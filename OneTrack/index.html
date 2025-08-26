@@ -1,0 +1,2118 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>OneTrack</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      *,*::before,*::after{box-sizing:border-box}
+      :root{
+        --bg:#0c1116;--card-bg:#0f1620;--card-sub:#111b26;--text:#e5e7eb;--muted:#9ca3af;
+        --border:#1f2937;--accent:#6366f1;--pill-bg:#101826;--pill-border:#273347;--input-bg:#0d141c;
+        --input-border:#253041;--focus:#8b5cf6;--shadow:0 1px 2px rgba(0,0,0,.25),0 6px 20px rgba(0,0,0,.35);
+        --good:#10b981;--bad:#ef4444;--flex-green:#10b981;--flex-green-weak:#06251c;--flex-green-border:#0f3a2c;--flex-decor:#10b981;
+      }
+      body[data-theme="light"]{
+        --bg:#f5f7fb;
+        --card-bg:#fff;
+        --card-sub:#fff;
+        --text:#111827;
+        --muted:#6b7280;
+        --border:#e5e7eb;
+        --accent:#111827;
+        --pill-bg:#eef2ff;
+        --pill-border:#c7d2fe;
+        --input-bg:#fff;
+        --input-border:#d1d5db;
+        --focus:#4f46e5;
+        --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.06);
+        --good:#16a34a;
+        --bad:#dc2626;
+
+        /* Flex tab in light mode → darker purple */
+        --flex-green:#4f46e5;         /* main purple (darker) */
+        --flex-green-weak:#ede9fe;    /* light lavender bg */
+        --flex-green-border:#a78bfa;  /* purple border */
+        --flex-decor:#7c3aed;         /* accent purple */
+      }
+
+      /* Flex tab text color in light mode */
+      body[data-theme="light"] .tab[data-tab="flex"] {
+        color:#4f46e5;  /* dark purple text instead of green */
+      }
+
+      /* Light mode: Flex tab active text should be dark */
+      body[data-theme="light"] .tab[data-tab="flex"].active {
+        color:#ffffff; /* white when active */
+      }
+
+      html,body{height:100%}
+      body{font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;color:var(--text);background:var(--bg)}
+      .container{max-width:1100px;margin:24px auto;padding:0 16px}
+      h1{font-size:22px;margin:0}
+      h3{margin:0 0 8px}
+      .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+      .toggle-wrap{display:flex;align-items:center;gap:8px}
+      .theme-toggle{
+        display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+        padding:6px 10px;border:1px solid var(--border);border-radius:999px;
+        background:var(--card-bg);font-size:12px;color:var(--text);
+        transition:background .15s,border-color .15s,box-shadow .15s,opacity .15s
+      }
+      .theme-toggle:hover{border-color:var(--focus)}
+      .theme-toggle:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,.35)}
+
+      .tabs{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+      .tab{padding:10px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--card-bg);color:var(--text);box-shadow:var(--shadow)}
+      .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+      /* Flex chip colors */
+      .tab[data-tab="flex"]{
+        background:var(--flex-green-weak);
+        border-color:var(--flex-green-border);
+        color:#a7f3d0;
+      }
+      .tab[data-tab="flex"].active{
+        background:var(--flex-green);
+        border-color:var(--flex-green);
+        color:#ffffff;
+      }
+
+      .card{border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;background:var(--card-bg);box-shadow:var(--shadow);overflow:hidden}
+      .subcard{background:var(--card-sub);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);overflow:hidden}
+      .subcard+.subcard{margin-top:18px}
+      .subhead{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:12px}
+      label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+      input,select{width:100%;padding:12px 14px;border:1px solid var(--input-border);border-radius:12px;background:var(--input-bg);color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;max-width:100%;min-width:0}
+      input:focus,select:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(139,92,246,.25)}
+      .row{display:grid;gap:18px;margin-bottom:16px}
+      .row-1{grid-template-columns:1fr}.row-2{grid-template-columns:repeat(2,minmax(0,1fr))}.row-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .row>*{min-width:0}
+      .btn{
+        display:inline-flex;align-items:center;justify-content:center;gap:8px;
+        padding:12px 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;
+        cursor:pointer;box-shadow:var(--shadow);white-space:nowrap;width:auto;
+        transition:box-shadow .15s,transform .04s
+      }
+      .btn:active{transform:translateY(1px)}
+      .btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,.35),var(--shadow)}
+      .btn:disabled{opacity:.6;cursor:not-allowed}
+      .btn-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
+      .muted{color:var(--muted)}
+      table{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
+      thead th{text-align:left;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)}
+      tbody tr{background:var(--card-sub);box-shadow:var(--shadow)}
+      td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+      th.sort{cursor:pointer}
+      .pill{display:inline-block;background:var(--pill-bg);border:1px solid var(--pill-border);padding:5px 9px;border-radius:999px;font-size:12px;margin-right:6px}
+      canvas{max-height:360px}
+      .filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+      .filters .range-pair{display:flex;gap:10px;align-items:end}
+      @media (max-width:900px){.filters{grid-template-columns:1fr}.row{gap:14px}}
+      .toast{position:fixed;inset:auto 16px 16px auto;background:var(--card-bg);border:1px solid var(--border);box-shadow:var(--shadow);padding:10px 14px;border-radius:10px;z-index:2000}
+      input[type="number"]{-moz-appearance:textfield}
+      input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+      .db-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+      .db-title{display:flex;flex-direction:column}
+      .db-actions{display:flex;align-items:center;gap:10px}
+      .db-edit{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg);cursor:pointer}
+      .db-save,.db-cancel,.db-add{padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
+      .db-save,.db-add{background:var(--accent);color:#fff}
+
+      /* high-contrast cancel, esp. in dark mode */
+      .db-cancel{
+        background:transparent;color:var(--text);
+        border:1px solid var(--border)
+      }
+      .db-cancel:hover{border-color:var(--focus)}
+
+      .collapsible-body{display:none;margin-top:10px}
+      [contenteditable="true"]{outline:none;border-bottom:2px dashed transparent}
+      [contenteditable="true"]:focus{border-bottom-color:var(--focus)}
+      .editing table td{padding:8px}
+      .cat-row{background:transparent;box-shadow:none}
+      .cat-cell{font-weight:700;letter-spacing:.04em;color:var(--muted);border-bottom:none;padding:8px 6px;text-transform:uppercase;cursor:pointer}
+      .cat-btn{background:none;border:0;color:inherit;font:inherit;display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;width:100%;text-align:left}
+      .chev{display:inline-block;transition:transform .15s}
+      .cat-row.collapsed .chev{transform:rotate(0)}.cat-row.expanded .chev{transform:rotate(90deg)}
+      .name-cell{display:flex;gap:8px;align-items:center}
+      .name-cell .cat-select{max-width:220px}.name-cell .name-input{flex:1}
+
+      /* FLEX card styling */
+      .flex-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        border-radius: 12px;
+        background: var(--card-sub);
+      }
+
+      .flex-hero{
+        position:relative;
+        min-height:190px;
+        overflow:hidden;
+        isolation:isolate;
+      }
+
+      /* Add breathing room between controls and preview */
+      .flex-controls { margin-bottom: 16px; }
+      #flexCard { margin-top: 4px; }
+
+      /* When saving, remove border entirely */
+      .flex-card.saving { border: none !important; box-shadow: none !important; }
+
+      .fx-ribbon{
+        position:absolute;left:18px;top:18px;z-index:2;background:linear-gradient(180deg,#2b3648,#1e2836);color:#d8e5ff;border:1px solid rgba(255,255,255,.08);padding:6px 10px;border-radius:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
+      }
+      .flex-bg{
+        position:absolute;inset:-20% -10% auto -10%;height:260px;background:
+          radial-gradient(60% 60% at 70% 40%, rgba(16,185,129,.45) 0%, transparent 70%),
+          radial-gradient(50% 50% at 20% -10%, rgba(16,185,129,.25) 0%, transparent 70%);
+        opacity:.16;transform:rotate(-6deg);pointer-events:none
+      }
+
+      .flex-bgimg{
+        position:absolute;
+        inset:-3px;
+        background-position:center;
+        background-repeat:no-repeat;
+        background-size:cover;
+        transform:none !important;
+        opacity:.20;
+        filter:saturate(1.05) contrast(1.05);
+        pointer-events:none;
+      }
+
+      .flex-title{position:absolute;left:18px;bottom:18px;right:18px;z-index:2;font-weight:900;font-size:26px;letter-spacing:.3px;text-shadow:0 1px 0 rgba(0,0,0,.2)}
+      .flex-body{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;padding:16px}
+      @media (max-width:920px){.flex-body{grid-template-columns:1fr}}
+      .fx-left{display:grid;grid-template-rows:auto auto;gap:14px}
+      .fx-statlist{background:linear-gradient(180deg, rgba(255,255,255,.02), transparent);border:1px solid var(--border);border-radius:12px;padding:14px}
+      .fx-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+      .fx-row .k{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+      .fx-row .v{font-size:18px;font-weight:800}
+      .fx-divider{height:1px;background:var(--border);margin:8px 0}
+      .fx-headline{border:1px solid var(--border);border-radius:12px;padding:16px 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg, rgba(16,185,129,.08), transparent 60%)}
+      .fx-profit{font-size:34px;font-weight:900;color:var(--good);line-height:1}
+      .fx-sub{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}
+      .fx-right{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--card-bg);display:flex;flex-direction:column;gap:10px}
+      .fx-chart-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;margin-bottom:8px}
+      .fx-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-top:1px solid var(--border);color:var(--muted)}
+      .fx-user{display:flex;align-items:center;gap:10px}
+      .fx-avatar{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.15);object-fit:cover}
+      .fx-username{font-weight:700}
+      .hide{display:none!important}
+      .gate-wrap{max-width:720px;margin:8vh auto;padding:0 16px}
+      .gate-card{border:1px solid var(--border);border-radius:16px;background:var(--card-bg);box-shadow:var(--shadow);padding:22px}
+      .gate-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+      .gate-title{font-weight:900;font-size:22px}
+      .discord-btn{
+        display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;
+        background:#5865F2;color:#fff;border:0;cursor:pointer;text-decoration:none;font-weight:700;
+        transition:filter .15s,box-shadow .15s
+      }
+      .discord-btn:hover{filter:brightness(1.05)}
+      .discord-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(88,101,242,.35)}
+      .discord-btn svg{width:20px;height:20px}
+      .gate-foot{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--muted);font-size:12px}
+      .link{color:#93c5fd;cursor:pointer;text-decoration:underline}
+
+      /* ===== Dark-mode contrast helpers ===== */
+      body:not([data-theme="light"]) .muted{ color:#b3bcc7 }
+      body:not([data-theme="light"]) .subhead{ color:#b3bcc7 }
+      body:not([data-theme="light"]) thead th{ color:#c4ccd6 }
+      body:not([data-theme="light"]) label{ color:#aeb7c2 }
+      body:not([data-theme="light"]) .pill{ color:#e9edf2 }
+      body:not([data-theme="light"]) .gate-foot{ color:#9fb0c6 }
+
+      /* ===== Database (dark mode) fixes ===== */
+      body:not([data-theme="light"]) #database .collapsible-body table td[contenteditable="true"]{
+        color: var(--text);
+        background: rgba(255,255,255,.02);
+        border-bottom-color: var(--input-border);
+      }
+      body:not([data-theme="light"]) #db_sheet_tbl tbody td{ color: var(--text); }
+      body:not([data-theme="light"]) #db_sheet_tbl thead th{ color:#c4ccd6; }
+
+      /* DB header buttons */
+      #database .db-actions button{ color: var(--text); }
+      #database .db-actions .db-edit{
+        background: var(--card-bg);
+        border: 1px solid var(--pill-border);
+      }
+      #database .db-actions .db-save,
+      #database .db-actions .db-add{
+        background: var(--accent); color:#fff;
+      }
+      #database .db-actions .db-cancel{
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--pill-border);
+      }
+      #database .db-actions button:hover{ border-color: var(--focus); }
+      #database .db-actions button:focus-visible{
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(139,92,246,.35);
+      }
+      #database .db-section.editing .db-actions .db-cancel{
+        background: rgba(255,255,255,.04);
+        border-color: var(--focus);
+      }
+      #database .db-section.editing .db-actions .db-cancel:hover{
+        background: rgba(255,255,255,.06);
+      }
+
+      /* ===== Dark mode button border enhancement ===== */
+      body:not([data-theme="light"]) button,
+      body:not([data-theme="light"]) .btn,
+      body:not([data-theme="light"]) .discord-btn,
+      body:not([data-theme="light"]) .theme-toggle,
+      body:not([data-theme="light"]) .db-actions button {
+        border: 1px solid var(--pill-border) !important;
+        box-shadow: var(--shadow);
+      }
+
+      /* Items → category header row: remove borders/shadows/backgrounds */
+      #db_items_tbl .cat-row td {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+      }
+      /* Category toggle look */
+      #db_items_tbl .cat-btn,
+      #db_items_tbl .cat-btn:hover,
+      #db_items_tbl .cat-btn:focus,
+      #db_items_tbl .cat-btn:focus-visible {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        outline: none !important;
+        padding: 6px 0;
+        color: var(--muted);
+      }
+      #db_items_tbl .cat-bar { gap: 8px; }
+
+      body:not([data-theme="light"]) .btn:hover,
+      body:not([data-theme="light"]) .btn:focus-visible {
+        border-color: #6366f1 !important;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(99,102,241,.35), var(--shadow);
+      }
+
+      /* ===== Stats filters layout fix ===== */
+      #stats .filters{
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+        gap:18px;
+      }
+      #stats .filters .range-pair{
+        grid-column: span 2;
+        display:flex;
+        gap:10px;
+        align-items:end;
+      }
+      @media (max-width: 700px){
+        #stats .filters{ grid-template-columns: 1fr; }
+        #stats .filters .range-pair{
+          grid-column: auto;
+          flex-direction:column;
+          align-items:stretch;
+        }
+      }
+
+      /* ===== Flex filters layout fix ===== */
+      #flex .filters{
+        display:grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+        gap:18px;
+      }
+      #flex .filters .range-pair{
+        grid-column: span 2;
+        display:flex;
+        gap:10px;
+        align-items:end;
+      }
+      #flex .filters .range-pair > div{ min-width:0; }
+      @media (max-width: 700px){
+        #flex .filters{ grid-template-columns: 1fr; }
+        #flex .filters .range-pair{
+          grid-column: auto;
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+
+      /* Flex: hide overlay title and keep image unrotated */
+      .flex-title{ display:none !important; }
+      .flex-card .flex-bgimg{ transform: none !important; }
+      #fx_bgimg{ transform:none !important; }
+
+      /* blue for Unrealized */
+      :root{ --info:#60a5fa; }
+      body[data-theme="light"]{ --info:#2563eb; }
+
+      /* right-column blocks */
+      .fx-right-metrics { border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--card-bg); }
+      .fx-right-metrics .k { font-size:12px; color: var(--muted); letter-spacing:.06em; text-transform:uppercase; }
+      .fx-right-metrics .v { font-size:18px; font-weight:800; }
+
+      .cat-add{ padding:8px 12px; border-radius:10px; border:0; background:var(--accent); color:#fff; cursor:pointer }
+
+      /* Full-width flex bar inside the category TD */
+      .cat-bar{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:8px;
+        width:100%;
+      }
+      .cat-cell{
+        font-weight:700;
+        letter-spacing:.04em;
+        color:var(--muted);
+        border-bottom:none;
+        padding:8px 6px;
+        text-transform:uppercase;
+      }
+      .cat-add{ padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; cursor:pointer; }
+
+      /* Even out spacing for Quick Add action row */
+      .qa-actions { margin-top: 16px; margin-bottom: 0; }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  </head>
+  <body>
+    <!-- ========= AUTH GATE ========= -->
+    <div id="authGate" class="gate-wrap">
+      <div class="gate-card">
+        <div class="gate-head">
+          <div class="gate-title">OneTrack</div>
+          <button id="gateThemeBtn" class="theme-toggle" title="Toggle theme"><span id="gateThemeLabel">Dark</span> 🌗</button>
+        </div>
+        <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
+        <div class="btn-row">
+          <button id="discordBtn" class="discord-btn" type="button" onclick="startDiscord(event)">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.369A19.791 19.791 0 0 0 16.558 3a13.276 13.276 0 0 0-.66 1.36 18.47 18.47 0 0 0-4.796 0A13.123 13.123 0 0 0 10.44 3a19.736 19.736 0 0 0-3.76 1.369C3.18 8.048 2.36 11.62 2.66 15.139a19.94 19.94 0 0 0 4.886 2.48 14.534 14.534 0 0 0 1.052-1.713 12.805 12.805 0 0 1-1.66-.802c.139-.104.274-.212.405-.322a9.18 9.18 0 0 0 8.314 0c.132.11.267.218.405.322-.532.307-1.089.574-1.667.802.302.6.654 1.172 1.052 1.713a19.897 19.897 0 0 0 4.89-2.48c.4-4.49-.69-8.04-2.72-10.77ZM9.68 13.89c-1.02 0-1.852-.934-1.852-2.08 0-1.146.82-2.08 1.853-2.08s1.873.934 1.853 2.08c0 1.146-.82 2.08-1.853 2.08Zm4.64 0c-1.02 0-1.852-.934-1.852-2.08 0-1.146.82-2.08 1.853-2.08 1.032 0 1.872.934 1.852 2.08 0 1.146-.82 2.08-1.853 2.08Z"/></svg>
+            Sign in with Discord
+          </button>
+        </div>
+        <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
+      </div>
+    </div>
+
+    <!-- ========= APP ========= -->
+    <div id="appRoot" class="container" style="display:none">
+      <div class="header">
+        <h1 id="appTitle">OneTrack</h1>
+        <div class="toggle-wrap">
+          <button id="themeBtn" class="theme-toggle" title="Toggle theme"><span id="themeLabel">Dark</span> 🌗</button>
+          <button id="logoutBtn" class="theme-toggle" title="Sign out">Sign out</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="quick">Quick Add</div>
+        <div class="tab" data-tab="sold">Mark as Sold</div>
+        <div class="tab" data-tab="stats">Stats</div>
+        <div class="tab" data-tab="inventory">Inventory</div>
+        <div class="tab" data-tab="flex">Flex</div>
+        <div class="tab" data-tab="database">Settings</div>
+      </div>
+
+      <!-- Quick Add -->
+      <section id="quick" class="card">
+        <div class="subcard">
+          <div class="subhead">Order details</div>
+          <div class="row row-1">
+            <div><label>Order Date</label><input type="date" id="qa_date"></div>
+          </div>
+          <div class="row row-2">
+            <div><label>Item</label><input list="items" id="qa_item" placeholder="Start typing…"></div>
+            <div><label>Retailer (Bought From)</label><input list="retailers" id="qa_retailer" placeholder="Walmart, Target…"></div>
+          </div>
+          <div class="row row-2">
+            <div><label>Quantity</label><input type="number" id="qa_qty" min="1" step="1" value="1"></div>
+            <div><label>Buy Price (total)</label><input type="number" id="qa_buy" step="0.01" placeholder="e.g. 329.95"></div>
+          </div>
+        </div>
+
+        <div class="subcard">
+          <div class="subhead">Sale details (optional — for already-sold items)</div>
+          <div class="row row-2">
+            <div><label>Sale Date</label><input type="date" id="qa_sale_date"></div>
+            <div><label>Sale Location</label><select id="qa_market"></select></div>
+          </div>
+          <div class="row row-2">
+            <div><label>Sell Price</label><input type="number" id="qa_sell" step="0.01" placeholder="0 = unsold"></div>
+            <div><label>Shipping</label><input type="number" id="qa_ship" step="0.01" value="0"></div>
+          </div>
+          <div class="muted" id="qa_fee_hint"></div>
+        </div>
+
+        <div class="btn-row qa-actions">
+          <button class="btn" id="qa_btn">Save</button>
+          <span id="qa_msg" class="muted"></span>
+        </div>
+      </section>
+
+      <!-- Mark Sold -->
+      <section id="sold" class="card" style="display:none">
+        <div class="row row-3">
+          <div><label>Select Open Purchase</label><select id="ms_pick"></select></div>
+          <div><label>Sell Price</label><input type="number" id="ms_sell" step="0.01"></div>
+          <div><label>Sale Date</label><input type="date" id="ms_date"></div>
+        </div>
+        <div class="row row-3">
+          <div><label>Sale Location</label><select id="ms_market"></select></div>
+          <div><label>Fee % (blank = auto)</label><input type="number" id="ms_fee" step="0.0001" placeholder="e.g. 0.109 or 10.9"></div>
+          <div><label>Shipping</label><input type="number" id="ms_ship" step="0.01" value="0"></div>
+        </div>
+        <div class="btn-row" style="margin-top:6px">
+          <button class="btn" id="ms_btn">Mark Sold</button>
+          <span id="ms_msg" class="muted"></span>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <section id="stats" class="card" style="display:none">
+        <div class="filters">
+          <div>
+            <label>Date Range</label>
+            <select id="st_range">
+              <option value="all">All time</option>
+              <option value="mtd">Month-to-date</option>
+              <option value="last30">Last 30 days</option>
+              <option value="last7">Last 7 days</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </div>
+
+          <div class="range-pair">
+            <div style="flex:1"><label>From</label><input type="date" id="st_from" disabled></div>
+            <div style="flex:1"><label>To</label><input type="date" id="st_to" disabled></div>
+          </div>
+
+          <div>
+            <label>Item filter</label>
+            <select id="st_item"></select>
+          </div>
+          <div></div>
+        </div>
+
+        <div class="btn-row" style="margin:6px 0 12px 0">
+          <button class="btn" id="st_apply">Apply</button>
+          <span class="muted" id="st_hint"></span>
+        </div>
+
+        <div id="st_summary" style="margin:16px 0 10px 0"></div>
+
+        <div class="subcard">
+          <div class="row row-2">
+            <div>
+              <label>Chart:</label>
+              <select id="st_chartType">
+                <option value="purchMonth"># of purchases by month</option>
+                <option value="salesMonth"># of sales by month</option>
+                <option value="purchStore"># of purchases by store</option>
+                <option value="salesPlatform"># of sales by platform</option>
+                <option value="revCogs">COGS (red) & Revenue (green) by month</option>
+              </select>
+            </div>
+          </div>
+          <canvas id="st_chart"></canvas>
+        </div>
+
+        <div class="subcard" style="margin-top:16px">
+          <h3>Breakdown by item</h3>
+          <table id="st_items_tbl">
+            <thead>
+              <tr>
+                <th class="sort" data-sort="item">Item</th>
+                <th class="sort" data-sort="boughtQty">Bought</th>
+                <th class="sort" data-sort="soldQty">Sold</th>
+                <th class="sort" data-sort="onHandQty">On Hand</th>
+                <th class="sort" data-sort="totalCost">Total Cost</th>
+                <th class="sort" data-sort="totalRevenue">Total Revenue</th>
+                <th class="sort" data-sort="profit">Profit/Loss</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+            <!-- Inventory -->
+      <section id="inventory" class="card" style="display:none">
+        <div style="margin-bottom:10px"><span class="pill" id="inv_totals">Loading…</span></div>
+        <div class="subcard">
+          <table id="inv_tbl">
+            <thead>
+              <tr>
+                <th class="sort" data-key="item">Item</th>
+                <th class="sort" data-key="onHandQty">On Hand</th>
+                <th class="sort" data-key="avgCost">Avg Cost / item</th>
+                <th class="sort" data-key="onHandCost">On-hand Cost (total)</th>
+                <th class="sort" data-key="estPrice">Est. Price</th>
+                <th class="sort" data-key="estValue">Est. Value</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Database -->
+      <section id="database" class="card" style="display:none">
+        <!-- Items -->
+        <div class="subcard db-section" data-section="items">
+          <div class="db-head">
+            <div class="db-title">
+              <h3 style="margin:0">Items</h3>
+              <div class="muted" id="db_items_count">Total items: 0</div>
+            </div>
+            <div class="db-actions">
+              <button class="db-edit" data-action="edit">Expand</button>
+              <button class="db-save" data-action="save" style="display:none">Save</button>
+              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
+              <button class="db-add" data-action="add" style="display:none">Add</button>
+            </div>
+          </div>
+          <div class="collapsible-body">
+            <table id="db_items_tbl" style="margin-top:10px">
+              <thead><tr><th>Name</th><th>Release</th><th>MSRP</th><th>Market Value</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Retailers -->
+        <div class="subcard db-section" data-section="retailers">
+          <div class="db-head">
+            <div class="db-title">
+              <h3 style="margin:0">Retailers</h3>
+              <div class="muted" id="db_retailers_count">Total retailers: 0</div>
+            </div>
+            <div class="db-actions">
+              <button class="db-edit" data-action="edit">Expand</button>
+              <button class="db-save" data-action="save" style="display:none">Save</button>
+              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
+              <button class="db-add" data-action="add" style="display:none">Add</button>
+            </div>
+          </div>
+          <div class="collapsible-body">
+            <table id="db_retail_tbl" style="margin-top:10px">
+              <thead><tr><th>Name</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sale Platforms -->
+        <div class="subcard db-section" data-section="marketplaces">
+          <div class="db-head">
+            <div class="db-title">
+              <h3 style="margin:0">Sale Platforms</h3>
+              <div class="muted" id="db_mkt_count">Total platforms: 0</div>
+            </div>
+            <div class="db-actions">
+              <button class="db-edit" data-action="edit">Expand</button>
+              <button class="db-save" data-action="save" style="display:none">Save</button>
+              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
+              <button class="db-add" data-action="add" style="display:none">Add</button>
+            </div>
+          </div>
+          <div class="collapsible-body">
+            <table id="db_mkt_tbl" style="margin-top:10px">
+              <thead><tr><th>Platform</th><th>Fee %</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Spreadsheet (Order Book) -->
+        <div class="subcard db-section" data-section="sheet">
+          <div class="db-head">
+            <div class="db-title">
+              <h3 style="margin:0">Spreadsheet</h3>
+              <div class="muted" id="db_sheet_count">Rows: 0</div>
+            </div>
+            <div class="db-actions">
+              <button class="db-edit" data-action="edit">Expand</button>
+              <button class="db-save" data-action="save" style="display:none">Save</button>
+              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
+              <button class="db-add" data-action="add" style="display:none">Add</button>
+            </div>
+          </div>
+          <div class="collapsible-body">
+            <table id="db_sheet_tbl" style="margin-top:10px">
+              <thead>
+                <tr>
+                  <th>Order Date</th>
+                  <th>Item</th>
+                  <th>Buy Price</th>
+                  <th>Bought From</th>
+                  <th>Sell Price</th>
+                  <th>Sale Date</th>
+                  <th>Sale Location</th>
+                  <th>Shipping</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLEX -->
+      <section id="flex" class="card" style="display:none">
+        <div class="subcard flex-controls">
+          <div class="subhead">Create a shareable “Flex” graphic</div>
+          <div class="filters">
+            <div>
+              <label>Date Range</label>
+              <select id="fx_range">
+                <option value="all">All time</option>
+                <option value="last30">Last 30 days</option>
+                <option value="mtd">Month-to-date</option>
+                <option value="last7">Last 7 days</option>
+                <option value="custom">Custom…</option>
+              </select>
+            </div>
+            <div class="range-pair">
+              <div style="flex:1"><label>From</label><input type="date" id="fx_from" disabled></div>
+              <div style="flex:1"><label>To</label><input type="date" id="fx_to" disabled></div>
+            </div>
+            <div>
+              <label>Item</label>
+              <select id="fx_item"></select>
+            </div>
+            <div>
+              <label>Header Image URL (optional)</label>
+              <input type="url" id="fx_img" placeholder="https://example.com/image.jpg">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn" id="fx_gen">Generate</button>
+            <button class="btn" id="fx_clear" type="button">Clear</button>
+            <button class="btn" id="fx_save">Save Image</button>
+            <span class="muted" id="fx_msg"></span>
+          </div>
+        </div>
+
+        <div id="flexCard" class="flex-card">
+          <div class="flex-hero">
+            <div class="fx-ribbon" id="fx_ribbon">ITEM</div>
+            <div class="flex-bg"></div>
+            <div id="fx_bgimg" class="flex-bgimg" aria-hidden="true"></div>
+          </div>
+
+          <div class="flex-body">
+            <!-- LEFT -->
+            <div class="fx-left">
+              <div class="fx-statlist">
+                <div class="fx-chart-title" id="fx_left_title">Stats</div>
+                <div id="fx_stats"></div>
+              </div>
+              <div class="fx-headline">
+                <div class="fx-profit" id="fx_bigprofit">$0.00</div>
+                <div class="fx-sub" id="fx_subline"></div>
+              </div>
+            </div>
+
+            <!-- RIGHT -->
+            <div class="fx-right">
+              <div class="fx-chart-title">Cumulative Net Profit</div>
+              <canvas id="fx_chart"></canvas>
+
+              <!-- Metrics beneath chart -->
+              <div class="fx-right-metrics">
+                <div class="fx-row"><div class="k">Inventory</div><div class="v" id="fx_onhand">0</div></div>
+                <div class="fx-row"><div class="k">Longest Hold</div><div class="v" id="fx_longest">0 days</div></div>
+                <div class="fx-row"><div class="k">Unrealized Value</div><div class="v" id="fx_unrealized" style="color:var(--info)">$0.00</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fx-foot">
+            <div class="fx-user">
+              <img id="fx_avatar" class="fx-avatar" alt="avatar" />
+              <span id="fx_username" class="fx-username">@username</span>
+            </div>
+            <span id="fx_right_note" class="muted"></span>
+          </div>
+        </div>
+      </section>
+
+      <datalist id="items"></datalist>
+      <datalist id="retailers"></datalist>
+    </div>
+
+    <div id="toast" class="toast" style="display:none"></div>
+
+    <script>
+      // ===== Base URL from server (or current page sans query) =====
+      const BASE_URL = location.origin; // cosmetic only
+
+      // ✅ Use your Netlify Function proxy (same-origin) instead of the Apps Script URL here
+// (You’ll set the real GAS URL in the function’s environment variable below.)
+// Use proxy ONLY for JSON API calls (fixes CORS)
+const GAS_API_URL = "/.netlify/functions/gas-proxy";
+
+// Use the direct Apps Script EXEC URL ONLY for OAuth full-page redirects
+const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
+
+
+// ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
+(function(){
+  const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
+  if (hasGAS) return; // running inside Apps Script sandbox
+
+  function callApi(action, params={}) {
+  const qs = new URLSearchParams({ route:'api', action, ...params });
+  return fetch(`${GAS_API_URL}?${qs.toString()}`, { method:'GET', credentials:'omit' })
+    .then(r => r.json());
+}
+
+
+        // Map each function to action + param shaping
+        const map = {
+          getInitModel:              () => ({action:'getInitModel'}),
+          getOpenPurchases:          () => ({action:'getOpenPurchases'}),
+          getInventory:              () => ({action:'getInventory'}),
+          getDatabaseFull:           () => ({action:'getDatabaseFull'}),
+          getOrderBookEditable:      () => ({action:'getOrderBookEditable'}),
+          getStatsV2:       (range,item,from,to)=>({action:'getStatsV2', params:{rangeKey:range, item, from, to}}),
+          getLongestHoldDays:(item)  => ({action:'getLongestHoldDays', params:{item}}),
+
+          submitQuickAdd:    (payload)=>({action:'submitQuickAdd',    params:{payload: JSON.stringify(payload)}}),
+          submitMarkAsSold:  (payload)=>({action:'submitMarkAsSold',  params:{payload: JSON.stringify(payload)}}),
+          addOrderBookRow:   (payload)=>({action:'addOrderBookRow',   params:{payload: JSON.stringify(payload)}}),
+          updateOrderBookRows:(rows)  =>({action:'updateOrderBookRows',params:{rows: JSON.stringify(rows)}}),
+
+          addDatabaseItem:        (payload)=>({action:'addDatabaseItem',        params:{payload: JSON.stringify(payload)}}),
+          addDatabaseRetailer:    (name)  =>({action:'addDatabaseRetailer',     params:{name}}),
+          addDatabaseMarketplace: (payload)=>({action:'addDatabaseMarketplace', params:{payload: JSON.stringify(payload)}}),
+          updateDatabaseItems:    (rows)  =>({action:'updateDatabaseItems',     params:{rows: JSON.stringify(rows)}}),
+          updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
+          updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
+
+          // Optional helper used by html2canvas fallback
+          fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
+        };
+
+        function Runner(){
+          this._ok = ()=>{};
+          this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
+        }
+        Runner.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
+        Runner.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
+
+        Object.keys(map).forEach(name=>{
+          Runner.prototype[name] = function(...args){
+            const spec = map[name](...args) || {};
+            return callApi(spec.action, spec.params||{})
+              .then(res=>{
+                if (res && res.ok === false && res.error) throw res;
+                if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
+                this._ok(res);
+              })
+              .catch(this._err);
+          };
+        });
+
+        window.google = { script: { run: new Runner() } };
+      })();
+
+      // ===== Theme toggle (works on gate + app) =====
+      const themeBtn = document.getElementById('themeBtn');
+      const gateThemeBtn = document.getElementById('gateThemeBtn');
+      const themeLabel = document.getElementById('themeLabel');
+      const gateThemeLabel = document.getElementById('gateThemeLabel');
+
+      const savedTheme = localStorage.getItem('orders_theme') || 'dark';
+      setTheme(savedTheme);
+
+      themeBtn?.addEventListener('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
+      gateThemeBtn?.addEventListener('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+      function setTheme(mode){
+        document.body.dataset.theme = mode;
+        const labelText = (mode==='dark'?'Dark':'Light');
+        if (themeLabel) themeLabel.textContent = labelText;
+        if (gateThemeLabel) gateThemeLabel.textContent = labelText;
+        localStorage.setItem('orders_theme', mode);
+        setChartDefaultsToTheme();
+        if (window.__redrawChart) window.__redrawChart();
+        if (window.__drawFlexChart) window.__drawFlexChart();
+      }
+      function cssVar(n){return getComputedStyle(document.body).getPropertyValue(n).trim();}
+      function setChartDefaultsToTheme(){ if (window.Chart){ Chart.defaults.color=cssVar('--text')||'#222'; Chart.defaults.borderColor=cssVar('--border')||'#e5e7eb'; } }
+
+      // ===== Gate helpers =====
+      const authGate = document.getElementById('authGate');
+      const appRoot  = document.getElementById('appRoot');
+      const gateStatus = document.getElementById('gateStatus');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      function getSession(){
+        try{ const raw = localStorage.getItem('orders_user'); return raw ? JSON.parse(raw) : null; }catch(_){ return null; }
+      }
+      function showGate(){ appRoot.style.display='none'; authGate.style.display=''; }
+      function showApp(){
+        authGate.style.display='none';
+        appRoot.style.display='';
+        initFlexUserBits();
+        reloadModel();   // ensure metadata loads when the app is visible
+      }
+
+      // ===== Auth (simple & Netlify-friendly) =====
+      function hasAppsScript(){
+        return typeof google !== 'undefined' && google.script && google.script.run;
+      }
+
+      // Single entry point for the button
+function startDiscord(ev){
+  try { ev?.preventDefault(); ev?.stopPropagation(); } catch(_) {}
+  if (gateStatus) gateStatus.textContent = 'Opening Discord…';
+  const u = "/.netlify/functions/gas-proxy?route=discord_login"; // <- Netlify function
+  try { (window.top || window).location.assign(u); }
+  catch(_) { window.location.href = u; }
+}
+
+
+
+
+      // Ensure the click handler is globally visible and bound, even if inline onclick fails
+      (function wireDiscord(){
+  // expose for inline onclick="startDiscord(event)"
+  window.startDiscord = startDiscord;
+
+  const btn = document.getElementById('discordBtn');
+  if (!btn) return;
+
+  // Just in case a stale build added an href somewhere, nuke it.
+  btn.removeAttribute('href');
+
+  // Rebind cleanly so no old listeners linger
+  const clone = btn.cloneNode(true);
+  btn.parentNode.replaceChild(clone, btn);
+  clone.addEventListener('click', startDiscord);
+})();
+
+      function shortDateMMDDYY(iso){
+        if(!iso) return '';
+        const [y,m,d] = iso.split('-').map(Number);
+        return `${m}/${d}/${String(y).slice(-2)}`;
+      }
+      function computeFlexStatsTitle(){
+        const r = document.getElementById('fx_range')?.value || 'all';
+        if (r === 'all')     return 'All-Time Stats';
+        if (r === 'last30')  return 'Last 30 Days Stats';
+        if (r === 'last7')   return 'Last 7 Days Stats';
+        if (r === 'mtd')     return 'Month-to-Date Stats';
+        if (r === 'custom') {
+          const from = document.getElementById('fx_from')?.value || '';
+          const to   = document.getElementById('fx_to')?.value   || '';
+          if (from && to) return `${shortDateMMDDYY(from)} - ${shortDateMMDDYY(to)} Stats`;
+          return 'Custom Range Stats';
+        }
+        return 'Stats';
+      }
+
+      // Logout
+      logoutBtn?.addEventListener('click', ()=>{
+        try { localStorage.removeItem('orders_user'); } catch(_){}
+        showGate();
+      });
+
+      // Receive postMessage from callback (popup -> opener)
+      window.addEventListener('message', (ev)=>{
+        if (!ev || !ev.data) return;
+        if (ev.data.type === 'orders_login_success'){
+          try { localStorage.setItem('orders_user', JSON.stringify(ev.data.profile||{})); } catch(_){}
+          showApp();
+        }
+      });
+
+      (function pickUpSess(){
+        const h = location.hash || '';
+        const m = h.match(/#sess=([^&]+)/);
+        if (!m) return;
+        const code = decodeURIComponent(m[1]);
+
+        fetch(GAS_API_URL + '?route=api&action=redeem_session_code&code=' + encodeURIComponent(code))
+          .then(r => r.json())
+          .then(d => {
+            if (d && d.profile) {
+              try { localStorage.setItem('orders_user', JSON.stringify(d.profile)); } catch(_) {}
+              history.replaceState(null, '', location.pathname + location.search); // remove the hash
+              showApp();
+            }
+          })
+          .catch(() => { /* ignore */ });
+      })();
+
+      // ===== Init gate/app on load =====
+      (function safeBoot(){
+        try {
+          getSession() ? showApp() : showGate();
+        } catch (e) {
+          console.error('Boot error:', e);
+          showGate(); // always show the sign-in gate if anything goes wrong
+        }
+        // last-chance fallback: if both are still hidden after a moment, show gate
+        setTimeout(() => {
+          const gate = document.getElementById('authGate');
+          const app  = document.getElementById('appRoot');
+          const bothHidden = gate && app && gate.style.display === 'none' && app.style.display === 'none';
+          if (bothHidden) showGate();
+        }, 300);
+      })();
+
+      // ===== Tabs =====
+      document.querySelectorAll('.tab').forEach(el=>{
+        el.addEventListener('click', ()=>{
+          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+          el.classList.add('active');
+          const id = el.dataset.tab;
+          document.querySelectorAll('section').forEach(s=>s.style.display='none');
+          document.getElementById(id).style.display='block';
+          if (id==='stats') refreshStats();
+          if (id==='inventory') refreshInventory();
+          if (id==='database') loadDatabase();
+          if (id==='flex') initFlexDefaults();
+        });
+      });
+
+      // ==== Helpers ====
+      let META=null, CHART=null, STATS_CACHE=null, DB_STATE=null, FLEX={ chart:null, cache:null };
+      function money(n){return Number(n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});}
+      function pct(n){return (Number(n||0)).toLocaleString(undefined,{maximumFractionDigits:2})+'%';}
+      function escapeHtml(s){return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+      function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t.__to);t.__to=setTimeout(()=>t.style.display='none',1500);}
+      setChartDefaultsToTheme();
+      function isCategoryName(name){
+        const s=(name||'').trim(); if(!s) return false;
+        return s === s.toUpperCase() && /[A-Z]{2}/.test(s.replace(/[^A-Z]/g,''));
+      }
+
+      // Small fetch->dataURL helper to avoid CORS / taint for html2canvas
+      async function toDataUrl(url){
+        if(!url) return '';
+        try{
+          const resp = await fetch(url,{mode:'cors',cache:'no-store'});
+          const blob = await resp.blob();
+          return await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); });
+        }catch(_){
+          try{ return await new Promise(resolve=>{ google.script.run.withSuccessHandler(resolve).fetchImageAsDataUrl(url); }); }
+          catch(_e){ return url; }
+        }
+      }
+
+      // ==== Load model data from server (hardened) ====
+      function reloadModel() {
+        google.script.run
+          .withSuccessHandler(initModel)
+          .withFailureHandler(err => {
+            console.error('getInitModel failed:', err);
+            toast('Could not load metadata.');
+          })
+          .getInitModel();
+      }
+
+      function initModel(model){
+        try {
+          if (!model || model.error) {
+            const msg = model && model.error ? model.error : 'No model returned';
+            console.error('initModel error:', msg, model);
+            toast('Metadata unavailable.');
+            META = { items:[], retailers:[], marketplaces:[] };
+          } else {
+            META = model;
+          }
+
+          // Always use safe arrays
+          const items      = Array.isArray(META.items) ? META.items : [];
+          const retailers  = Array.isArray(META.retailers) ? META.retailers : [];
+          const markets    = Array.isArray(META.marketplaces) ? META.marketplaces : [];
+
+          // Datalists for Quick Add
+          const itemsDL = document.getElementById('items');
+          const retailDL = document.getElementById('retailers');
+          if (itemsDL)  itemsDL.innerHTML  = items.map(x => `<option value="${escapeHtml(x)}">`).join('');
+          if (retailDL) retailDL.innerHTML = retailers.map(x => `<option value="${escapeHtml(x)}">`).join('');
+
+          // Market selects (Quick Add / Mark Sold)
+          const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+          const qaMarket = document.getElementById('qa_market');
+          const msMarket = document.getElementById('ms_market');
+          if (qaMarket) qaMarket.innerHTML = mktOptions;
+          if (msMarket) msMarket.innerHTML = mktOptions;
+
+          // Stats item filter
+          const stItem = document.getElementById('st_item');
+          if (stItem) {
+            stItem.innerHTML = `<option value="">All items</option>` + items.map(i => `<option>${escapeHtml(i)}</option>`).join('');
+          }
+
+          // Stats controls (idempotent wiring)
+          const rangeSel = document.getElementById('st_range');
+          const fromInp  = document.getElementById('st_from');
+          const toInp    = document.getElementById('st_to');
+          const applyBtn = document.getElementById('st_apply');
+          const hint     = document.getElementById('st_hint');
+
+          function updateCustomUI(){
+            const isCustom = (rangeSel?.value === 'custom');
+            if (fromInp && toInp) { fromInp.disabled = toInp.disabled = !isCustom; }
+            if (hint) hint.textContent = isCustom ? 'Pick a From/To date and click Apply' : '';
+          }
+
+          // Remove old listeners (by cloning) to avoid duplicates if init runs twice
+          if (rangeSel) {
+            const rClone = rangeSel.cloneNode(true);
+            rangeSel.parentNode.replaceChild(rClone, rangeSel);
+            rClone.addEventListener('change', () => { updateCustomUI(); if (rClone.value !== 'custom') refreshStats(); });
+          }
+          if (document.getElementById('st_item')) {
+            const sel = document.getElementById('st_item');
+            const sClone = sel.cloneNode(true);
+            sel.parentNode.replaceChild(sClone, sel);
+            sClone.addEventListener('change', refreshStats);
+          }
+          if (document.getElementById('st_chartType')) {
+            const ct = document.getElementById('st_chartType');
+            const ctClone = ct.cloneNode(true);
+            ct.parentNode.replaceChild(ctClone, ct);
+            ctClone.addEventListener('change', drawStats);
+          }
+          if (applyBtn) {
+            const aClone = applyBtn.cloneNode(true);
+            applyBtn.parentNode.replaceChild(aClone, applyBtn);
+            aClone.addEventListener('click', () => {
+              const r = (document.getElementById('st_range')?.value || 'all');
+              const f = document.getElementById('st_from')?.value || '';
+              const t = document.getElementById('st_to')?.value   || '';
+              if (r === 'custom' && (!f || !t)) { toast('Select both From and To dates'); return; }
+              refreshStats();
+            });
+          }
+          updateCustomUI();
+
+          function defaultSummary(){
+            return {
+              totalQty:0, soldQty:0, revenue:0, costSold:0, fees:0, shipping:0,
+              netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0
+            };
+          }
+          function normalizeStatsPayload(res){
+            if (!res || typeof res !== 'object') {
+              return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
+            }
+            if (res.ok === false && res.error){
+              console.warn('getStatsV2 error:', res.error);
+              return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
+            }
+            const s = res.summary || {};
+            return {
+              summary: {
+                totalQty: +s.totalQty || 0,
+                soldQty: +s.soldQty || 0,
+                revenue: +s.revenue || 0,
+                costSold: +s.costSold || 0,
+                fees: +s.fees || 0,
+                shipping: +s.shipping || 0,
+                netProfit: +s.netProfit || 0,
+                roiPct: +s.roiPct || 0,
+                marginPct: +s.marginPct || 0,
+                asp: +s.asp || 0,
+                avgDaysToSell: +s.avgDaysToSell || 0
+              },
+              breakdownByItem: Array.isArray(res.breakdownByItem) ? res.breakdownByItem : [],
+              charts: res.charts || {},
+              monthly: Array.isArray(res.monthly) ? res.monthly : []
+            };
+          }
+
+          // expose for later uses
+          window.defaultSummary = defaultSummary;
+          window.normalizeStatsPayload = normalizeStatsPayload;
+
+        } catch (e) {
+          console.error('initModel crashed:', e);
+        }
+      }
+      // ==== Quick Add ====
+      const qaBtn = document.getElementById('qa_btn');
+      qaBtn.addEventListener('click', ()=>{
+        const payload = {
+          order_date:   document.getElementById('qa_date').value,
+          item:         document.getElementById('qa_item').value.trim(),
+          bought_from:  document.getElementById('qa_retailer').value.trim(),
+          quantity:     document.getElementById('qa_qty').value,
+          buy_price:    document.getElementById('qa_buy').value,
+          sell_price:   document.getElementById('qa_sell').value,
+          sale_date:    document.getElementById('qa_sale_date').value,
+          sale_location:document.getElementById('qa_market').value,
+          shipping:     document.getElementById('qa_ship').value
+        };
+        if(!payload.item){ toast('Item is required'); return; }
+        qaBtn.disabled = true;
+        const msg = document.getElementById('qa_msg'); 
+        msg.textContent='Saving…';
+        google.script.run
+          .withSuccessHandler(_=>{
+            msg.textContent='Saved ✔';
+            toast('Saved');
+            refreshOpen();
+            setTimeout(()=>{ msg.textContent=''; }, 1200);
+            qaBtn.disabled=false;
+          })
+          .withFailureHandler(err=>{
+            alert(err?.message||err);
+            qaBtn.disabled=false;
+          })
+          .submitQuickAdd(payload);
+      });
+
+      // ==== Mark Sold ====
+      const msBtn=document.getElementById('ms_btn');
+      msBtn.addEventListener('click', ()=>{
+        const payload={
+          row:           document.getElementById('ms_pick').value,
+          sell_price:    document.getElementById('ms_sell').value,
+          sale_date:     document.getElementById('ms_date').value,
+          sale_location: document.getElementById('ms_market').value,
+          fees:          document.getElementById('ms_fee').value,
+          shipping:      document.getElementById('ms_ship').value||0
+        };
+        if(!payload.row){ toast('Pick a purchase'); return; }
+        msBtn.disabled=true; const msg=document.getElementById('ms_msg'); msg.textContent='Saving…';
+        google.script.run
+          .withSuccessHandler(_=>{
+            msg.textContent='Updated ✔';
+            toast('Marked as sold');
+            refreshOpen();
+            setTimeout(()=>msg.textContent='',1200);
+            msBtn.disabled=false;
+          })
+          .withFailureHandler(err=>{ alert(err?.message||err); msBtn.disabled=false; })
+          .submitMarkAsSold(payload);
+      });
+
+      function refreshOpen(){
+        google.script.run
+          .withSuccessHandler(list=>{
+            const sel=document.getElementById('ms_pick');
+            const arr = Array.isArray(list) ? list : [];
+            sel.innerHTML = arr.map(o=>`<option value="${o.row}">${escapeHtml(o.label)}</option>`).join('');
+            if (!arr.length) sel.innerHTML = '';
+          })
+          .withFailureHandler(err=>{
+            console.error('getOpenPurchases failed:', err);
+            document.getElementById('ms_pick').innerHTML = '';
+          })
+          .getOpenPurchases();
+      }
+
+      // ==== Stats ====
+      function refreshStats(){
+        const range=document.getElementById('st_range').value;
+        const item=document.getElementById('st_item').value||'';
+        const from=document.getElementById('st_from').value || '';
+        const to=document.getElementById('st_to').value || '';
+        const hint = document.getElementById('st_hint');
+
+        google.script.run
+          .withSuccessHandler(res=>{
+            STATS_CACHE = (window.normalizeStatsPayload ? window.normalizeStatsPayload(res) : res);
+            hint.textContent = '';
+            drawStats();
+          })
+          .withFailureHandler(err=>{
+            console.error('getStatsV2 failed:', err);
+            STATS_CACHE = window.normalizeStatsPayload ? window.normalizeStatsPayload(null) : null;
+            hint.textContent = 'Stats unavailable.';
+            drawStats();
+          })
+          .getStatsV2(range,item,from,to);
+      }
+
+      function drawStats(){
+        if (!STATS_CACHE){ return; }
+        const s = STATS_CACHE.summary || (window.defaultSummary ? window.defaultSummary() : {});
+        document.getElementById('st_summary').innerHTML =
+          `<span class="pill">Units (Total): ${s.totalQty}</span>`+
+          `<span class="pill">Units Sold: ${s.soldQty}</span>`+
+          `<span class="pill">Revenue: ${money(s.revenue)}</span>`+
+          `<span class="pill">COGS: ${money(s.costSold)}</span>`+
+          `<span class="pill">Fees: ${money(s.fees)}</span>`+
+          `<span class="pill">Shipping: ${money(s.shipping)}</span>`+
+          `<span class="pill"><b>Profit:</b> ${money(s.netProfit)}</span>`+
+          `<span class="pill">ROI: ${pct(s.roiPct)}</span>`+
+          `<span class="pill">Margin: ${pct(s.marginPct)}</span>`+
+          `<span class="pill">ASP: ${money(s.asp)}</span>`+
+          `<span class="pill">Avg Days to Sell: ${s.avgDaysToSell}</span>`;
+
+        const tb=document.querySelector('#st_items_tbl tbody');
+        const rows=(STATS_CACHE.breakdownByItem||[]);
+        tb.innerHTML = rows.map(r=>(
+          `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
+          `<td>${money(r.totalCost)}</td><td>${money(r.totalRevenue)}</td><td><b>${money(r.profit)}</b></td></tr>`
+        )).join('');
+        document.querySelectorAll('#st_items_tbl thead th.sort').forEach(th=>{
+          th.onclick=()=>{
+            const key=th.dataset.sort; const asc = !(th.dataset.asc==='1'); th.dataset.asc=asc?'1':'0';
+            const sorted=[...rows].sort((a,b)=>{
+              const va=a[key], vb=b[key];
+              if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
+              return asc?(va-vb):(vb-va);
+            });
+            tb.innerHTML = sorted.map(r=>(
+              `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
+              `<td>${money(r.totalCost)}</td><td>${money(r.totalRevenue)}</td><td><b>${money(r.profit)}</b></td></tr>`
+            )).join('');
+          };
+        });
+
+        if (CHART) CHART.destroy();
+        const ctx=document.getElementById('st_chart');
+        const mode=document.getElementById('st_chartType').value;
+
+        if (mode==='revCogs'){
+          const labels=(STATS_CACHE.monthly||[]).map(x=>x.ym);
+          const rev=(STATS_CACHE.monthly||[]).map(x=>x.revenue);
+          const cogs=(STATS_CACHE.monthly||[]).map(x=>Math.abs(x.cost));
+          CHART=new Chart(ctx,{type:'line',data:{
+            labels,
+            datasets:[
+              {label:'Revenue',data:rev,tension:.25,fill:false,borderColor:'#22c55e'},
+              {label:'COGS',data:cogs,tension:.25,fill:false,borderColor:'#ef4444'}
+            ]},
+            options:{plugins:{legend:{display:true}},scales:{y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}}}
+          });
+        }else{
+          const C = STATS_CACHE.charts || {};
+          let labels=[], series={};
+          if (mode==='purchMonth'){ series=C.purchasesByMonthByItem || {}; }
+          if (mode==='salesMonth'){ series=C.salesByMonthByItem || {}; }
+          if (mode==='purchStore'){ series=C.purchasesByStoreByItem || {}; }
+          if (mode==='salesPlatform'){ series=C.salesByPlatformByItem || {}; }
+          labels = Object.keys(series);
+          const items = C.topItems || [];
+          const datasets = items.map(name=>({ label:name, data:labels.map(k=> (series[k] && series[k][name]) ? series[k][name] : 0 ), type:'bar' }));
+          CHART=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{plugins:{legend:{display:true}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
+        }
+        window.__redrawChart = drawStats;
+      }
+
+      // ==== Inventory ====
+      function refreshInventory(){
+        const pill = document.getElementById('inv_totals');
+        const tb   = document.querySelector('#inv_tbl tbody');
+        pill.textContent = 'Loading…'; tb.innerHTML = '';
+        google.script.run
+          .withSuccessHandler(res=>{
+            if (!res || res.error){ pill.textContent = 'Error loading inventory'; if (res && res.error) console.error(res.error); return; }
+            const t = res.totals || {qty:0, cost:0, estValue:0, unrealized:0};
+            pill.innerHTML = `On hand: <b>${t.qty}</b> • Cost: <b>${money(t.cost)}</b> • Est. Value: <b>${money(t.estValue)}</b> • Unrealized: <b>${money(t.unrealized)}</b>`;
+            const rows = res.items || [];
+            tb.innerHTML = rows.map(r => `
+              <tr>
+                <td>${escapeHtml(r.item)}</td>
+                <td>${r.onHandQty}</td>
+                <td>${money(r.avgCost)}</td>
+                <td>${money(r.onHandCost)}</td>
+                <td>${money(r.estPrice)}</td>
+                <td>${money(r.estValue)}</td>
+              </tr>
+            `).join('');
+            document.querySelectorAll('#inv_tbl thead th.sort').forEach(th=>{
+              th.onclick = ()=>{
+                const key = th.dataset.key;
+                const asc = !(th.dataset.asc==='1'); th.dataset.asc = asc ? '1' : '0';
+                const sorted = [...rows].sort((a,b)=>{
+                  const va=a[key], vb=b[key];
+                  if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
+                  return asc?(va-vb):(vb-va);
+                });
+                tb.innerHTML = sorted.map(r => `
+                  <tr>
+                    <td>${escapeHtml(r.item)}</td>
+                    <td>${r.onHandQty}</td>
+                    <td>${money(r.avgCost)}</td>
+                    <td>${money(r.onHandCost)}</td>
+                    <td>${money(r.estPrice)}</td>
+                    <td>${money(r.estValue)}</td>
+                  </tr>
+                `).join('');
+              };
+            });
+          })
+          .withFailureHandler(err=>{ pill.textContent = 'Error loading inventory'; alert(err && err.message ? err.message : err); })
+          .getInventory();
+      }
+
+      // ==== Database ====
+      function loadDatabase(){
+        google.script.run
+          .withSuccessHandler(res => { DB_STATE = res || { items:[], retailers:[], marketplaces:[] }; renderDBCollapsed(); })
+          .withFailureHandler(err => alert('Database load error: ' + (err && err.message ? err.message : err)))
+          .getDatabaseFull();
+
+        google.script.run.withSuccessHandler(data=>{
+          const count = (data && data.rows) ? data.rows.length : 0;
+          document.getElementById('db_sheet_count').textContent = 'Rows: ' + count;
+        }).getOrderBookEditable();
+      }
+
+      function renderDBCollapsed(){
+        try{
+          const it = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
+          const r  = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
+          const m  = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : [];
+          document.getElementById('db_items_count').textContent     = 'Total items: ' + it.length;
+          document.getElementById('db_retailers_count').textContent = 'Total retailers: ' + r.length;
+          document.getElementById('db_mkt_count').textContent       = 'Total platforms: ' + m.length;
+          document.querySelectorAll('#database .db-section').forEach(sec=>{
+            sec.classList.remove('editing');
+            sec.querySelector('.collapsible-body').style.display = 'none';
+            sec.querySelector('[data-action="edit"]').style.display = '';
+            sec.querySelector('[data-action="save"]').style.display = 'none';
+            sec.querySelector('[data-action="cancel"]').style.display = 'none';
+            sec.querySelector('[data-action="add"]').style.display = 'none';
+          });
+          wireDBButtons();
+        }catch(err){ alert('Database render error: ' + (err && err.message ? err.message : err)); console.error(err); }
+      }
+
+      function renderDBBody(section){
+        if (section === 'items') {
+          const it  = DB_STATE.items || [];
+          const tb  = document.querySelector('#db_items_tbl tbody');
+          const storeKey = 'db_cat_collapsed';
+          let collapsed = {}; try { collapsed = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch(_){ collapsed = {}; }
+
+          const catOrder = []; const catSet   = new Set();
+          for (const x of it) { if (isCategoryName(x.name) && !catSet.has(x.name)) { catSet.add(x.name); catOrder.push(x.name); } }
+          const catMap = {}; catOrder.forEach(c => catMap[c] = []);
+
+          const explicitCatFor = (name) => {
+            const m = String(name||'').match(/^([^:]+):\s*/);
+            if (!m) return null;
+            const p = m[1].trim().toUpperCase();
+            return catSet.has(p) ? p : null;
+          };
+
+          let currentCat = null;
+          for (const x of it) {
+            if (!x || !x.name) continue;
+            if (isCategoryName(x.name)) { currentCat = x.name; continue; }
+            const byPrefix = explicitCatFor(x.name);
+            const target = byPrefix || currentCat;
+            if (target && catMap[target]) catMap[target].push(x);
+          }
+          const assigned = new Set(); Object.values(catMap).flat().forEach(r => assigned.add(r.row));
+          const uncategorised = it.filter(x => x && x.name && !isCategoryName(x.name) && !assigned.has(x.row));
+
+          let html = '';
+          for (const cat of catOrder) {
+            const isCol = !!collapsed[cat]; const stateClass = isCol ? 'collapsed' : 'expanded';
+            html += `<tr class="cat-row ${stateClass}" data-role="category" data-cat="${escapeHtml(cat)}">
+              <td class="cat-cell" colspan="100">
+                <div class="cat-bar">
+                  <button class="cat-btn" type="button" aria-expanded="${!isCol}" aria-controls="cat-${escapeHtml(cat)}">
+                    <span class="chev">▸</span><span>${escapeHtml(cat)}</span>
+                  </button>
+                  <button class="db-add cat-add" type="button" data-cat="${escapeHtml(cat)}" title="Add item to ${escapeHtml(cat)}">Add</button>
+                </div>
+              </td>
+            </tr>`;
+
+            const rows = catMap[cat] || [];
+            for (const x of rows) {
+              const msrp = (x.msrp==null?'':x.msrp);
+              const market = (x.market==null?'':x.market);
+              const rel = (x.release||'');
+              html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
+                <td contenteditable="true">${escapeHtml(x.name)}</td>
+                <td contenteditable="true">${escapeHtml(rel)}</td>
+                <td contenteditable="true">${msrp}</td>
+                <td contenteditable="true">${market}</td>
+              </tr>`;
+            }
+          }
+          if (uncategorised.length){
+            const cat = 'Other'; const isCol = !!collapsed[cat]; const stateClass = isCol ? 'collapsed' : 'expanded';
+            html += `<tr class="cat-row ${stateClass}" data-role="category" data-cat="${cat}">
+              <td class="cat-cell" colspan="100">
+                <div class="cat-bar">
+                  <button class="cat-btn" type="button" aria-expanded="${!isCol}" aria-controls="cat-${cat}">
+                    <span class="chev">▸</span><span>${cat}</span>
+                  </button>
+                  <button class="db-add cat-add" type="button" data-cat="${cat}" title="Add item to ${cat}">Add</button>
+                </div>
+              </td>
+            </tr>`;
+
+            for (const x of uncategorised) {
+              const msrp = (x.msrp==null?'':x.msrp);
+              const market = (x.market==null?'':x.market);
+              const rel = (x.release||'');
+              html += `<tr data-row="${x.row}" data-cat="${cat}" style="${isCol?'display:none;':''}">
+                <td contenteditable="true">${escapeHtml(x.name)}</td>
+                <td contenteditable="true">${escapeHtml(rel)}</td>
+                <td contenteditable="true">${msrp}</td>
+                <td contenteditable="true">${market}</td>
+              </tr>`;
+            }
+          }
+          tb.innerHTML = html; tb.dataset.cats = JSON.stringify(catOrder);
+
+          tb.onclick = (ev)=>{
+            // per-category Add button
+            const addBtn = ev.target.closest('button.cat-add');
+            if (addBtn) { insertPendingRowForCategory(addBtn.dataset.cat); return; }
+
+            // expand/collapse category
+            const catRow = ev.target.closest('tr.cat-row');
+            if (!catRow) return;
+            const cat = catRow.dataset.cat;
+            const nowCollapsed = !catRow.classList.contains('collapsed');
+            catRow.classList.toggle('collapsed', nowCollapsed);
+            catRow.classList.toggle('expanded', !nowCollapsed);
+            const rows = tb.querySelectorAll('tr[data-cat]:not(.cat-row)');
+            rows.forEach(r => { if (r.dataset.cat === cat) r.style.display = nowCollapsed ? 'none' : ''; });
+            const obj = {}; try { Object.assign(obj, JSON.parse(localStorage.getItem(storeKey) || '{}')); } catch(_){}
+            obj[cat] = nowCollapsed ? 1 : 0; localStorage.setItem(storeKey, JSON.stringify(obj));
+          };
+
+        } else if (section === 'retailers') {
+          let r = DB_STATE.retailers || []; 
+          const tb = document.querySelector('#db_retail_tbl tbody');
+          r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
+          tb.innerHTML = r.map(x => `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td></tr>`).join('');
+
+        } else if (section === 'marketplaces') {
+          let m = DB_STATE.marketplaces || []; 
+          const tb = document.querySelector('#db_mkt_tbl tbody');
+          m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
+          tb.innerHTML = m.map(x => {
+            const fee = Number(x.fee || 0);
+            return `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td><td contenteditable="true">${fee}</td></tr>`;
+          }).join('');
+
+        } else if (section === 'sheet') {
+          const tb = document.querySelector('#db_sheet_tbl tbody');
+          tb.innerHTML = '<tr><td colspan="8" class="muted">Loading…</td></tr>';
+          google.script.run
+            .withSuccessHandler(data=>{
+              const rows = (data && data.rows) ? data.rows.slice() : [];
+              rows.sort((a, b) => {
+                const da = a.order_date || '';
+                const db = b.order_date || '';
+                if (da && db) {
+                  const cmp = db.localeCompare(da); // desc
+                  if (cmp !== 0) return cmp;
+                } else if (da || db) {
+                  return db ? 1 : -1; // blank dates last
+                }
+                return (b.row || 0) - (a.row || 0);
+              });
+
+              document.getElementById('db_sheet_count').textContent = 'Rows: ' + rows.length;
+              tb.innerHTML = rows.map(r => `
+                <tr data-row="${r.row}">
+                  <td contenteditable="true">${escapeHtml(r.order_date)}</td>
+                  <td contenteditable="true">${escapeHtml(r.item)}</td>
+                  <td contenteditable="true">${r.buy_price}</td>
+                  <td contenteditable="true">${escapeHtml(r.bought_from)}</td>
+                  <td contenteditable="true">${r.sell_price}</td>
+                  <td contenteditable="true">${escapeHtml(r.sale_date)}</td>
+                  <td contenteditable="true">${escapeHtml(r.sale_location)}</td>
+                  <td contenteditable="true">${r.shipping}</td>
+                </tr>
+              `).join('');
+            })
+            .withFailureHandler(err=>{
+              tb.innerHTML = `<tr><td colspan="8">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
+            })
+            .getOrderBookEditable();
+        }
+      }
+
+      function wireDBButtons(){
+        document.querySelectorAll('#database .db-section').forEach(sec=>{
+          const body   = sec.querySelector('.collapsible-body');
+          const edit   = sec.querySelector('[data-action="edit"]');
+          const save   = sec.querySelector('[data-action="save"]');
+          const cancel = sec.querySelector('[data-action="cancel"]');
+          const addBtn = sec.querySelector('[data-action="add"]');
+
+          edit.onclick = ()=>{
+            sec.classList.add('editing');
+            body.style.display = 'block';
+            edit.style.display = 'none';
+            save.style.display = '';
+            cancel.style.display = '';
+            addBtn.style.display = (sec.dataset.section === 'items') ? 'none' : '';
+            renderDBBody(sec.dataset.section);
+          };
+
+          cancel.onclick = ()=> renderDBCollapsed();
+          save.onclick   = ()=> saveDBSection(sec.dataset.section);
+          addBtn.onclick = ()=> addPendingRow(sec.dataset.section);
+        });
+      }
+
+      function addPendingRow(section){
+        if (section === 'items') {
+          const tb = document.querySelector('#db_items_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
+          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
+          tb.insertBefore(tr, tb.firstChild);
+          const firstCell = tr.querySelector('td[contenteditable="true"]');
+          if (firstCell) {
+            setTimeout(() => {
+              firstCell.focus();
+              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+              tr.scrollIntoView({ block: 'nearest' });
+            }, 0);
+          }
+        }
+
+        if (section === 'retailers') {
+          const tb = document.querySelector('#db_retail_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
+          tr.innerHTML = `<td contenteditable="true"></td>`;
+          tb.insertBefore(tr, tb.firstChild);
+          const firstCell = tr.querySelector('td[contenteditable="true"]');
+          if (firstCell) {
+            setTimeout(() => {
+              firstCell.focus();
+              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+              tr.scrollIntoView({ block: 'nearest' });
+            }, 0);
+          }
+        }
+
+        if (section === 'marketplaces') {
+          const tb = document.querySelector('#db_mkt_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
+          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true">0</td>`;
+          tb.insertBefore(tr, tb.firstChild);
+          const firstCell = tr.querySelector('td[contenteditable="true"]');
+          if (firstCell) {
+            setTimeout(() => {
+              firstCell.focus();
+              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+              tr.scrollIntoView({ block: 'nearest' });
+            }, 0);
+          }
+        }
+
+        if (section === 'sheet') {
+          const tb = document.querySelector('#db_sheet_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
+          tr.innerHTML = `
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true">-0</td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true">0</td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true"></td>
+            <td contenteditable="true">0</td>`;
+          tb.insertBefore(tr, tb.firstChild);
+          const firstCell = tr.querySelector('td[contenteditable="true"]');
+          if (firstCell) {
+            setTimeout(() => {
+              firstCell.focus();
+              const range = document.createRange();
+              range.selectNodeContents(firstCell);
+              range.collapse(false);
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(range);
+              tr.scrollIntoView({ block: 'nearest' });
+            }, 0);
+          }
+        }
+      }
+
+      function saveDBSection(section){
+        if (section === 'items') {
+          const rows = Array.from(document.querySelectorAll('#db_items_tbl tbody tr'))
+            .map(tr => {
+              if (tr.classList.contains('__pending')){
+                const name = tr.children[0].textContent.trim();
+                if (!name) return null;
+                const payload = {
+                  name,
+                  release: tr.children[1].textContent.trim(),
+                  msrp: tr.children[2].textContent.trim(),
+                  market: tr.children[3].textContent.trim()
+                };
+                google.script.run.withFailureHandler(err=>alert(err?.message||err)).addDatabaseItem(payload);
+                return null;
+              }
+              if (tr.dataset.row){
+                return {
+                  row: Number(tr.dataset.row),
+                  name: tr.children[0].textContent.trim(),
+                  release: tr.children[1].textContent.trim(),
+                  msrp: tr.children[2].textContent.trim(),
+                  market: tr.children[3].textContent.trim()
+                };
+              }
+              return null;
+            })
+            .filter(Boolean);
+          if (rows.length){
+            google.script.run
+              .withSuccessHandler(()=>{ toast('Items updated ✔'); const wasOpen='items'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
+              .withFailureHandler(err=>alert(err?.message||err))
+              .updateDatabaseItems(rows);
+          }else{
+            toast('Saved ✔'); const wasOpen='items'; loadDatabase(); reopenDBTabAfterLoad(wasOpen);
+          }
+        }
+
+        if (section === 'retailers') {
+          const pend = Array.from(document.querySelectorAll('#db_retail_tbl tbody tr.__pending'));
+          pend.forEach(tr=>{
+            const name = tr.children[0].textContent.trim();
+            if (name){
+              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addDatabaseRetailer(name);
+            }
+          });
+          const rows = Array.from(document.querySelectorAll('#db_retail_tbl tbody tr'))
+            .filter(tr => !tr.classList.contains('__pending'))
+            .map(tr => ({ row: Number(tr.dataset.row), name: tr.children[0].textContent.trim() }));
+          google.script.run
+            .withSuccessHandler(()=>{ toast('Retailers updated ✔'); const wasOpen='retailers'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
+            .withFailureHandler(err=>alert(err?.message||err))
+            .updateDatabaseRetailers(rows);
+        }
+
+        if (section === 'marketplaces') {
+          const pend = Array.from(document.querySelectorAll('#db_mkt_tbl tbody tr.__pending'));
+          pend.forEach(tr=>{
+            const name = tr.children[0].textContent.trim();
+            const fee  = tr.children[1].textContent.trim();
+            if (name){
+              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addDatabaseMarketplace({name, fee});
+            }
+          });
+          const rows = Array.from(document.querySelectorAll('#db_mkt_tbl tbody tr'))
+            .filter(tr => !tr.classList.contains('__pending'))
+            .map(tr => ({ row: Number(tr.dataset.row), name: tr.children[0].textContent.trim(), fee: tr.children[1].textContent.trim() }));
+          google.script.run
+            .withSuccessHandler(()=>{ toast('Platforms updated ✔'); const wasOpen='marketplaces'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
+            .withFailureHandler(err=>alert(err?.message||err))
+            .updateDatabaseMarketplaces(rows);
+        }
+
+        if (section === 'sheet') {
+          const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
+          pend.forEach(tr=>{
+            const payload = {
+              order_date:  tr.children[0].textContent.trim(),
+              item:        tr.children[1].textContent.trim(),
+              buy_price:   tr.children[2].textContent.trim(),
+              bought_from: tr.children[3].textContent.trim(),
+              sell_price:  tr.children[4].textContent.trim(),
+              sale_date:   tr.children[5].textContent.trim(),
+              sale_location: tr.children[6].textContent.trim(),
+              shipping:    tr.children[7].textContent.trim()
+            };
+            if (payload.item){
+              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
+            }
+          });
+
+          const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
+            .filter(tr => !tr.classList.contains('__pending'))
+            .map(tr => ({
+              row: Number(tr.dataset.row),
+              order_date:  tr.children[0].textContent.trim(),
+              item:        tr.children[1].textContent.trim(),
+              buy_price:   tr.children[2].textContent.trim(),
+              bought_from: tr.children[3].textContent.trim(),
+              sell_price:  tr.children[4].textContent.trim(),
+              sale_date:   tr.children[5].textContent.trim(),
+              sale_location: tr.children[6].textContent.trim(),
+              shipping:    tr.children[7].textContent.trim()
+            }));
+          google.script.run
+            .withSuccessHandler(()=>{ toast('Sheet updated ✔'); const wasOpen='sheet'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
+            .withFailureHandler(err=>alert(err?.message||err))
+            .updateOrderBookRows(rows);
+        }
+      }
+
+      function reopenDBTabAfterLoad(which){
+        const tab = document.querySelector('.tab[data-tab="database"]');
+        if (tab){
+          tab.click();
+          setTimeout(()=>{
+            const sec = document.querySelector(`.db-section[data-section="${which}"]`);
+            if (sec){
+              const btn = sec.querySelector('[data-action="edit"]');
+              btn && btn.click();
+            }
+          }, 350);
+        }
+      }
+
+      // ===== FLEX =====
+      function initFlexDefaults(){
+        const fxRange = document.getElementById('fx_range');
+        const fxFrom  = document.getElementById('fx_from');
+        const fxTo    = document.getElementById('fx_to');
+        const fxItem  = document.getElementById('fx_item');
+
+        function updateFlexCustom(){
+          const isCustom = fxRange.value === 'custom';
+          fxFrom.disabled = fxTo.disabled = !isCustom;
+        }
+        fxRange.onchange = updateFlexCustom;
+        updateFlexCustom();
+
+        if (!fxItem.value && META && META.items && META.items.length){
+          fxItem.innerHTML = META.items.map(i=>`<option>${escapeHtml(i)}</option>`).join('');
+          fxItem.value = META.items[0];
+        }
+        initFlexUserBits();
+      }
+
+      function initFlexUserBits(){
+        const fxUser   = document.getElementById('fx_username');
+        const fxAv     = document.getElementById('fx_avatar');
+        const appTitle = document.getElementById('appTitle');
+        const sess = getSession();
+
+        if (sess){
+          const uname = sess.displayName || sess.username || 'User';
+          fxUser.textContent = sess.displayName || (sess.username || 'user');
+          if (sess.avatarUrl){
+            toDataUrl(sess.avatarUrl).then(dataUri => { fxAv.src = dataUri || sess.avatarUrl; })
+                                     .catch(() => { fxAv.src = sess.avatarUrl; });
+          } else {
+            fxAv.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+          }
+          if (appTitle) appTitle.textContent = uname + "s OneTrack";
+        } else {
+          fxUser.textContent = '@username';
+          fxAv.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
+          if (appTitle) appTitle.textContent = "OneTrack";
+        }
+      }
+
+      document.getElementById('fx_gen').addEventListener('click', runFlex);
+      document.getElementById('fx_save').addEventListener('click', saveFlexImage);
+      document.getElementById('fx_clear').addEventListener('click', clearFlexCard);
+
+      function runFlex(){
+        const range = document.getElementById('fx_range').value;
+        const item  = document.getElementById('fx_item').value || '';
+        const from  = document.getElementById('fx_from').value || '';
+        const to    = document.getElementById('fx_to').value   || '';
+        const msg   = document.getElementById('fx_msg');
+
+        if (!item){ toast('Pick an item'); return; }
+        if (msg) msg.textContent = 'Building…';
+
+        google.script.run
+          .withSuccessHandler(res=>{
+            const norm = window.normalizeStatsPayload ? window.normalizeStatsPayload(res) : res;
+            FLEX.cache = norm;
+            drawFlexCard(item, norm);
+            if (msg){ msg.textContent = 'Ready ✔'; setTimeout(()=>{ msg.textContent=''; }, 1200); }
+          })
+          .withFailureHandler(err => {
+            if (msg) msg.textContent = '';
+            alert(err && err.message ? err.message : err);
+          })
+          .getStatsV2(range, item, from, to);
+      }
+
+      async function applyHeaderImage(url){
+        const holder = document.getElementById('fx_bgimg');
+        if (!url){ holder.style.backgroundImage=''; return; }
+        const dataUri = await toDataUrl(url);
+        holder.style.backgroundImage = `url("${dataUri || url}")`;
+      }
+
+      function drawFlexCard(item, stats){
+        const msg = document.getElementById('fx_msg');
+        if (msg){ msg.textContent='Ready ✔'; setTimeout(()=>{ msg.textContent=''; }, 1200); }
+
+        // left title (range-aware)
+        const tEl = document.getElementById('fx_left_title');
+        if (tEl) tEl.textContent = computeFlexStatsTitle();
+
+        // ribbon
+        document.getElementById('fx_ribbon').textContent = item.split(':')[0]?.toUpperCase() || 'ITEM';
+
+        // header image
+        const url = (document.getElementById('fx_img').value || '').trim();
+        applyHeaderImage(url);
+
+        // data
+        const row = (stats.breakdownByItem||[])[0] || { boughtQty:0, soldQty:0, onHandQty:0, totalCost:0, totalRevenue:0, profit:0 };
+        const s   = stats.summary || {};
+        const avgCost = row.boughtQty ? Math.abs(row.totalCost)/row.boughtQty : 0;
+        const avgSale = row.soldQty ? (row.totalRevenue/row.soldQty) : 0;
+
+        // helpers
+        function topKeyFrom(map){
+          let bestK='', bestV=-1;
+          for (const k of Object.keys(map||{})){
+            const v = (map[k] && map[k][item]) ? map[k][item] : 0;
+            if (v>bestV){ bestV=v; bestK=k; }
+          }
+          return bestK || '—';
+        }
+        const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
+        const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
+
+        // LEFT stats
+        const statsEl = document.getElementById('fx_stats');
+        statsEl.innerHTML = `
+          <div class="fx-row"><div class="k">Bought</div><div class="v">${row.boughtQty||0}</div></div>
+          <div class="fx-row"><div class="k">Sold</div><div class="v">${row.soldQty||0}</div></div>
+          <div class="fx-row"><div class="k">Avg Cost</div><div class="v">${money(avgCost)}</div></div>
+          <div class="fx-row"><div class="k">Avg Sale</div><div class="v">${money(avgSale)}</div></div>
+          <div class="fx-divider"></div>
+          <div class="fx-row"><div class="k">Realized Profit</div>
+            <div class="v" style="color:${(row.profit||0)>=0?'var(--good)':'var(--bad)'}">${money(row.profit||0)}</div>
+          </div>
+          <div class="fx-divider"></div>
+          <div class="fx-row"><div class="k">Top Retailer</div><div class="v">${escapeHtml(topRetail)}</div></div>
+          <div class="fx-row"><div class="k">Top Marketplace</div><div class="v">${escapeHtml(topPlat)}</div></div>
+        `;
+
+        // headline
+        document.getElementById('fx_bigprofit').textContent = money(row.profit||0);
+        document.getElementById('fx_subline').innerHTML =
+          `<span>ROI ${pct(s.roiPct)}</span> · <span>Margin ${pct(s.marginPct)}</span> · <span>Avg Days ${s.avgDaysToSell||0}</span>`;
+
+        // CHART
+        const ctx = document.getElementById('fx_chart');
+        const monthly = (stats.monthly||[]).slice().sort((a,b)=>a.ym.localeCompare(b.ym));
+        const labels = monthly.map(x=>x.ym);
+        const cumulative = []; let sum = 0;
+        for (const m of monthly){ sum += (m.profit||0); cumulative.push(Math.round(sum*100)/100); }
+
+        if (FLEX.chart) FLEX.chart.destroy();
+        FLEX.chart = new Chart(ctx,{
+          type:'line',
+          data:{ labels, datasets:[{ label:'Cumulative Net Profit', data:cumulative, tension:.3, fill:false, borderColor:'#22c55e' }]},
+          options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback:v=>'$'+Number(v).toLocaleString() } } } }
+        });
+
+        // right-side metrics (on-hand + unrealized + longest)
+        updateOnHandAndUnrealized(item);
+        updateLongestHold(item);
+
+        window.__drawFlexChart = ()=>drawFlexCard(item, stats);
+      }
+
+      function updateUnrealizedValue(itemName, onHand){
+        const el = document.getElementById('fx_unrealized');
+        const setVal = (n)=>{ if (el) el.textContent = money(Number(n)||0); };
+
+        if (!onHand || !Number(onHand) || Number(onHand) <= 0){ setVal(0); return; }
+
+        const toNum = (v)=>{ const n = Number(String(v||'').replace(/[^0-9.\-]/g,'')); return isFinite(n) ? n : 0; };
+        const normalize = (s)=> String(s||'').trim().toLowerCase();
+
+        const tryCompute = (db)=>{
+          try{
+            const items = (db && Array.isArray(db.items)) ? db.items : null;
+            if (!items) return false;
+
+            let rec = items.find(x => normalize(x && x.name) === normalize(itemName));
+            if (!rec){ rec = items.find(x => normalize(itemName).includes(normalize(x && x.name))); }
+
+            const marketRaw = rec ? (rec.market ?? rec.market_value ?? rec.price ?? 0) : 0;
+            const market = toNum(marketRaw);
+            setVal(toNum(onHand) * market);
+            return true;
+          }catch(_){ return false; }
+        };
+
+        if (tryCompute(window.DB_STATE)) return;
+
+        google.script.run
+          .withSuccessHandler(res => { window.DB_STATE = res || {}; tryCompute(window.DB_STATE) || setVal(0); })
+          .withFailureHandler(() => setVal(0))
+          .getDatabaseFull();
+      }
+
+      function updateOnHandAndUnrealized(itemName){
+        const onHandEl = document.getElementById('fx_onhand');
+        const norm = s => String(s||'').trim().toLowerCase();
+
+        google.script.run
+          .withSuccessHandler(inv => {
+            let qty = 0;
+            try{
+              const rows = Array.isArray(inv?.items) ? inv.items : [];
+              let rec = rows.find(r => norm(r.item) === norm(itemName));
+              if (!rec) rec = rows.find(r => norm(itemName).includes(norm(r.item)));
+              qty = Number(rec?.onHandQty || 0);
+            }catch(_){ qty = 0; }
+
+            if (onHandEl) onHandEl.textContent = String(qty);
+            updateUnrealizedValue(itemName, qty);
+          })
+          .withFailureHandler(() => {
+            if (onHandEl) onHandEl.textContent = '0';
+            updateUnrealizedValue(itemName, 0);
+          })
+          .getInventory();
+      }
+
+      function updateLongestHold(itemName){
+        const el = document.getElementById('fx_longest');
+        const setVal = (txt, muted=false)=>{
+          if (!el) return;
+          el.textContent = txt;
+          el.classList.toggle('muted', !!muted);
+        };
+        const norm = s => String(s||'').trim().toLowerCase();
+        const expect = norm(itemName);
+
+        google.script.run
+          .withSuccessHandler(days=>{
+            const current = norm(document.getElementById('fx_item').value || '');
+            if (current !== expect) return;
+            const n = Number(days);
+            if (isFinite(n) && n >= 0) setVal(n + ' days', n === 0);
+            else setVal('0 days', true);
+          })
+          .withFailureHandler(()=>{
+            const current = norm(document.getElementById('fx_item').value || '');
+            if (current === expect) setVal('0 days', true);
+          })
+          .getLongestHoldDays(itemName);
+      }
+
+      function clearFlexCard(){
+        FLEX.cache = null;
+        if (FLEX.chart) { try { FLEX.chart.destroy(); } catch(_) {} FLEX.chart = null; }
+
+        document.getElementById('fx_stats').innerHTML = '';
+        document.getElementById('fx_bigprofit').textContent = '$0.00';
+        document.getElementById('fx_subline').textContent = '';
+        document.getElementById('fx_ribbon').textContent = 'ITEM';
+
+        const bg = document.getElementById('fx_bgimg');
+        if (bg) bg.style.backgroundImage = '';
+
+        const onHandEl = document.getElementById('fx_onhand');
+        const unrlEl   = document.getElementById('fx_unrealized');
+        const longest  = document.getElementById('fx_longest');
+        if (onHandEl) onHandEl.textContent = '0';
+        if (unrlEl)   unrlEl.textContent   = money(0);
+        if (longest) { longest.textContent = '0 days'; longest.classList.add('muted'); }
+
+        const msg = document.getElementById('fx_msg');
+        if (msg) msg.textContent = '';
+
+        const img = document.getElementById('fx_img');
+        if (img) img.value = '';
+      }
+
+      async function saveFlexImage(){
+        const node = document.getElementById('flexCard');
+        const btn1 = document.getElementById('fx_gen');
+        const btn2 = document.getElementById('fx_save');
+
+        btn1.disabled = btn2.disabled = true;
+        try {
+          node.classList.add("saving");
+          const canvas = await html2canvas(node, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: false });
+          const link = document.createElement('a');
+          link.download = 'flex.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        } catch(e) {
+          alert(e && e.message ? e.message : e);
+        } finally {
+          node.classList.remove("saving");
+          btn1.disabled = btn2.disabled = false;
+        }
+      }
+
+      function insertPendingRowForCategory(cat){
+        const tb = document.querySelector('#db_items_tbl tbody');
+        if (!tb) return;
+        const isOther = (cat === 'Other');
+
+        // expand if collapsed
+        const catHeader = tb.querySelector(`tr.cat-row[data-cat="${CSS.escape(cat)}"]`);
+        if (catHeader && catHeader.classList.contains('collapsed')) {
+          catHeader.classList.remove('collapsed');
+          catHeader.classList.add('expanded');
+          const rowsSameCat = tb.querySelectorAll(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
+          rowsSameCat.forEach(r => r.style.display = '');
+          try {
+            const storeKey = 'db_cat_collapsed';
+            const obj = JSON.parse(localStorage.getItem(storeKey) || '{}');
+            obj[cat] = 0;
+            localStorage.setItem(storeKey, JSON.stringify(obj));
+          } catch(_) {}
+        }
+
+        // helper: "CROWN ZENITH" → "Crown Zenith"
+        function formatCategoryName(str){
+          return String(str || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        // pending row
+        const tr = document.createElement('tr');
+        tr.className = '__pending';
+        tr.setAttribute('data-cat', cat);
+        tr.innerHTML = `
+          <td contenteditable="true">${
+            isOther ? '' : (escapeHtml(formatCategoryName(cat) + ':') + '&nbsp;')
+          }</td>
+          <td contenteditable="true"></td>
+          <td contenteditable="true"></td>
+          <td contenteditable="true"></td>
+        `;
+
+        const firstDataRow = tb.querySelector(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
+        if (firstDataRow) {
+          tb.insertBefore(tr, firstDataRow);
+        } else if (catHeader) {
+          tb.insertBefore(tr, catHeader.nextSibling);
+        } else {
+          tb.insertBefore(tr, tb.firstChild);
+        }
+
+        const firstCell = tr.querySelector('td[contenteditable="true"]');
+        if (firstCell) {
+          setTimeout(() => {
+            firstCell.focus();
+            const range = document.createRange(); range.selectNodeContents(firstCell); range.collapse(false);
+            const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+            tr.scrollIntoView({ block: 'nearest' });
+          }, 0);
+        }
+      }
+    </script>
+  </body>
+</html>
