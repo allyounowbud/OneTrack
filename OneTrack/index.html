@@ -573,11 +573,12 @@
               <div class="muted" id="db_items_count">Total items: 0</div>
             </div>
             <div class="db-actions">
-              <button class="db-edit" data-action="edit">Expand</button>
-              <button class="db-save" data-action="save" style="display:none">Save</button>
-              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
-              <button class="db-add" data-action="add" style="display:none">Add</button>
-            </div>
+  <button type="button" class="db-edit" data-action="edit">Expand</button>
+  <button type="button" class="db-save" data-action="save" style="display:none">Save</button>
+  <button type="button" class="db-cancel" data-action="cancel" style="display:none">Close</button>
+  <button type="button" class="db-add" data-action="add" style="display:none">Add</button>
+</div>
+
           </div>
           <div class="collapsible-body">
             <table id="db_items_tbl" style="margin-top:10px">
@@ -777,11 +778,11 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
       const text = await r.text();
       if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0, 200)}`);
       if (/application\/json/i.test(ct)) return JSON.parse(text);
-      // some proxies don’t set content-type; try JSON, otherwise throw a readable error
       try { return JSON.parse(text); }
       catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0, 200)}`); }
     });
 }
+
 
 
 
@@ -873,9 +874,10 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
   authGate.style.display='none';
   appRoot.style.display='';
   initFlexUserBits();
-  reloadModel();   // ensure metadata loads when the app is visible
-  refreshOpen();   // ← prefetch open purchases so the tab is instant
+  reloadModel();     // metadata for quick/sold/flex lists
+  refreshOpen();     // ← prime “Mark as Sold” dropdown immediately
 }
+
 
 
       // ===== Auth (simple & Netlify-friendly) =====
@@ -990,13 +992,20 @@ function startDiscord(ev){
     const id = el.dataset.tab;
     document.querySelectorAll('section').forEach(s=>s.style.display='none');
     document.getElementById(id).style.display='block';
+
     if (id==='stats')     refreshStats();
     if (id==='inventory') refreshInventory();
     if (id==='database')  loadDatabase();
     if (id==='flex')      initFlexDefaults();
-    if (id==='sold')      refreshOpen();       // ← load open purchases when entering the tab
+    if (id==='sold')      refreshOpen();             // ← populate the picker
+
+    // If metadata hasn’t landed yet, make sure we fetch it for UI that needs lists
+    if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
+      reloadModel();
+    }
   });
 });
+
 
 
       // ==== Helpers ====
@@ -1369,17 +1378,22 @@ function startDiscord(ev){
       }
 
       // ==== Database ====
-      function loadDatabase(){
-        google.script.run
-          .withSuccessHandler(res => { DB_STATE = res || { items:[], retailers:[], marketplaces:[] }; renderDBCollapsed(); })
-          .withFailureHandler(err => alert('Database load error: ' + (err && err.message ? err.message : err)))
-          .getDatabaseFull();
+      async function loadDatabase(){
+  try{
+    const [db, sheet] = await Promise.all([
+      gas('getDatabaseFull'),
+      gas('getOrderBookEditable')
+    ]);
+    DB_STATE = db || { items:[], retailers:[], marketplaces:[] };
+    renderDBCollapsed(); // wires the Expand/Save/Close/Add buttons
+    const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
+    const el = document.getElementById('db_sheet_count');
+    if (el) el.textContent = 'Rows: ' + count;     // no more flicker back to 0
+  }catch(err){
+    alert('Database load error: ' + (err && err.message ? err.message : err));
+  }
+}
 
-        google.script.run.withSuccessHandler(data=>{
-          const count = (data && data.rows) ? data.rows.length : 0;
-          document.getElementById('db_sheet_count').textContent = 'Rows: ' + count;
-        }).getOrderBookEditable();
-      }
 
       function renderDBCollapsed(){
         try{
@@ -1898,6 +1912,12 @@ function startDiscord(ev){
         }
         const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
         const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
+
+        function gas(name, ...args){
+  return new Promise((resolve, reject)=>{
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args);
+  });
+}
 
         // LEFT stats
         const statsEl = document.getElementById('fx_stats');
