@@ -1384,15 +1384,18 @@ function startDiscord(ev){
       gas('getDatabaseFull'),
       gas('getOrderBookEditable')
     ]);
+
     DB_STATE = db || { items:[], retailers:[], marketplaces:[] };
     renderDBCollapsed(); // wires the Expand/Save/Close/Add buttons
+
     const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
     const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: ' + count;     // no more flicker back to 0
+    if (el) el.textContent = 'Rows: ' + count;   // stays correct
   }catch(err){
     alert('Database load error: ' + (err && err.message ? err.message : err));
   }
 }
+
 
 
       function renderDBCollapsed(){
@@ -1918,6 +1921,20 @@ function startDiscord(ev){
     google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args);
   });
 }
+
+        // Promise wrapper around google.script.run calls
+function gas(name, ...args){
+  return new Promise((resolve, reject)=>{
+    try{
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)[name](...args);
+    }catch(e){
+      reject(e);
+    }
+  });
+}
+
 
         // LEFT stats
         const statsEl = document.getElementById('fx_stats');
