@@ -1027,7 +1027,11 @@ function startDiscord(ev){
 
     if (id==='stats') refreshStats();
 if (id==='inventory') refreshInventory();
-if (id==='database') loadDatabase();
+// new: wire the buttons immediately, then fetch data
+if (id==='database') { 
+  try { renderDBCollapsed(); } catch(_) {}
+  loadDatabase();
+}
 if (id==='flex') initFlexDefaults();
     if (id==='sold') refreshOpen();
 
@@ -1414,13 +1418,17 @@ if (id==='flex') initFlexDefaults();
       // ==== Database ====
       async function loadDatabase(){
   try{
+    // make buttons live immediately
+    try { renderDBCollapsed(); } catch(_) {}
+
     const [db, sheet] = await Promise.all([
       gas('getDatabaseFull'),
       gas('getOrderBookEditable')
     ]);
 
     DB_STATE = db || { items:[], retailers:[], marketplaces:[] };
-    renderDBCollapsed(); // wires the Expand/Save/Close/Add buttons
+    renderDBCollapsed(); // refresh counts & keep buttons wired
+
 
     const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
     const el = document.getElementById('db_sheet_count');
@@ -1455,8 +1463,9 @@ if (id==='flex') initFlexDefaults();
 
       function renderDBBody(section){
         if (section === 'items') {
-          const it  = DB_STATE.items || [];
-          const tb  = document.querySelector('#db_items_tbl tbody');
+  const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
+  const tb  = document.querySelector('#db_items_tbl tbody');
+
           const storeKey = 'db_cat_collapsed';
           let collapsed = {}; try { collapsed = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch(_){ collapsed = {}; }
 
@@ -1555,14 +1564,16 @@ if (id==='flex') initFlexDefaults();
           };
 
         } else if (section === 'retailers') {
-          let r = DB_STATE.retailers || []; 
-          const tb = document.querySelector('#db_retail_tbl tbody');
+  let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
+  const tb = document.querySelector('#db_retail_tbl tbody');
+
           r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
           tb.innerHTML = r.map(x => `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td></tr>`).join('');
 
         } else if (section === 'marketplaces') {
-          let m = DB_STATE.marketplaces || []; 
-          const tb = document.querySelector('#db_mkt_tbl tbody');
+  let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : [];
+  const tb = document.querySelector('#db_mkt_tbl tbody');
+
           m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
           tb.innerHTML = m.map(x => {
             const fee = Number(x.fee || 0);
