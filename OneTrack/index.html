@@ -94,6 +94,12 @@
       .db-cancel:hover{border-color:var(--focus)}
       .db-del{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--bad);cursor:pointer}
       .db-del:hover{border-color: var(--focus)}
+      /* Inline row save buttons (accent look, same sizing as .db-del) */
+      .db-row-save,.db-row-update{
+      padding:8px 12px; border-radius:10px; border:1px solid var(--pill-border);
+      background: var(--accent); color:#fff; cursor:pointer
+      }
+      .db-row-save:hover,.db-row-update:hover{ border-color: var(--focus); }
       .collapsible-body{display:none;margin-top:10px}
       [contenteditable="true"]{outline:none;border-bottom:2px dashed transparent}
       [contenteditable="true"]:focus{border-bottom-color:var(--focus)}
@@ -1396,7 +1402,10 @@ tb.innerHTML = rows.map(r => `
 html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
   <td><input type="text"  value="${escapeHtml(x.name)}"></td>
   <td><input type="number" step="0.01" value="${Number(market||0)}"></td>
-  <td class="td-actions"><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
+  <td class="td-actions">
+  <button class="db-row-update" data-row="${x.row}" type="button">Save</button>
+  <button class="db-del" data-kind="items" data-row="${x.row}">Delete</button>
+</td>
 </tr>`;
       }
     }
@@ -1530,7 +1539,7 @@ edit.onclick = async ()=>{
   sec.classList.add('editing');
   body.style.display = 'block';
   edit.style.display = 'none';
-  save.style.display = '';
+  save.style.display = (sec.dataset.section === 'items') ? 'none' : '';
   cancel.style.display = '';
   addBtn.style.display = '';
 
@@ -1551,6 +1560,48 @@ edit.onclick = async ()=>{
         const dbRoot = document.getElementById('database');
         if (!dbRoot.__wiredDelete) {
           dbRoot.addEventListener('click', (ev)=>{
+            // Row-level SAVE for a new (pending) item
+const rowSaveBtn = ev.target.closest('button.db-row-save');
+if (rowSaveBtn) {
+  const tr = rowSaveBtn.closest('tr');
+  const name  = cellVal(tr.children[0]);
+  const market= cellVal(tr.children[1]);
+  if (!name) { toast('Item name required'); return; }
+
+  google.script.run
+    .withSuccessHandler(()=>{
+      toast('Item added ✔');
+      const was='items';
+      loadDatabase();
+      reopenDBTabAfterLoad(was);
+    })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .addDatabaseItem({ name, market });
+  return;
+}
+
+// Row-level UPDATE for an existing item
+const rowUpdBtn = ev.target.closest('button.db-row-update');
+if (rowUpdBtn) {
+  const tr = rowUpdBtn.closest('tr');
+  const rowId = Number(tr.dataset.row||0);
+  if (!rowId) return;
+
+  const name   = cellVal(tr.children[0]);
+  const market = cellVal(tr.children[1]);
+  if (!name) { toast('Item name required'); return; }
+
+  google.script.run
+    .withSuccessHandler(()=>{
+      toast('Item updated ✔');
+      const was='items';
+      loadDatabase();
+      reopenDBTabAfterLoad(was);
+    })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .updateDatabaseItems([{ row: rowId, name, market }]);
+  return;
+}
             const btn = ev.target.closest('button.db-del');
             if (!btn) return;
             const kind = btn.dataset.kind;
@@ -1591,9 +1642,9 @@ edit.onclick = async ()=>{
     const tr = document.createElement('tr');
     tr.className='__pending';
     tr.innerHTML = `
-  <td><input type="text"  value=""></td>
+  <td><input type="text"  value="${escapeHtml(prefix)}"></td>
   <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions"></td>
+  <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
 `;
     tb.insertBefore(tr, tb.firstChild);
     const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
@@ -1615,10 +1666,10 @@ edit.onclick = async ()=>{
     const tr = document.createElement('tr');
     tr.className='__pending';
     tr.innerHTML = `
-      <td><input type="text" value=""></td>
-      <td><input type="number" step="0.0001" value="0"></td>
-      <td class="td-actions"></td>
-    `;
+  <td><input type="text"  value=""></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
+`;
     tb.insertBefore(tr, tb.firstChild);
     const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
   }
