@@ -151,7 +151,6 @@
       body:not([data-theme="light"]) #database .collapsible-body table td[contenteditable="true"]{ color: var(--text); background: rgba(255,255,255,.02); border-bottom-color: var(--input-border); }
       body:not([data-theme="light"]) #db_sheet_tbl tbody td{ color: var(--text); }
       body:not([data-theme="light"]) #db_sheet_tbl thead th{ color:#c4ccd6; }
-      #database .db- button{ color: var(--text); }
       #database .db-actions .db-edit{ background: var(--card-bg); border: 1px solid var(--pill-border); }
       #database .db-actions .db-save, #database .db-actions .db-add{ background: var(--accent); color:#fff; }
       #database .db-actions .db-cancel{ background: transparent; color: var(--text); border: 1px solid var(--pill-border); }
@@ -682,13 +681,25 @@
       function getSession(){
         try{ const raw = localStorage.getItem('orders_user'); return raw ? JSON.parse(raw) : null; }catch(_){ return null; }
       }
-      function showGate(){ appRoot.style.display='none'; authGate.style.display=''; }
-        reloadModel();
+      function showGate(){
+  appRoot.style.display='none';
+  authGate.style.display='';
+}
+
+function showApp(){
+  authGate.style.display='none';
+  appRoot.style.display='';
+  // load model data for dropdowns, stats, etc
+  reloadModel();
   // open last tab or default to quick
   const last = (()=>{
     try{ return localStorage.getItem('orders_lastTab') || 'quick'; }catch(_){ return 'quick'; }
   })();
   openTab(last);
+  // ensure Flex card user/branding bits are ready if user visits Flex first
+  try { initFlexUserBits(); } catch(_){}
+}
+
 
       function showErr(err, fallback){
         const msg = (err && (err.error || err.message)) || (typeof err==='string' ? err : '') || (fallback || 'Something went wrong');
@@ -729,9 +740,6 @@
     setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
     try { history.replaceState(null, '', location.pathname + location.search); } catch(_) {} // clear #sess even on failure
     showGate();
-  })();
-})();
-
         })();
       })();
       const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
