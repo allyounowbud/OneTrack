@@ -770,7 +770,12 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
 
   function callApi(action, params = {}) {
   const qs = new URLSearchParams({ route: 'api', action, ...params });
-- return fetch(`${GAS_API_URL}?${qs.toString()}`, { method: 'GET', credentials: 'omit' })
+return fetch(`${GAS_API_URL}?${qs.toString()}`, {
+  method: 'GET',
+  credentials: 'same-origin',   // send/receive your session cookie
+  cache: 'no-store',
+  headers: { 'Accept': 'application/json' }
+})
 + return fetch(`${GAS_API_URL}?${qs.toString()}`, {
 +   method: 'GET',
 +   credentials: 'same-origin',   // was 'omit' → must send the session cookie
@@ -958,7 +963,7 @@ function startDiscord(ev){
       (function pickUpSess(){
   const h = location.hash || '';
   const m = h.match(/#sess=([^&]+)/);
-  if (!m) return;  // no session code in URL
+  if (!m) return;
 
   const code   = decodeURIComponent(m[1]);
   const status = document.getElementById('gateStatus');
@@ -968,24 +973,20 @@ function startDiscord(ev){
     `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`,
     {
       method: 'GET',
-      credentials: 'same-origin',   // IMPORTANT: accept Set-Cookie
-      cache: 'no-store'
+      credentials: 'same-origin',   // allow Set-Cookie from the function
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
     }
   )
   .then(async r => {
     let data;
-    try { data = await r.json(); }
-    catch { data = { ok:false, error:'Bad JSON from redeem_session_code' }; }
-
+    try { data = await r.json(); } catch { data = { ok:false, error:'Bad JSON from redeem_session_code' }; }
     console.log('redeem_session_code response:', data);
-    Set-Cookie: ot_sess=<token>; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000
 
     if (data && data.profile) {
-      // persist profile for UI and show the app
       try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
-      // drop the #sess=… from the URL
-      history.replaceState(null, '', location.pathname + location.search);
-      // quick sanity: did the cookie stick?
+      history.replaceState(null, '', location.pathname + location.search); // drop #sess
+      // (optional) quick sanity check:
       if (!document.cookie || !/ot_sess=/.test(document.cookie)) {
         console.warn('Session cookie missing after redeem. Check Set-Cookie attributes.');
       }
@@ -993,7 +994,6 @@ function startDiscord(ev){
       return;
     }
 
-    // Didn’t get a profile → show an error and keep the gate up
     if (status) status.textContent = `Sign-in failed${data && data.error ? ': ' + data.error : ''}`;
     showGate();
   })
@@ -1003,6 +1003,7 @@ function startDiscord(ev){
     showGate();
   });
 })();
+
 
       // ===== Init gate/app on load =====
       (function safeBoot(){
