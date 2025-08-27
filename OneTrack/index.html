@@ -393,10 +393,12 @@
         </div>
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
-          <button id="discordBtn" class="discord-btn" type="button" onclick="startDiscord(event)">
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.369A19.791 19.791 0 0 0 16.558 3a13.276 13.276 0 0 0-.66 1.36 18.47 18.47 0 0 0-4.796 0A13.123 13.123 0 0 0 10.44 3a19.736 19.736 0 0 0-3.76 1.369C3.18 8.048 2.36 11.62 2.66 15.139a19.94 19.94 0 0 0 4.886 2.48 14.534 14.534 0 0 0 1.052-1.713 12.805 12.805 0 0 1-1.66-.802c.139-.104.274-.212.405-.322a9.18 9.18 0 0 0 8.314 0c.132.11.267.218.405.322-.532.307-1.089.574-1.667.802.302.6.654 1.172 1.052 1.713a19.897 19.897 0 0 0 4.89-2.48c.4-4.49-.69-8.04-2.72-10.77ZM9.68 13.89c-1.02 0-1.852-.934-1.852-2.08 0-1.146.82-2.08 1.853-2.08s1.873.934 1.853 2.08c0 1.146-.82 2.08-1.853 2.08Zm4.64 0c-1.02 0-1.852-.934-1.852-2.08 0-1.146.82-2.08 1.853-2.08 1.032 0 1.872.934 1.852 2.08 0 1.146-.82 2.08-1.853 2.08Z"/></svg>
-            Sign in with Discord
-          </button>
+          <a id="discordBtn" class="discord-btn"
+   href="https://script.google.com/macros/s/YOUR_EXEC_ID/exec?route=discord_login"
+   target="_top" rel="noopener">
+  … Sign in with Discord …
+</a>
+
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
       </div>
@@ -901,8 +903,11 @@ function startDiscord(ev){
   try { ev?.preventDefault(); ev?.stopPropagation(); } catch(_) {}
   if (gateStatus) gateStatus.textContent = 'Opening Discord…';
   const u = GAS_EXEC_DIRECT + (GAS_EXEC_DIRECT.includes('?') ? '&' : '?') + 'route=discord_login';
-  (window.top || window).location.href = u; // top-level navigation directly to Apps Script
+  // Force top-level navigation from the Netlify page
+  try { (window.top || window).location.href = u; }
+  catch(_) { window.location.href = u; }
 }
+
 
 
 
