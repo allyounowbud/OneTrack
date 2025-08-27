@@ -751,6 +751,8 @@
 
       <datalist id="items"></datalist>
       <datalist id="retailers"></datalist>
+      <datalist id="marketplaces"></datalist>
+
     </div>
 
     <div id="toast" class="toast" style="display:none"></div>
@@ -823,12 +825,13 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
     Runner.prototype[name] = function(...args){
       const spec = map[name](...args) || {};
       return callApi(spec.action, spec.params||{})
-        .then(res=>{
-          if (res && res.ok === false && res.error) throw res;
-          if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
-          this._ok(res);
-        })
-        .catch(this._err);
+  .then(res=>{
+    if (res && res.ok === false) throw new Error(res.error || 'Request failed');
+    if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
+    this._ok(res);
+  })
+  .catch(err => this._err((err && (err.message || err.error)) || String(err)));
+
     };
   });
 
@@ -837,14 +840,17 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
 
   // Promise helper so you can call gas('fnName', payload)
   function gas(name, payload) {
-    return new Promise((resolve, reject) => {
-      const r = window.google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(e => reject(e?.message || String(e)));
-      if (payload === undefined) r[name]();
-      else r[name](payload);
-    });
-  }
+  return new Promise((resolve, reject) => {
+    const r = window.google.script.run
+      .withSuccessHandler(res => {
+        if (res && res.ok === false) reject(res.error || 'Request failed');
+        else resolve(res);
+      })
+      .withFailureHandler(e => reject((e && (e.error || e.message)) || String(e)));
+    if (payload === undefined) r[name](); else r[name](payload);
+  });
+}
+
   window.gas = gas;
 })();
 
@@ -893,6 +899,10 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
   refreshOpen();   // ← add this
 }
 
+function showErr(err, fallback){
+  const msg = (err && (err.error || err.message)) || (typeof err==='string' ? err : '') || (fallback || 'Something went wrong');
+  alert(msg);
+}
 
 
       // ===== Auth (simple & Netlify-friendly) =====
@@ -1042,10 +1052,6 @@ const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
     if (id==='stats') refreshStats();
 if (id==='inventory') refreshInventory();
 // new: wire the buttons immediately, then fetch data
-if (id==='database') { 
-  try { renderDBCollapsed(); } catch(_) {}
-  loadDatabase();
-}
 if (id==='flex') initFlexDefaults();
     if (id==='sold') refreshOpen();
 
@@ -1124,6 +1130,9 @@ if (id==='flex') initFlexDefaults();
           const msMarket = document.getElementById('ms_market');
           if (qaMarket) qaMarket.innerHTML = mktOptions;
           if (msMarket) msMarket.innerHTML = mktOptions;
+          const mktsDL = document.getElementById('marketplaces');
+if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}">`).join('');
+
 
           // Stats item filter
           const stItem = document.getElementById('st_item');
@@ -1244,10 +1253,7 @@ if (id==='flex') initFlexDefaults();
             setTimeout(()=>{ msg.textContent=''; }, 1200);
             qaBtn.disabled=false;
           })
-          .withFailureHandler(err=>{
-            alert(err?.message||err);
-            qaBtn.disabled=false;
-          })
+          .withFailureHandler(err=>{ showErr(err); qaBtn.disabled=false; })
           .submitQuickAdd(payload);
       });
 
@@ -1272,7 +1278,7 @@ if (id==='flex') initFlexDefaults();
             setTimeout(()=>msg.textContent='',1200);
             msBtn.disabled=false;
           })
-          .withFailureHandler(err=>{ alert(err?.message||err); msBtn.disabled=false; })
+          .withFailureHandler(err=>{ showErr(err); msBtn.disabled=false; })
           .submitMarkAsSold(payload);
       });
 
@@ -1425,7 +1431,7 @@ if (id==='flex') initFlexDefaults();
               };
             });
           })
-          .withFailureHandler(err=>{ pill.textContent = 'Error loading inventory'; alert(err && err.message ? err.message : err); })
+          .withFailureHandler(err=>{ pill.textContent='Error loading inventory'; showErr(err); })
           .getInventory();
       }
 
@@ -1480,7 +1486,7 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
     const el = document.getElementById('db_sheet_count');
     if (el) el.textContent = 'Rows: ' + count;   // stays correct
   }catch(err){
-    alert('Database load error: ' + (err && err.message ? err.message : err));
+    showErr(err || 'Database load error');
   }
 }
 
@@ -1489,12 +1495,15 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
 
       function renderDBCollapsed(){
         try{
-          const it = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
-          const r  = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
-          const m  = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : [];
-          document.getElementById('db_items_count').textContent     = 'Total items: ' + it.length;
-          document.getElementById('db_retailers_count').textContent = 'Total retailers: ' + r.length;
-          document.getElementById('db_mkt_count').textContent       = 'Total platforms: ' + m.length;
+          const has = k => (DB_STATE && Array.isArray(DB_STATE[k]));
+const it = has('items') ? DB_STATE.items : null;
+const r  = has('retailers') ? DB_STATE.retailers : null;
+const m  = has('marketplaces') ? DB_STATE.marketplaces : null;
+
+document.getElementById('db_items_count').textContent     = it ? ('Total items: ' + it.length)         : 'Loading…';
+document.getElementById('db_retailers_count').textContent = r  ? ('Total retailers: ' + r.length)      : 'Loading…';
+document.getElementById('db_mkt_count').textContent       = m  ? ('Total platforms: ' + m.length)      : 'Loading…';
+
           document.querySelectorAll('#database .db-section').forEach(sec=>{
             sec.classList.remove('editing');
             sec.querySelector('.collapsible-body').style.display = 'none';
@@ -1645,18 +1654,31 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
               });
 
               document.getElementById('db_sheet_count').textContent = 'Rows: ' + rows.length;
-              tb.innerHTML = rows.map(r => `
-                <tr data-row="${r.row}">
-                  <td contenteditable="true">${escapeHtml(r.order_date)}</td>
-                  <td contenteditable="true">${escapeHtml(r.item)}</td>
-                  <td contenteditable="true">${r.buy_price}</td>
-                  <td contenteditable="true">${escapeHtml(r.bought_from)}</td>
-                  <td contenteditable="true">${r.sell_price}</td>
-                  <td contenteditable="true">${escapeHtml(r.sale_date)}</td>
-                  <td contenteditable="true">${escapeHtml(r.sale_location)}</td>
-                  <td contenteditable="true">${r.shipping}</td>
-                </tr>
-              `).join('');
+
+const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+
+tb.innerHTML = rows.map(r => `
+  <tr data-row="${r.row}">
+    <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
+    <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
+    <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
+    <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
+    <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
+    <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
+    <td>
+      <select>${mktOptions}</select>
+    </td>
+    <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+  </tr>
+`).join('');
+
+// set selected sale location now that <select> exists
+Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
+  const sel = tr.children[6].querySelector('select');
+  if (sel) sel.value = rows[i]?.sale_location || '';
+});
+
             })
             .withFailureHandler(err=>{
               tb.innerHTML = `<tr><td colspan="8">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
@@ -1679,7 +1701,7 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
             edit.style.display = 'none';
             save.style.display = '';
             cancel.style.display = '';
-            addBtn.style.display = (sec.dataset.section === 'items') ? 'none' : '';
+            addBtn.style.display = '';
             renderDBBody(sec.dataset.section);
           };
 
@@ -1745,15 +1767,19 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
           const tb = document.querySelector('#db_sheet_tbl tbody');
           const tr = document.createElement('tr');
           tr.className='__pending';
-          tr.innerHTML = `
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true">-0</td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true">0</td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true"></td>
-            <td contenteditable="true">0</td>`;
+          const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+
+tr.innerHTML = `
+  <td><input type="date" value=""></td>
+  <td><input list="items" value=""></td>
+  <td><input type="number" step="0.01" value="-0"></td>
+  <td><input list="retailers" value=""></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td><input type="date" value=""></td>
+  <td><select>${mktOptions}</select></td>
+  <td><input type="number" step="0.01" value="0"></td>`;
+
           tb.insertBefore(tr, tb.firstChild);
           const firstCell = tr.querySelector('td[contenteditable="true"]');
           if (firstCell) {
@@ -2007,6 +2033,11 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
         }
         const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
         const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
+
+        const getCellVal = td => {
+  const el = td.querySelector('input,select');
+  return (el ? el.value : td.textContent).trim();
+};
 
     
         // LEFT stats
