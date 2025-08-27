@@ -763,7 +763,8 @@
 // (You’ll set the real GAS URL in the function’s environment variable below.)
 // Use proxy ONLY for JSON API calls (fixes CORS)
 const GAS_API_URL     = "/.netlify/functions/gas-proxy";
-const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec"; // ← single source of truth
+- const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
++ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
 
 
 // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
@@ -900,13 +901,16 @@ if (id==='sold') refreshOpen();
       }
 
       // Single entry point for the button
+// in index.html
 function startDiscord(ev){
-  // Optional safety: if someone binds this handler, still go TOP to the direct GAS URL
-  if (ev) { try { ev.preventDefault(); ev.stopPropagation(); } catch(_) {} }
-  if (typeof gateStatus !== 'undefined' && gateStatus) gateStatus.textContent = 'Opening Discord…';
-  const u = GAS_EXEC_DIRECT + (GAS_EXEC_DIRECT.includes('?') ? '&' : '?') + 'route=discord_login';
-  try { (window.top || window).location.href = u; } catch(_) { window.location.href = u; }
+  try { ev?.preventDefault(); ev?.stopPropagation(); } catch(_) {}
+  if (gateStatus) gateStatus.textContent = 'Opening Discord…';
+- const u = "/.netlify/functions/gas-proxy?route=discord_login";
++ const u = GAS_EXEC_DIRECT + "?route=discord_login";
+  try { (window.top || window).location.assign(u); }
+  catch(_) { window.location.href = u; }
 }
+
 
 // DO NOT strip href or replace the node. Just ensure target is correct.
 (function wireDiscord(){
