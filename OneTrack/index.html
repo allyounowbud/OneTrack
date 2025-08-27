@@ -974,87 +974,98 @@ function startDiscord(ev){
       });
 
 // --- robust redeem of #sess=… with proxy + direct fallback ---
-(function pickUpSess(){
-  const h = location.hash || '';
-  const m = h.match(/#sess=([^&]+)/);
-  if (!m) return;                 // we didn't come back from Discord
+// ===== Auth (simple & Netlify-friendly) =====
 
-  const code   = decodeURIComponent(m[1]);
-  const status = document.getElementById('gateStatus');
-  if (status) status.textContent = 'Finalizing sign-in…';
+// (keep your existing showGate(), showApp(), getSession(), startDiscord(), etc. above this block)
 
-  async function redeem(url){
-    try{
-      const r = await fetch(url, {
-        method: 'GET',
-        credentials: 'same-origin',
-        cache: 'no-store',
-        headers: { 'Accept': 'application/json' }
-      });
-      const txt = await r.text();
-      try { return JSON.parse(txt); } 
-      catch { return { ok:false, error: 'Bad JSON: ' + txt.slice(0,120) }; }
-    }catch(err){
-      return { ok:false, error: String(err && (err.message || err)) };
-    }
+// Ensure the Discord button always opens in the top frame (works even if JS is half-broken)
+(function wireDiscord(){
+  const el = document.getElementById('discordBtn');
+  if (el) el.setAttribute('target','_top');
+})();
+
+// Utility: set status text on the gate without exploding if the node is missing
+function setGateStatus(text){
+  const s = document.getElementById('gateStatus');
+  if (s) s.textContent = text || '';
+}
+
+// Try to redeem a one-time code against a URL and always return a JSON object
+async function redeemJson(url){
+  try{
+    const r   = await fetch(url, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    });
+    const txt = await r.text();
+    try { return JSON.parse(txt); }
+    catch { return { ok:false, error:'Bad JSON: ' + txt.slice(0,160) }; }
+  }catch(err){
+    return { ok:false, error:String(err && (err.message || err)) };
   }
+}
+
+// Redeem #sess=… if we just returned from Discord (Netlify proxy → direct fallback)
+(function redeemIfNeeded(){
+  const m = (location.hash || '').match(/#sess=([^&]+)/);
+  if (!m) return;
+
+  const code = decodeURIComponent(m[1]);
+  setGateStatus('Finalizing sign-in…');
 
   (async ()=>{
-    // 1) try Netlify proxy
-    const url1 = `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`;
-    let data = await redeem(url1);
-    // 2) if that fails, try calling GAS directly
+    // 1) Try the Netlify proxy first
+    let data = await redeemJson(
+      `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`
+    );
+
+    // 2) Fallback to calling Apps Script directly
     if (!data || !data.profile) {
-      const url2 = `${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`;
-      data = await redeem(url2);
+      data = await redeemJson(
+        `${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`
+      );
     }
 
     console.log('redeem_session_code response:', data);
 
     if (data && data.profile) {
-      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_) {}
-      // clean the URL and show the app
+      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
+      // Remove the #sess=… so we don’t re-redeem on refresh
       history.replaceState(null, '', location.pathname + location.search);
       showApp();
       return;
     }
 
-    if (status) status.textContent = `Sign-in failed${data && data.error ? ': ' + data.error : ''}`;
+    // Couldn’t redeem → show gate and message
+    setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
     showGate();
   })();
 })();
 
-
-
-
-      // ===== Init gate/app on load =====
-// If we're returning from Discord with a one-time code, let the redeem flow win.
+// ===== Init gate/app on load =====
 const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
 
-// prefix the IIFE with a semicolon in case the previous statement lacked one
-; (function safeBoot(){
+// Boot once DOM is ready. If we’re in the middle of redeeming, just show the gate and let the
+// redeem block above take over.
+;(function safeBoot(){
   try {
-    if (__HAS_SESS_HASH) {
-      // pickUpSess() (defined above) will redeem and call showApp().
-      // Keep the gate visible with the “Finalizing sign-in…” message, but
-      // do not override here or in the fallback timer.
-      showGate();
-      return;
-    }
+    if (__HAS_SESS_HASH) { showGate(); return; }
     getSession() ? showApp() : showGate();
   } catch (e) {
     console.error('Boot error:', e);
     showGate();
   }
-  // last-chance fallback (skip if we're in the middle of a redeem)
+  // last-chance fallback if both were hidden
   setTimeout(() => {
     if (__HAS_SESS_HASH) return;
     const gate = document.getElementById('authGate');
     const app  = document.getElementById('appRoot');
-    const bothHidden = gate && app && gate.style.display === 'none' && app.style.display === 'none';
-    if (bothHidden) showGate();
+    if (gate && app && gate.style.display === 'none' && app.style.display === 'none') showGate();
   }, 300);
 })();
+
 
 
 
