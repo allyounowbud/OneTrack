@@ -770,7 +770,12 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
 
   function callApi(action, params = {}) {
   const qs = new URLSearchParams({ route: 'api', action, ...params });
-  return fetch(`${GAS_API_URL}?${qs.toString()}`, { method: 'GET', credentials: 'omit' })
+- return fetch(`${GAS_API_URL}?${qs.toString()}`, { method: 'GET', credentials: 'omit' })
++ return fetch(`${GAS_API_URL}?${qs.toString()}`, {
++   method: 'GET',
++   credentials: 'same-origin',   // was 'omit' → must send the session cookie
++   cache: 'no-store'
++ })
     .then(async r => {
       const ct = r.headers.get('content-type') || '';
       const text = await r.text();
@@ -780,6 +785,7 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
       catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0, 200)}`); }
     });
 }
+
 
   // Convenience promise wrapper so you can call gas('fnName', payload)
 function gas(name, payload) {
