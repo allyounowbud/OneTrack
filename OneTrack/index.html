@@ -973,46 +973,59 @@ function startDiscord(ev){
         }
       });
 
-      (function pickUpSess(){
+      <script>
+// --- robust redeem of #sess=… with proxy + direct fallback ---
+(function pickUpSess(){
   const h = location.hash || '';
   const m = h.match(/#sess=([^&]+)/);
-  if (!m) return;
+  if (!m) return;                 // we didn't come back from Discord
 
   const code   = decodeURIComponent(m[1]);
   const status = document.getElementById('gateStatus');
   if (status) status.textContent = 'Finalizing sign-in…';
 
-  fetch(
-    `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`,
-    {
-      method: 'GET',
-      credentials: 'same-origin',
-      cache: 'no-store',
-      headers: { 'Accept': 'application/json' }
+  async function redeem(url){
+    try{
+      const r = await fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+      });
+      const txt = await r.text();
+      try { return JSON.parse(txt); } 
+      catch { return { ok:false, error: 'Bad JSON: ' + txt.slice(0,120) }; }
+    }catch(err){
+      return { ok:false, error: String(err && (err.message || err)) };
     }
-  )
-  .then(async r => {
-    let data;
-    try { data = await r.json(); } catch { data = { ok:false, error:'Bad JSON from redeem_session_code' }; }
+  }
+
+  (async ()=>{
+    // 1) try Netlify proxy
+    const url1 = `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`;
+    let data = await redeem(url1);
+    // 2) if that fails, try calling GAS directly
+    if (!data || !data.profile) {
+      const url2 = `${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`;
+      data = await redeem(url2);
+    }
+
     console.log('redeem_session_code response:', data);
 
     if (data && data.profile) {
-      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
-      history.replaceState(null, '', location.pathname + location.search); // remove #sess
-      // It’s OK if the cookie isn’t visible; we still show the app.
+      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_) {}
+      // clean the URL and show the app
+      history.replaceState(null, '', location.pathname + location.search);
       showApp();
       return;
     }
 
     if (status) status.textContent = `Sign-in failed${data && data.error ? ': ' + data.error : ''}`;
     showGate();
-  })
-  .catch(err => {
-    console.error('redeem_session_code error:', err);
-    if (status) status.textContent = 'Sign-in failed.';
-    showGate();
-  });
+  })();
 })();
+</script>
+
 
 
 
