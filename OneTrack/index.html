@@ -202,8 +202,8 @@
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
           <a id="discordBtn" class="discord-btn"
-             href="https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec?route=discord_login"
-             target="_top" rel="noopener">Sign in with Discord</a>
+   href="/.netlify/functions/gas-proxy?route=discord_login"
+   target="_top" rel="noopener">Sign in with Discord</a>
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
       </div>
@@ -717,31 +717,42 @@
           }
           console.log('redeem_session_code response:', data);
           if (data && data.profile) {
-            try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
-            history.replaceState(null, '', location.pathname + location.search);
-            showApp();
-            return;
-          }
-          setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
-          showGate();
+  try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
+  history.replaceState(null, '', location.pathname + location.search);
+  showApp();
+  return;
+}
+setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
+try { history.replaceState(null, '', location.pathname + location.search); } catch(_){}
+showGate();
         })();
       })();
       const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
-      ;(function safeBoot(){
-        try {
-          if (__HAS_SESS_HASH) { showGate(); return; }
-          getSession() ? showApp() : showGate();
-        } catch (e) {
-          console.error('Boot error:', e);
-          showGate();
-        }
-        setTimeout(() => {
-          if (__HAS_SESS_HASH) return;
-          const gate = document.getElementById('authGate');
-          const app  = document.getElementById('appRoot');
-          if (gate && app && gate.style.display === 'none' && app.style.display === 'none') showGate();
-        }, 300);
-      })();
+;(function safeBoot(){
+  try {
+    const sess = getSession();
+    if (sess) {
+      // Already authorized — show the app even if #sess= is still present
+      showApp();
+    } else if (__HAS_SESS_HASH) {
+      // Waiting for redeemIfNeeded to complete; show gate in the meantime
+      showGate();
+    } else {
+      showGate();
+    }
+  } catch (e) {
+    console.error('Boot error:', e);
+    showGate();
+  }
+  setTimeout(() => {
+    const gate = document.getElementById('authGate');
+    const app  = document.getElementById('appRoot');
+    if (gate && app && gate.style.display === 'none' && app.style.display === 'none') {
+      try { getSession() ? showApp() : showGate(); } catch(_) { showGate(); }
+    }
+  }, 300);
+})();
+
 
       // Logout
       logoutBtn?.addEventListener('click', ()=>{
