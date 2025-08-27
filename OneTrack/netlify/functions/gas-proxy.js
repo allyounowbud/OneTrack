@@ -1,52 +1,36 @@
+// netlify/functions/gas-proxy.js
 export async function handler(event) {
-  const EXEC =
-    process.env.GAS_EXEC_URL ||
-    "https://script.google.com/macros/s/REPLACE_WITH_YOUR_EXEC_ID/exec";
+  const execBase = process.env.GAS_EXEC_URL; // e.g. https://script.google.com/macros/s/YOUR_EXEC_ID/exec
+  if (!execBase) {
+    return { statusCode: 500, body: "GAS_EXEC_URL env var is missing" };
+  }
 
-  try {
-    const url = new URL(event.rawUrl);
-    const route = url.searchParams.get("route") || "";
+  const qs = event.queryStringParameters || {};
+  const route = qs.route || "api";
 
-    if (event.httpMethod === "OPTIONS") {
-      return { statusCode: 204, headers: cors(), body: "" };
-    }
-
-    if (route === "discord_login") {
-      return redirect(`${EXEC}?route=discord_login`);
-    }
-
-    if (route === "api") {
-      const target = `${EXEC}${url.search}`;
-      const resp = await fetch(target, { method: "GET" });
-      const body = await resp.text();
-      return {
-        statusCode: resp.status,
-        headers: {
-          ...cors(),
-          "content-type": resp.headers.get("content-type") || "application/json",
-        },
-        body,
-      };
-    }
-
-    return redirect(EXEC);
-  } catch (err) {
+  // For OAuth we must 302 the browser to Apps Script (not proxy HTML)
+  if (route === "discord_login") {
+    const url = execBase + (execBase.includes("?") ? "&" : "?") + "route=discord_login";
     return {
-      statusCode: 500,
-      headers: cors(),
-      body: JSON.stringify({ ok: false, error: String(err?.message || err) }),
+      statusCode: 302,
+      headers: { Location: url, "Cache-Control": "no-store" },
+      body: "",
     };
   }
 
-  function cors() {
-    return {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+  // Everything else: forward GET to Apps Script and relay the response
+  const url = execBase + (execBase.includes("?") ? "&" : "?") +
+              new URLSearchParams(qs).toString();
+
+  const resp = await fetch(url, { method: "GET" });
+  const text = await resp.text();
+
+  return {
+    statusCode: resp.status,
+    headers: {
+      "Content-Type": resp.headers.get("content-type") || "application/json",
       "Cache-Control": "no-store",
-    };
-  }
-  function redirect(location) {
-    return { statusCode: 302, headers: { Location: location, ...cors() }, body: "" };
-  }
+    },
+    body: text,
+  };
 }
