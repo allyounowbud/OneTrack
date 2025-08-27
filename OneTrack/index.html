@@ -683,13 +683,13 @@
         try{ const raw = localStorage.getItem('orders_user'); return raw ? JSON.parse(raw) : null; }catch(_){ return null; }
       }
       function showGate(){ appRoot.style.display='none'; authGate.style.display=''; }
-      function showApp(){
-        authGate.style.display='none';
-        appRoot.style.display='';
-        initFlexUserBits();
         reloadModel();
-        refreshOpen();
-      }
+  // open last tab or default to quick
+  const last = (()=>{
+    try{ return localStorage.getItem('orders_lastTab') || 'quick'; }catch(_){ return 'quick'; }
+  })();
+  openTab(last);
+
       function showErr(err, fallback){
         const msg = (err && (err.error || err.message)) || (typeof err==='string' ? err : '') || (fallback || 'Something went wrong');
         alert(msg);
@@ -750,23 +750,46 @@
       });
 
       // ===== Tabs =====
-      document.querySelectorAll('.tab').forEach(el=>{
-        el.addEventListener('click', ()=>{
-          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-          el.classList.add('active');
-          const id = el.dataset.tab;
-          document.querySelectorAll('section').forEach(s=>s.style.display='none');
-          document.getElementById(id).style.display='block';
-          if (id==='stats') refreshStats();
-          if (id==='inventory') refreshInventory();
-          if (id==='flex') initFlexDefaults();
-          if (id==='sold') refreshOpen();
-          if (id==='database') loadDatabase();
-          if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
-            reloadModel();
-          }
-        });
-      });
+      function openTab(id){
+  // update active tab UI
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.tab === id);
+  });
+  // show section
+  document.querySelectorAll('section').forEach(s=>s.style.display='none');
+  const sec = document.getElementById(id);
+  if (sec) sec.style.display = 'block';
+
+  // remember
+  try{ localStorage.setItem('orders_lastTab', id); }catch(_){}
+
+  // per-tab hooks
+  if (id==='stats') refreshStats();
+  if (id==='inventory') refreshInventory();
+  if (id==='flex') initFlexDefaults();
+  if (id==='sold') {
+    refreshOpen();
+    // default Sell Date today if blank
+    const d = document.getElementById('ms_date');
+    if (d && !d.value) d.value = todayISO();
+  }
+  if (id==='database') loadDatabase();
+  if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
+    reloadModel();
+  }
+  // default Quick Add date & refresh QA fee hint
+  if (id==='quick'){
+    const qd = document.getElementById('qa_date');
+    if (qd && !qd.value) qd.value = todayISO();
+    updateQAFeeHint();
+  }
+}
+
+document.querySelectorAll('.tab').forEach(el=>{
+  el.addEventListener('click', ()=> openTab(el.dataset.tab));
+});
+});
+
 
       // ==== Helpers ====
       let META=null, CHART=null, STATS_CACHE=null, DB_STATE=null, FLEX={ chart:null, cache:null };
@@ -787,10 +810,47 @@
           catch(_e){ return url; }
         }
       }
+
+      function todayISO(){
+  const d = new Date();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+function moneyCompact(n){
+  try{
+    return new Intl.NumberFormat(undefined, { style:'currency', currency:'USD', notation:'compact', maximumFractionDigits:1 }).format(Number(n||0));
+  }catch(_){ return money(n); }
+}
+
       function cellVal(td){
         const el = td && td.querySelector ? td.querySelector('input,select') : null;
         return (el ? el.value : (td?.textContent || '')).trim();
       }
+
+      function getFeePctFor(market){
+  try{
+    const pct = META?.feeTable?.[market]?.pct;
+    return (typeof pct === 'number' && isFinite(pct) && pct>=0) ? pct : 0;
+  }catch(_){ return 0; }
+}
+
+// Quick Add fee hint under Sell Price
+function updateQAFeeHint(){
+  const mkt = document.getElementById('qa_market')?.value || '';
+  const sell = Number(document.getElementById('qa_sell')?.value || 0);
+  const hint = document.getElementById('qa_fee_hint');
+  if (!hint) return;
+  const pct = getFeePctFor(mkt);
+  if (mkt && sell>0 && pct>0){
+    const feeAmt = Math.round(sell * pct * 100)/100;
+    const pctTxt = (pct>0 && pct<1) ? (pct*100).toFixed(2) : String(pct);
+    hint.textContent = `Estimated platform fee: ${pctTxt}% (≈ ${money(feeAmt)})`;
+  }else{
+    hint.textContent = '';
+  }
+}
+
 
       // ==== Load model data ====
       function reloadModel() {
@@ -824,9 +884,34 @@
 
           const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
           const qaMarket = document.getElementById('qa_market');
-          const msMarket = document.getElementById('ms_market');
-          if (qaMarket) qaMarket.innerHTML = mktOptions;
-          if (msMarket) msMarket.innerHTML = mktOptions;
+const msMarket = document.getElementById('ms_market');
+if (qaMarket) qaMarket.innerHTML = mktOptions;
+if (msMarket) msMarket.innerHTML = mktOptions;
+
+          // kick a first-time fee hint update (if user is on Quick Add)
+if (document.querySelector('.tab.active')?.dataset.tab === 'quick'){
+  updateQAFeeHint();
+}
+
+
+// ---- Fee hint (Quick Add) ----
+const qaSell = document.getElementById('qa_sell');
+if (qaMarket){
+  qaMarket.onchange = updateQAFeeHint;
+}
+if (qaSell){
+  qaSell.oninput = updateQAFeeHint;
+}
+
+// ---- Auto-fill fee on Mark Sold when marketplace changes ----
+if (msMarket){
+  msMarket.onchange = ()=>{
+    const pct = getFeePctFor(msMarket.value);   // decimal (e.g. 0.109)
+    const feeInput = document.getElementById('ms_fee');
+    if (feeInput) feeInput.value = (pct || 0);
+  };
+}
+
           const mktsDL = document.getElementById('marketplaces');
           if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}">`).join('');
 
@@ -1025,26 +1110,50 @@
           `<span class="pill">ASP: ${money(s.asp)}</span>`+
           `<span class="pill">Avg Days to Sell: ${s.avgDaysToSell}</span>`;
 
-        const tb=document.querySelector('#st_items_tbl tbody');
-        const rows=(STATS_CACHE.breakdownByItem||[]);
-        tb.innerHTML = rows.map(r=>(
-          `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
-          `<td>${money(r.totalCost)}</td><td>${money(r.totalRevenue)}</td><td><b>${money(r.profit)}</b></td></tr>`
-        )).join('');
-        document.querySelectorAll('#st_items_tbl thead th.sort').forEach(th=>{
-          th.onclick=()=>{
-            const key=th.dataset.sort; const asc = !(th.dataset.asc==='1'); th.dataset.asc=asc?'1':'0';
-            const sorted=[...rows].sort((a,b)=>{
-              const va=a[key], vb=b[key];
-              if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
-              return asc?(va-vb):(vb-va);
-            });
-            tb.innerHTML = sorted.map(r=>(
-              `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
-              `<td>${money(r.totalCost)}</td><td>${money(r.totalRevenue)}</td><td><b>${money(r.profit)}</b></td></tr>`
-            )).join('');
-          };
-        });
+        const tb = document.querySelector('#st_items_tbl tbody');
+let rows = (STATS_CACHE.breakdownByItem||[]);
+
+// apply saved sort (if any)
+let pref = null;
+try { pref = JSON.parse(localStorage.getItem('st_sort')||'null'); } catch(_){ pref=null; }
+if (pref && pref.key){
+  const { key, asc } = pref;
+  rows = [...rows].sort((a,b)=>{
+    const va=a[key], vb=b[key];
+    if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
+    return asc?(va-vb):(vb-va);
+  });
+}
+
+// initial render
+const renderRows = (arr)=> tb.innerHTML = arr.map(r=>(
+  `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
+  `<td>${money(r.totalCost)}</td><td>${money(r.totalRevenue)}</td><td><b>${money(r.profit)}</b></td></tr>`
+)).join('');
+renderRows(rows);
+
+// click to sort + save preference
+document.querySelectorAll('#st_items_tbl thead th.sort').forEach(th=>{
+  th.onclick=()=>{
+    const key = th.dataset.sort;
+    // toggle asc: if clicking same key, flip; else default desc for numbers, asc for strings
+    let asc = true;
+    if (pref && pref.key===key) asc = !pref.asc;
+    else {
+      const sample = rows[0]?.[key];
+      asc = (typeof sample==='string'); // strings asc by default, numbers desc by default
+    }
+    const sorted = [...rows].sort((a,b)=>{
+      const va=a[key], vb=b[key];
+      if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
+      return asc?(va-vb):(vb-va);
+    });
+    rows = sorted;
+    renderRows(rows);
+    try { localStorage.setItem('st_sort', JSON.stringify({key, asc})); } catch(_){}
+  };
+});
+
 
         if (CHART) CHART.destroy();
         const ctx=document.getElementById('st_chart');
@@ -1082,18 +1191,24 @@
           .withSuccessHandler(res=>{
             if (!res || res.error){ pill.textContent = 'Error loading inventory'; if (res && res.error) console.error(res.error); return; }
             const t = res.totals || {qty:0, cost:0, estValue:0, unrealized:0};
-            pill.innerHTML = `On hand: <b>${t.qty}</b> • Cost: <b>${money(t.cost)}</b> • Est. Value: <b>${money(t.estValue)}</b> • Unrealized: <b>${money(t.unrealized)}</b>`;
-            const rows = res.items || [];
-            tb.innerHTML = rows.map(r => `
-              <tr>
-                <td>${escapeHtml(r.item)}</td>
-                <td>${r.onHandQty}</td>
-                <td>${money(r.avgCost)}</td>
-                <td>${money(r.onHandCost)}</td>
-                <td>${money(r.estPrice)}</td>
-                <td>${money(r.estValue)}</td>
-              </tr>
-            `).join('');
+pill.innerHTML = `On hand: <b>${t.qty}</b> • Cost: <b>${moneyCompact(t.cost)}</b> • Est. Value: <b>${moneyCompact(t.estValue)}</b> • Unrealized: <b>${moneyCompact(t.unrealized)}</b>`;
+const rows = (res.items || []).slice().sort((a,b)=>{
+  // default: On Hand desc, then Est. Value desc
+  const d = (b.onHandQty||0) - (a.onHandQty||0);
+  if (d) return d;
+  return (b.estValue||0) - (a.estValue||0);
+});
+tb.innerHTML = rows.map(r => `
+  <tr>
+    <td>${escapeHtml(r.item)}</td>
+    <td>${r.onHandQty}</td>
+    <td>${money(r.avgCost)}</td>
+    <td>${money(r.onHandCost)}</td>
+    <td>${money(r.estPrice)}</td>
+    <td>${money(r.estValue)}</td>
+  </tr>
+`).join('');
+
             document.querySelectorAll('#inv_tbl thead th.sort').forEach(th=>{
               th.onclick = ()=>{
                 const key = th.dataset.key;
