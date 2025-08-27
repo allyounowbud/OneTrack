@@ -750,7 +750,9 @@
       </section>
 
       <datalist id="items"></datalist>
-      <datalist id="retailers"></datalist>
+<datalist id="retailers"></datalist>
+<datalist id="marketplaces"></datalist>
+
     </div>
 
     <div id="toast" class="toast" style="display:none"></div>
@@ -1086,15 +1088,33 @@ if (id==='flex') initFlexDefaults();
       }
 
       // ==== Load model data from server (hardened) ====
-      function reloadModel() {
-        google.script.run
-          .withSuccessHandler(initModel)
-          .withFailureHandler(err => {
-            console.error('getInitModel failed:', err);
-            toast('Could not load metadata.');
-          })
-          .getInitModel();
-      }
+      // ==== Load model data from server (hardened) ====
+
+// Promise wrapper for google.script.run (works in GAS + your shim)
+function gas(name, ...args){
+  return new Promise((resolve, reject)=>{
+    try{
+      const req = google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(err => reject(err));
+      if (typeof req[name] !== 'function') return reject(new Error('Unknown RPC: '+name));
+      req[name](...args);
+    }catch(e){
+      reject(e);
+    }
+  });
+}
+
+function reloadModel() {
+  google.script.run
+    .withSuccessHandler(initModel)
+    .withFailureHandler(err => {
+      console.error('getInitModel failed:', err);
+      toast('Could not load metadata.');
+    })
+    .getInitModel();
+}
+
 
       function initModel(model){
         try {
@@ -1119,11 +1139,16 @@ if (id==='flex') initFlexDefaults();
           if (retailDL) retailDL.innerHTML = retailers.map(x => `<option value="${escapeHtml(x)}">`).join('');
 
           // Market selects (Quick Add / Mark Sold)
-          const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-          const qaMarket = document.getElementById('qa_market');
-          const msMarket = document.getElementById('ms_market');
-          if (qaMarket) qaMarket.innerHTML = mktOptions;
-          if (msMarket) msMarket.innerHTML = mktOptions;
+const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+const qaMarket = document.getElementById('qa_market');
+const msMarket = document.getElementById('ms_market');
+if (qaMarket) qaMarket.innerHTML = mktOptions;
+if (msMarket) msMarket.innerHTML = mktOptions;
+
+// Also fill datalist for the Spreadsheet editor
+const mktsDL = document.getElementById('marketplaces');
+if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}">`).join('');
+
 
           // Stats item filter
           const stItem = document.getElementById('st_item');
@@ -1393,16 +1418,33 @@ if (id==='flex') initFlexDefaults();
             const t = res.totals || {qty:0, cost:0, estValue:0, unrealized:0};
             pill.innerHTML = `On hand: <b>${t.qty}</b> • Cost: <b>${money(t.cost)}</b> • Est. Value: <b>${money(t.estValue)}</b> • Unrealized: <b>${money(t.unrealized)}</b>`;
             const rows = res.items || [];
-            tb.innerHTML = rows.map(r => `
-              <tr>
-                <td>${escapeHtml(r.item)}</td>
-                <td>${r.onHandQty}</td>
-                <td>${money(r.avgCost)}</td>
-                <td>${money(r.onHandCost)}</td>
-                <td>${money(r.estPrice)}</td>
-                <td>${money(r.estValue)}</td>
-              </tr>
-            `).join('');
+            const mktOpts = (META && Array.isArray(META.marketplaces) ? META.marketplaces : [])
+  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+
+tb.innerHTML = rows.map(r => `
+  <tr data-row="${r.row}">
+    <td><input type="date" value="${escapeHtml(r.order_date)}"></td>
+    <td><input list="items" value="${escapeHtml(r.item)}"></td>
+    <td><input type="number" step="0.01" value="${r.buy_price}"></td>
+    <td><input list="retailers" value="${escapeHtml(r.bought_from)}"></td>
+    <td><input type="number" step="0.01" value="${r.sell_price}"></td>
+    <td><input type="date" value="${escapeHtml(r.sale_date)}"></td>
+    <td>
+      <select>
+        ${mktOpts}
+      </select>
+    </td>
+    <td><input type="number" step="0.01" value="${r.shipping}"></td>
+  </tr>
+`).join('');
+
+// set selected marketplace values
+Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
+  const loc = rows[i]?.sale_location || '';
+  const sel = tr.children[6].querySelector('select');
+  if (sel) sel.value = loc;
+});
+
             document.querySelectorAll('#inv_tbl thead th.sort').forEach(th=>{
               th.onclick = ()=>{
                 const key = th.dataset.key;
@@ -1679,7 +1721,7 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
             edit.style.display = 'none';
             save.style.display = '';
             cancel.style.display = '';
-            addBtn.style.display = (sec.dataset.section === 'items') ? 'none' : '';
+            addBtn.style.display = '';
             renderDBBody(sec.dataset.section);
           };
 
@@ -1694,7 +1736,19 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
           const tb = document.querySelector('#db_items_tbl tbody');
           const tr = document.createElement('tr');
           tr.className='__pending';
-          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
+          const mktOpts = (META && Array.isArray(META.marketplaces) ? META.marketplaces : [])
+  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+
+tr.innerHTML = `
+  <td><input type="date" value=""></td>
+  <td><input list="items" value=""></td>
+  <td><input type="number" step="0.01" value="-0"></td>
+  <td><input list="retailers" value=""></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td><input type="date" value=""></td>
+  <td><select>${mktOpts}</select></td>
+  <td><input type="number" step="0.01" value="0"></td>`;
+
           tb.insertBefore(tr, tb.firstChild);
           const firstCell = tr.querySelector('td[contenteditable="true"]');
           if (firstCell) {
@@ -1844,37 +1898,38 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
             .updateDatabaseMarketplaces(rows);
         }
 
-        if (section === 'sheet') {
-          const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
-          pend.forEach(tr=>{
-            const payload = {
-              order_date:  tr.children[0].textContent.trim(),
-              item:        tr.children[1].textContent.trim(),
-              buy_price:   tr.children[2].textContent.trim(),
-              bought_from: tr.children[3].textContent.trim(),
-              sell_price:  tr.children[4].textContent.trim(),
-              sale_date:   tr.children[5].textContent.trim(),
-              sale_location: tr.children[6].textContent.trim(),
-              shipping:    tr.children[7].textContent.trim()
-            };
-            if (payload.item){
-              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
-            }
-          });
+        const getCellVal = (td) => {
+  const el = td.querySelector('input,select');
+  return (el ? el.value : td.textContent).trim();
+};
 
-          const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
-            .filter(tr => !tr.classList.contains('__pending'))
-            .map(tr => ({
-              row: Number(tr.dataset.row),
-              order_date:  tr.children[0].textContent.trim(),
-              item:        tr.children[1].textContent.trim(),
-              buy_price:   tr.children[2].textContent.trim(),
-              bought_from: tr.children[3].textContent.trim(),
-              sell_price:  tr.children[4].textContent.trim(),
-              sale_date:   tr.children[5].textContent.trim(),
-              sale_location: tr.children[6].textContent.trim(),
-              shipping:    tr.children[7].textContent.trim()
-            }));
+// pending row payload
+const payload = {
+  order_date:    getCellVal(tr.children[0]),
+  item:          getCellVal(tr.children[1]),
+  buy_price:     getCellVal(tr.children[2]),
+  bought_from:   getCellVal(tr.children[3]),
+  sell_price:    getCellVal(tr.children[4]),
+  sale_date:     getCellVal(tr.children[5]),
+  sale_location: getCellVal(tr.children[6]),
+  shipping:      getCellVal(tr.children[7])
+};
+
+// existing rows mapping
+.map(tr => ({
+  row:           Number(tr.dataset.row),
+  order_date:    getCellVal(tr.children[0]),
+  item:          getCellVal(tr.children[1]),
+  buy_price:     getCellVal(tr.children[2]),
+  bought_from:   getCellVal(tr.children[3]),
+  sell_price:    getCellVal(tr.children[4]),
+  sale_date:     getCellVal(tr.children[5]),
+  sale_location: getCellVal(tr.children[6]),
+  shipping:      getCellVal(tr.children[7])
+}));
+
+
+          
           google.script.run
             .withSuccessHandler(()=>{ toast('Sheet updated ✔'); const wasOpen='sheet'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
             .withFailureHandler(err=>alert(err?.message||err))
