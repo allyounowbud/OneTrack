@@ -202,7 +202,7 @@
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
           <a id="discordBtn" class="discord-btn"
-   href="/.netlify/functions/gas-proxy?route=discord_login"
+   href="https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec?route=discord_login"
    target="_top" rel="noopener">Sign in with Discord</a>
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
@@ -730,20 +730,18 @@ showGate();
       const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
 ;(function safeBoot(){
   try {
-    const sess = getSession();
-    if (sess) {
-      // Already authorized — show the app even if #sess= is still present
-      showApp();
-    } else if (__HAS_SESS_HASH) {
-      // Waiting for redeemIfNeeded to complete; show gate in the meantime
-      showGate();
-    } else {
-      showGate();
-    }
+    // If we arrive with a session code in the hash, show the app immediately
+    // while redemption runs (redeemIfNeeded will store the profile + clear the hash).
+    if (__HAS_SESS_HASH) { showApp(); return; }
+
+    // Otherwise, fall back to saved session or gate.
+    getSession() ? showApp() : showGate();
   } catch (e) {
     console.error('Boot error:', e);
     showGate();
   }
+
+  // Safety: if somehow neither is visible, decide based on saved session.
   setTimeout(() => {
     const gate = document.getElementById('authGate');
     const app  = document.getElementById('appRoot');
@@ -752,6 +750,7 @@ showGate();
     }
   }, 300);
 })();
+
 
 
       // Logout
