@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8" />
@@ -27,24 +28,13 @@
         --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.06);
         --good:#16a34a;
         --bad:#dc2626;
-
-        /* Flex tab in light mode → darker purple */
-        --flex-green:#4f46e5;         /* main purple (darker) */
-        --flex-green-weak:#ede9fe;    /* light lavender bg */
-        --flex-green-border:#a78bfa;  /* purple border */
-        --flex-decor:#7c3aed;         /* accent purple */
+        --flex-green:#4f46e5;
+        --flex-green-weak:#ede9fe;
+        --flex-green-border:#a78bfa;
+        --flex-decor:#7c3aed;
       }
-
-      /* Flex tab text color in light mode */
-      body[data-theme="light"] .tab[data-tab="flex"] {
-        color:#4f46e5;  /* dark purple text instead of green */
-      }
-
-      /* Light mode: Flex tab active text should be dark */
-      body[data-theme="light"] .tab[data-tab="flex"].active {
-        color:#ffffff; /* white when active */
-      }
-
+      body[data-theme="light"] .tab[data-tab="flex"] { color:#4f46e5; }
+      body[data-theme="light"] .tab[data-tab="flex"].active { color:#ffffff; }
       html,body{height:100%}
       body{font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;color:var(--text);background:var(--bg)}
       .container{max-width:1100px;margin:24px auto;padding:0 16px}
@@ -60,23 +50,11 @@
       }
       .theme-toggle:hover{border-color:var(--focus)}
       .theme-toggle:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,.35)}
-
       .tabs{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
       .tab{padding:10px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--card-bg);color:var(--text);box-shadow:var(--shadow)}
       .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-
-      /* Flex chip colors */
-      .tab[data-tab="flex"]{
-        background:var(--flex-green-weak);
-        border-color:var(--flex-green-border);
-        color:#a7f3d0;
-      }
-      .tab[data-tab="flex"].active{
-        background:var(--flex-green);
-        border-color:var(--flex-green);
-        color:#ffffff;
-      }
-
+      .tab[data-tab="flex"]{ background:var(--flex-green-weak); border-color:var(--flex-green-border); color:#a7f3d0; }
+      .tab[data-tab="flex"].active{ background:var(--flex-green); border-color:var(--flex-green); color:#fff; }
       .card{border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;background:var(--card-bg);box-shadow:var(--shadow);overflow:hidden}
       .subcard{background:var(--card-sub);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);overflow:hidden}
       .subcard+.subcard{margin-top:18px}
@@ -87,12 +65,7 @@
       .row{display:grid;gap:18px;margin-bottom:16px}
       .row-1{grid-template-columns:1fr}.row-2{grid-template-columns:repeat(2,minmax(0,1fr))}.row-3{grid-template-columns:repeat(3,minmax(0,1fr))}
       .row>*{min-width:0}
-      .btn{
-        display:inline-flex;align-items:center;justify-content:center;gap:8px;
-        padding:12px 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;
-        cursor:pointer;box-shadow:var(--shadow);white-space:nowrap;width:auto;
-        transition:box-shadow .15s,transform .04s
-      }
+      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;cursor:pointer;box-shadow:var(--shadow);white-space:nowrap;width:auto;transition:box-shadow .15s,transform .04s}
       .btn:active{transform:translateY(1px)}
       .btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,.35),var(--shadow)}
       .btn:disabled{opacity:.6;cursor:not-allowed}
@@ -117,21 +90,10 @@
       .db-edit{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg);cursor:pointer}
       .db-save,.db-cancel,.db-add{padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
       .db-save,.db-add{background:var(--accent);color:#fff}
-
-      /* high-contrast cancel, esp. in dark mode */
-      .db-cancel{
-        background:transparent;color:var(--text);
-        border:1px solid var(--border)
-      }
+      .db-cancel{background:transparent;color:var(--text);border:1px solid var(--border)}
       .db-cancel:hover{border-color:var(--focus)}
-
-      .db-del{
-  padding:8px 12px; border-radius:10px; border:1px solid var(--border);
-  background:transparent; color:var(--bad); cursor:pointer;
-}
-.db-del:hover{ border-color: var(--focus); }
-
-
+      .db-del{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--bad);cursor:pointer}
+      .db-del:hover{border-color: var(--focus)}
       .collapsible-body{display:none;margin-top:10px}
       [contenteditable="true"]{outline:none;border-bottom:2px dashed transparent}
       [contenteditable="true"]:focus{border-bottom-color:var(--focus)}
@@ -143,53 +105,14 @@
       .cat-row.collapsed .chev{transform:rotate(0)}.cat-row.expanded .chev{transform:rotate(90deg)}
       .name-cell{display:flex;gap:8px;align-items:center}
       .name-cell .cat-select{max-width:220px}.name-cell .name-input{flex:1}
-
-      /* FLEX card styling */
-      .flex-card {
-        position: relative;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow);
-        border-radius: 12px;
-        background: var(--card-sub);
-      }
-
-      .flex-hero{
-        position:relative;
-        min-height:190px;
-        overflow:hidden;
-        isolation:isolate;
-      }
-
-      /* Add breathing room between controls and preview */
+      .flex-card { position: relative; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 12px; background: var(--card-sub); }
+      .flex-hero{ position:relative; min-height:190px; overflow:hidden; isolation:isolate; }
       .flex-controls { margin-bottom: 16px; }
       #flexCard { margin-top: 4px; }
-
-      /* When saving, remove border entirely */
       .flex-card.saving { border: none !important; box-shadow: none !important; }
-
-      .fx-ribbon{
-        position:absolute;left:18px;top:18px;z-index:2;background:linear-gradient(180deg,#2b3648,#1e2836);color:#d8e5ff;border:1px solid rgba(255,255,255,.08);padding:6px 10px;border-radius:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)
-      }
-      .flex-bg{
-        position:absolute;inset:-20% -10% auto -10%;height:260px;background:
-          radial-gradient(60% 60% at 70% 40%, rgba(16,185,129,.45) 0%, transparent 70%),
-          radial-gradient(50% 50% at 20% -10%, rgba(16,185,129,.25) 0%, transparent 70%);
-        opacity:.16;transform:rotate(-6deg);pointer-events:none
-      }
-
-      .flex-bgimg{
-        position:absolute;
-        inset:-3px;
-        background-position:center;
-        background-repeat:no-repeat;
-        background-size:cover;
-        transform:none !important;
-        opacity:.20;
-        filter:saturate(1.05) contrast(1.05);
-        pointer-events:none;
-      }
-
+      .fx-ribbon{ position:absolute;left:18px;top:18px;z-index:2;background:linear-gradient(180deg,#2b3648,#1e2836);color:#d8e5ff;border:1px solid rgba(255,255,255,.08);padding:6px 10px;border-radius:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+      .flex-bg{ position:absolute;inset:-20% -10% auto -10%;height:260px;background: radial-gradient(60% 60% at 70% 40%, rgba(16,185,129,.45) 0%, transparent 70%), radial-gradient(50% 50% at 20% -10%, rgba(16,185,129,.25) 0%, transparent 70%); opacity:.16;transform:rotate(-6deg);pointer-events:none}
+      .flex-bgimg{ position:absolute; inset:-3px; background-position:center; background-repeat:no-repeat; background-size:cover; transform:none !important; opacity:.20; filter:saturate(1.05) contrast(1.05); pointer-events:none; }
       .flex-title{position:absolute;left:18px;bottom:18px;right:18px;z-index:2;font-weight:900;font-size:26px;letter-spacing:.3px;text-shadow:0 1px 0 rgba(0,0,0,.2)}
       .flex-body{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;padding:16px}
       @media (max-width:920px){.flex-body{grid-template-columns:1fr}}
@@ -213,177 +136,53 @@
       .gate-card{border:1px solid var(--border);border-radius:16px;background:var(--card-bg);box-shadow:var(--shadow);padding:22px}
       .gate-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
       .gate-title{font-weight:900;font-size:22px}
-      .discord-btn{
-        display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;
-        background:#5865F2;color:#fff;border:0;cursor:pointer;text-decoration:none;font-weight:700;
-        transition:filter .15s,box-shadow .15s
-      }
+      .discord-btn{display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:#5865F2;color:#fff;border:0;cursor:pointer;text-decoration:none;font-weight:700;transition:filter .15s,box-shadow .15s}
       .discord-btn:hover{filter:brightness(1.05)}
       .discord-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(88,101,242,.35)}
       .discord-btn svg{width:20px;height:20px}
       .gate-foot{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--muted);font-size:12px}
       .link{color:#93c5fd;cursor:pointer;text-decoration:underline}
-
-      /* ===== Dark-mode contrast helpers ===== */
       body:not([data-theme="light"]) .muted{ color:#b3bcc7 }
       body:not([data-theme="light"]) .subhead{ color:#b3bcc7 }
       body:not([data-theme="light"]) thead th{ color:#c4ccd6 }
       body:not([data-theme="light"]) label{ color:#aeb7c2 }
       body:not([data-theme="light"]) .pill{ color:#e9edf2 }
       body:not([data-theme="light"]) .gate-foot{ color:#9fb0c6 }
-
-      /* ===== Database (dark mode) fixes ===== */
-      body:not([data-theme="light"]) #database .collapsible-body table td[contenteditable="true"]{
-        color: var(--text);
-        background: rgba(255,255,255,.02);
-        border-bottom-color: var(--input-border);
-      }
+      body:not([data-theme="light"]) #database .collapsible-body table td[contenteditable="true"]{ color: var(--text); background: rgba(255,255,255,.02); border-bottom-color: var(--input-border); }
       body:not([data-theme="light"]) #db_sheet_tbl tbody td{ color: var(--text); }
       body:not([data-theme="light"]) #db_sheet_tbl thead th{ color:#c4ccd6; }
-
-      /* DB header buttons */
       #database .db-actions button{ color: var(--text); }
-      #database .db-actions .db-edit{
-        background: var(--card-bg);
-        border: 1px solid var(--pill-border);
-      }
-      #database .db-actions .db-save,
-      #database .db-actions .db-add{
-        background: var(--accent); color:#fff;
-      }
-      #database .db-actions .db-cancel{
-        background: transparent;
-        color: var(--text);
-        border: 1px solid var(--pill-border);
-      }
+      #database .db-actions .db-edit{ background: var(--card-bg); border: 1px solid var(--pill-border); }
+      #database .db-actions .db-save, #database .db-actions .db-add{ background: var(--accent); color:#fff; }
+      #database .db-actions .db-cancel{ background: transparent; color: var(--text); border: 1px solid var(--pill-border); }
       #database .db-actions button:hover{ border-color: var(--focus); }
-      #database .db-actions button:focus-visible{
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(139,92,246,.35);
-      }
-      #database .db-section.editing .db-actions .db-cancel{
-        background: rgba(255,255,255,.04);
-        border-color: var(--focus);
-      }
-      #database .db-section.editing .db-actions .db-cancel:hover{
-        background: rgba(255,255,255,.06);
-      }
-
-      /* ===== Dark mode button border enhancement ===== */
-      body:not([data-theme="light"]) button,
-      body:not([data-theme="light"]) .btn,
-      body:not([data-theme="light"]) .discord-btn,
-      body:not([data-theme="light"]) .theme-toggle,
-      body:not([data-theme="light"]) .db-actions button {
-        border: 1px solid var(--pill-border) !important;
-        box-shadow: var(--shadow);
-      }
-
-      /* Items → category header row: remove borders/shadows/backgrounds */
-      #db_items_tbl .cat-row td {
-        border: none !important;
-        box-shadow: none !important;
-        background: transparent !important;
-      }
-      /* Category toggle look */
-      #db_items_tbl .cat-btn,
-      #db_items_tbl .cat-btn:hover,
-      #db_items_tbl .cat-btn:focus,
-      #db_items_tbl .cat-btn:focus-visible {
-        border: none !important;
-        box-shadow: none !important;
-        background: transparent !important;
-        outline: none !important;
-        padding: 6px 0;
-        color: var(--muted);
-      }
+      #database .db-actions button:focus-visible{ outline: none; box-shadow: 0 0 0 3px rgba(139,92,246,.35); }
+      #database .db-section.editing .db-actions .db-cancel{ background: rgba(255,255,255,.04); border-color: var(--focus); }
+      #database .db-section.editing .db-actions .db-cancel:hover{ background: rgba(255,255,255,.06); }
+      body:not([data-theme="light"]) button, body:not([data-theme="light"]) .btn, body:not([data-theme="light"]) .discord-btn, body:not([data-theme="light"]) .theme-toggle, body:not([data-theme="light"]) .db-actions button { border: 1px solid var(--pill-border) !important; box-shadow: var(--shadow); }
+      #db_items_tbl .cat-row td { border: none !important; box-shadow: none !important; background: transparent !important; }
+      #db_items_tbl .cat-btn, #db_items_tbl .cat-btn:hover, #db_items_tbl .cat-btn:focus, #db_items_tbl .cat-btn:focus-visible { border: none !important; box-shadow: none !important; background: transparent !important; outline: none !important; padding: 6px 0; color: var(--muted); }
       #db_items_tbl .cat-bar { gap: 8px; }
-
-      body:not([data-theme="light"]) .btn:hover,
-      body:not([data-theme="light"]) .btn:focus-visible {
-        border-color: #6366f1 !important;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(99,102,241,.35), var(--shadow);
-      }
-
-      /* ===== Stats filters layout fix ===== */
-      #stats .filters{
-        display:grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
-        gap:18px;
-      }
-      #stats .filters .range-pair{
-        grid-column: span 2;
-        display:flex;
-        gap:10px;
-        align-items:end;
-      }
-      @media (max-width: 700px){
-        #stats .filters{ grid-template-columns: 1fr; }
-        #stats .filters .range-pair{
-          grid-column: auto;
-          flex-direction:column;
-          align-items:stretch;
-        }
-      }
-
-      /* ===== Flex filters layout fix ===== */
-      #flex .filters{
-        display:grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
-        gap:18px;
-      }
-      #flex .filters .range-pair{
-        grid-column: span 2;
-        display:flex;
-        gap:10px;
-        align-items:end;
-      }
+      body:not([data-theme="light"]) .btn:hover, body:not([data-theme="light"]) .btn:focus-visible { border-color: #6366f1 !important; outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.35), var(--shadow); }
+      #stats .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:18px; }
+      #stats .filters .range-pair{ grid-column: span 2; display:flex; gap:10px; align-items:end; }
+      @media (max-width: 700px){ #stats .filters{ grid-template-columns: 1fr; } #stats .filters .range-pair{ grid-column: auto; flex-direction:column; align-items:stretch; } }
+      #flex .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:18px; }
+      #flex .filters .range-pair{ grid-column: span 2; display:flex; gap:10px; align-items:end; }
       #flex .filters .range-pair > div{ min-width:0; }
-      @media (max-width: 700px){
-        #flex .filters{ grid-template-columns: 1fr; }
-        #flex .filters .range-pair{
-          grid-column: auto;
-          flex-direction: column;
-          align-items: stretch;
-        }
-      }
-
-      /* Flex: hide overlay title and keep image unrotated */
+      @media (max-width: 700px){ #flex .filters{ grid-template-columns: 1fr; } #flex .filters .range-pair{ grid-column: auto; flex-direction: column; align-items: stretch; } }
       .flex-title{ display:none !important; }
       .flex-card .flex-bgimg{ transform: none !important; }
       #fx_bgimg{ transform:none !important; }
-
-      /* blue for Unrealized */
       :root{ --info:#60a5fa; }
       body[data-theme="light"]{ --info:#2563eb; }
-
-      /* right-column blocks */
       .fx-right-metrics { border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--card-bg); }
       .fx-right-metrics .k { font-size:12px; color: var(--muted); letter-spacing:.06em; text-transform:uppercase; }
       .fx-right-metrics .v { font-size:18px; font-weight:800; }
-
       .cat-add{ padding:8px 12px; border-radius:10px; border:0; background:var(--accent); color:#fff; cursor:pointer }
-
-      /* Full-width flex bar inside the category TD */
-      .cat-bar{
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:8px;
-        width:100%;
-      }
-      .cat-cell{
-        font-weight:700;
-        letter-spacing:.04em;
-        color:var(--muted);
-        border-bottom:none;
-        padding:8px 6px;
-        text-transform:uppercase;
-      }
+      .cat-bar{ display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; }
+      .cat-cell{ font-weight:700; letter-spacing:.04em; color:var(--muted); border-bottom:none; padding:8px 6px; text-transform:uppercase; }
       .cat-add{ padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; cursor:pointer; }
-
-      /* Even out spacing for Quick Add action row */
       .qa-actions { margin-top: 16px; margin-bottom: 0; }
     </style>
 
@@ -401,12 +200,8 @@
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
           <a id="discordBtn" class="discord-btn"
-   href="https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec?route=discord_login"
-   target="_top" rel="noopener">
-  Sign in with Discord
-</a>
-
-
+             href="https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec?route=discord_login"
+             target="_top" rel="noopener">Sign in with Discord</a>
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
       </div>
@@ -553,7 +348,7 @@
         </div>
       </section>
 
-            <!-- Inventory -->
+      <!-- Inventory -->
       <section id="inventory" class="card" style="display:none">
         <div style="margin-bottom:10px"><span class="pill" id="inv_totals">Loading…</span></div>
         <div class="subcard">
@@ -583,12 +378,11 @@
               <div class="muted" id="db_items_count">Total items: 0</div>
             </div>
             <div class="db-actions">
-  <button type="button" class="db-edit" data-action="edit">Expand</button>
-  <button type="button" class="db-save" data-action="save" style="display:none">Save</button>
-  <button type="button" class="db-cancel" data-action="cancel" style="display:none">Close</button>
-  <button type="button" class="db-add" data-action="add" style="display:none">Add</button>
-</div>
-
+              <button type="button" class="db-edit" data-action="edit">Expand</button>
+              <button type="button" class="db-save" data-action="save" style="display:none">Save</button>
+              <button type="button" class="db-cancel" data-action="cancel" style="display:none">Close</button>
+              <button type="button" class="db-add" data-action="add" style="display:none">Add</button>
+            </div>
           </div>
           <div class="collapsible-body">
             <table id="db_items_tbl" style="margin-top:10px">
@@ -659,12 +453,11 @@
           <div class="collapsible-body">
             <table id="db_sheet_tbl" style="margin-top:10px">
               <thead>
-  <tr>
-    <th>Order Date</th><th>Item</th><th>Buy Price</th><th>Bought From</th>
-    <th>Sell Price</th><th>Sale Date</th><th>Sale Location</th><th>Shipping</th><th>Actions</th>
-  </tr>
-</thead>
-
+                <tr>
+                  <th>Order Date</th><th>Item</th><th>Buy Price</th><th>Bought From</th>
+                  <th>Sell Price</th><th>Sale Date</th><th>Sale Location</th><th>Shipping</th><th>Actions</th>
+                </tr>
+              </thead>
               <tbody></tbody>
             </table>
           </div>
@@ -690,14 +483,8 @@
               <div style="flex:1"><label>From</label><input type="date" id="fx_from" disabled></div>
               <div style="flex:1"><label>To</label><input type="date" id="fx_to" disabled></div>
             </div>
-            <div>
-              <label>Item</label>
-              <select id="fx_item"></select>
-            </div>
-            <div>
-              <label>Header Image URL (optional)</label>
-              <input type="url" id="fx_img" placeholder="https://example.com/image.jpg">
-            </div>
+            <div><label>Item</label><select id="fx_item"></select></div>
+            <div><label>Header Image URL (optional)</label><input type="url" id="fx_img" placeholder="https://example.com/image.jpg"></div>
           </div>
           <div class="btn-row">
             <button class="btn" id="fx_gen">Generate</button>
@@ -731,8 +518,6 @@
             <div class="fx-right">
               <div class="fx-chart-title">Cumulative Net Profit</div>
               <canvas id="fx_chart"></canvas>
-
-              <!-- Metrics beneath chart -->
               <div class="fx-right-metrics">
                 <div class="fx-row"><div class="k">Inventory</div><div class="v" id="fx_onhand">0</div></div>
                 <div class="fx-row"><div class="k">Longest Hold</div><div class="v" id="fx_longest">0 days</div></div>
@@ -760,110 +545,96 @@
     <div id="toast" class="toast" style="display:none"></div>
 
     <script>
-      // ===== Base URL from server (or current page sans query) =====
-      const BASE_URL = location.origin; // cosmetic only
-
-const GAS_API_URL = "/.netlify/functions/gas-proxy";
-const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
+      // ===== Base URL / GAS endpoints =====
+      const BASE_URL = location.origin;
+      const GAS_API_URL = "/.netlify/functions/gas-proxy";
+      const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
 
       // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
-(function(){
-  const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
-  if (hasGAS) return; // running inside Apps Script sandbox
+      (function(){
+        const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
+        if (hasGAS) return;
 
-  // Low-level fetch to your Netlify proxy
-  function callApi(action, params = {}) {
-    const qs = new URLSearchParams({ route: 'api', action, ...params });
-    return fetch(`${GAS_API_URL}?${qs.toString()}`, {
-      method: 'GET',
-      credentials: 'same-origin',
-      cache: 'no-store',
-      headers: { 'Accept': 'application/json' }
-    })
-    .then(async r => {
-      const ct = r.headers.get('content-type') || '';
-      const text = await r.text();
-      if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0,200)}`);
-      if (/application\/json/i.test(ct)) return JSON.parse(text);
-      try { return JSON.parse(text); }
-      catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0,200)}`); }
-    });
-  }
+        function callApi(action, params = {}) {
+          const qs = new URLSearchParams({ route: 'api', action, ...params });
+          return fetch(`${GAS_API_URL}?${qs.toString()}`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json' }
+          })
+          .then(async r => {
+            const ct = r.headers.get('content-type') || '';
+            const text = await r.text();
+            if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0,200)}`);
+            if (/application\/json/i.test(ct)) return JSON.parse(text);
+            try { return JSON.parse(text); }
+            catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0,200)}`); }
+          });
+        }
 
-  // Endpoint mapper
-  const map = {
-    getInitModel:              () => ({action:'getInitModel'}),
-    getOpenPurchases:          () => ({action:'getOpenPurchases'}),
-    getInventory:              () => ({action:'getInventory'}),
-    getDatabaseFull:           () => ({action:'getDatabaseFull'}),
-    getOrderBookEditable:      () => ({action:'getOrderBookEditable'}),
-    getStatsV2:       (range,item,from,to)=>({action:'getStatsV2', params:{rangeKey:range, item, from, to}}),
-    getLongestHoldDays:(item)  => ({action:'getLongestHoldDays', params:{item}}),
+        const map = {
+          getInitModel:              () => ({action:'getInitModel'}),
+          getOpenPurchases:          () => ({action:'getOpenPurchases'}),
+          getInventory:              () => ({action:'getInventory'}),
+          getDatabaseFull:           () => ({action:'getDatabaseFull'}),
+          getOrderBookEditable:      () => ({action:'getOrderBookEditable'}),
+          getStatsV2:       (range,item,from,to)=>({action:'getStatsV2', params:{rangeKey:range, item, from, to}}),
+          getLongestHoldDays:(item)  => ({action:'getLongestHoldDays', params:{item}}),
+          submitQuickAdd:    (payload)=>({action:'submitQuickAdd',    params:{payload: JSON.stringify(payload)}}),
+          submitMarkAsSold:  (payload)=>({action:'submitMarkAsSold',  params:{payload: JSON.stringify(payload)}}),
+          addOrderBookRow:   (payload)=>({action:'addOrderBookRow',   params:{payload: JSON.stringify(payload)}}),
+          updateOrderBookRows:(rows)  =>({action:'updateOrderBookRows',params:{rows: JSON.stringify(rows)}}),
+          addDatabaseItem:        (payload)=>({action:'addDatabaseItem',        params:{payload: JSON.stringify(payload)}}),
+          addDatabaseRetailer:    (name)  =>({action:'addDatabaseRetailer',     params:{name}}),
+          addDatabaseMarketplace: (payload)=>({action:'addDatabaseMarketplace', params:{payload: JSON.stringify(payload)}}),
+          updateDatabaseItems:    (rows)  =>({action:'updateDatabaseItems',     params:{rows: JSON.stringify(rows)}}),
+          updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
+          updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
+          removeDatabaseItem:        (row)  => ({action:'removeDatabaseItem',        params:{row}}),
+          removeDatabaseRetailer:    (row)  => ({action:'removeDatabaseRetailer',    params:{row}}),
+          removeDatabaseMarketplace: (row)  => ({action:'removeDatabaseMarketplace', params:{row}}),
+          deleteOrderBookRows:       (rows) => ({action:'deleteOrderBookRows',       params:{rows: JSON.stringify(rows)}}),
+          fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
+        };
 
-    submitQuickAdd:    (payload)=>({action:'submitQuickAdd',    params:{payload: JSON.stringify(payload)}}),
-    submitMarkAsSold:  (payload)=>({action:'submitMarkAsSold',  params:{payload: JSON.stringify(payload)}}),
-    addOrderBookRow:   (payload)=>({action:'addOrderBookRow',   params:{payload: JSON.stringify(payload)}}),
-    updateOrderBookRows:(rows)  =>({action:'updateOrderBookRows',params:{rows: JSON.stringify(rows)}}),
+        function Runner(){
+          this._ok  = ()=>{};
+          this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
+        }
+        Runner.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
+        Runner.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
 
-    addDatabaseItem:        (payload)=>({action:'addDatabaseItem',        params:{payload: JSON.stringify(payload)}}),
-    addDatabaseRetailer:    (name)  =>({action:'addDatabaseRetailer',     params:{name}}),
-    addDatabaseMarketplace: (payload)=>({action:'addDatabaseMarketplace', params:{payload: JSON.stringify(payload)}}),
-    updateDatabaseItems:    (rows)  =>({action:'updateDatabaseItems',     params:{rows: JSON.stringify(rows)}}),
-    updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
-    updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
-    removeDatabaseItem:        (row)  => ({action:'removeDatabaseItem',        params:{row}}),
-    removeDatabaseRetailer:    (row)  => ({action:'removeDatabaseRetailer',    params:{row}}),
-    removeDatabaseMarketplace: (row)  => ({action:'removeDatabaseMarketplace', params:{row}}),
-    deleteOrderBookRows:       (rows) => ({action:'deleteOrderBookRows',       params:{rows: JSON.stringify(rows)}}),
+        Object.keys(map).forEach(name=>{
+          Runner.prototype[name] = function(...args){
+            const spec = map[name](...args) || {};
+            return callApi(spec.action, spec.params||{})
+              .then(res=>{
+                if (res && res.ok === false) throw new Error(res.error || 'Request failed');
+                if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
+                this._ok(res);
+              })
+              .catch(err => this._err((err && (err.message || err.error)) || String(err)));
+          };
+        });
 
+        window.google = { script: { run: new Runner() } };
 
-    fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
-  };
+        function gas(name, payload) {
+          return new Promise((resolve, reject) => {
+            const r = window.google.script.run
+              .withSuccessHandler(res => {
+                if (res && res.ok === false) reject(res.error || 'Request failed');
+                else resolve(res);
+              })
+              .withFailureHandler(e => reject((e && (e.error || e.message)) || String(e)));
+            if (payload === undefined) r[name](); else r[name](payload);
+          });
+        }
+        window.gas = gas;
+      })();
 
-  // google.script.run-compatible facade
-  function Runner(){
-    this._ok  = ()=>{};
-    this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
-  }
-  Runner.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
-  Runner.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
-
-  Object.keys(map).forEach(name=>{
-    Runner.prototype[name] = function(...args){
-      const spec = map[name](...args) || {};
-      return callApi(spec.action, spec.params||{})
-  .then(res=>{
-    if (res && res.ok === false) throw new Error(res.error || 'Request failed');
-    if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
-    this._ok(res);
-  })
-  .catch(err => this._err((err && (err.message || err.error)) || String(err)));
-
-    };
-  });
-
-  // Expose the stubbed surface
-  window.google = { script: { run: new Runner() } };
-
-  // Promise helper so you can call gas('fnName', payload)
-  function gas(name, payload) {
-  return new Promise((resolve, reject) => {
-    const r = window.google.script.run
-      .withSuccessHandler(res => {
-        if (res && res.ok === false) reject(res.error || 'Request failed');
-        else resolve(res);
-      })
-      .withFailureHandler(e => reject((e && (e.error || e.message)) || String(e)));
-    if (payload === undefined) r[name](); else r[name](payload);
-  });
-}
-
-  window.gas = gas;
-})();
-
-
-      
-      // ===== Theme toggle (works on gate + app) =====
+      // ===== Theme toggle =====
       const themeBtn = document.getElementById('themeBtn');
       const gateThemeBtn = document.getElementById('gateThemeBtn');
       const themeLabel = document.getElementById('themeLabel');
@@ -899,64 +670,64 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
       }
       function showGate(){ appRoot.style.display='none'; authGate.style.display=''; }
       function showApp(){
-  authGate.style.display='none';
-  appRoot.style.display='';
-  initFlexUserBits();
-  reloadModel();
-  refreshOpen();   // ← add this
-}
-
-function showErr(err, fallback){
-  const msg = (err && (err.error || err.message)) || (typeof err==='string' ? err : '') || (fallback || 'Something went wrong');
-  alert(msg);
-}
-
-
-      // ===== Auth (simple & Netlify-friendly) =====
-      function hasAppsScript(){
-        return typeof google !== 'undefined' && google.script && google.script.run;
+        authGate.style.display='none';
+        appRoot.style.display='';
+        initFlexUserBits();
+        reloadModel();
+        refreshOpen();
+      }
+      function showErr(err, fallback){
+        const msg = (err && (err.error || err.message)) || (typeof err==='string' ? err : '') || (fallback || 'Something went wrong');
+        alert(msg);
       }
 
-      // Single entry point for the button
-// in index.html
-function startDiscord(ev){
-  try { ev?.preventDefault(); ev?.stopPropagation(); } catch(_) {}
-  if (gateStatus) gateStatus.textContent = 'Opening Discord…';
-  const u = GAS_EXEC_DIRECT + "?route=discord_login";
-  try { (window.top || window).location.assign(u); }
-  catch(_) { window.location.href = u; }
-}
-
-
-
-// DO NOT strip href or replace the node. Just ensure target is correct.
-(function wireDiscord(){
-  const el = document.getElementById('discordBtn');
-  if (!el) return;
-  el.setAttribute('target', '_top');
-  // no cloning, no removing href
-})();
-
-
-      function shortDateMMDDYY(iso){
-        if(!iso) return '';
-        const [y,m,d] = iso.split('-').map(Number);
-        return `${m}/${d}/${String(y).slice(-2)}`;
+      // ===== Auth flow (Discord) =====
+      (function wireDiscord(){ const el = document.getElementById('discordBtn'); if (el) el.setAttribute('target','_top'); })();
+      function setGateStatus(text){ const s = document.getElementById('gateStatus'); if (s) s.textContent = text || ''; }
+      async function redeemJson(url){
+        try{
+          const r = await fetch(url, { method:'GET', credentials:'same-origin', cache:'no-store', headers:{'Accept':'application/json'} });
+          const txt = await r.text();
+          try { return JSON.parse(txt); } catch { return { ok:false, error:'Bad JSON: ' + txt.slice(0,160) }; }
+        }catch(err){ return { ok:false, error:String(err && (err.message || err)) }; }
       }
-      function computeFlexStatsTitle(){
-        const r = document.getElementById('fx_range')?.value || 'all';
-        if (r === 'all')     return 'All-Time Stats';
-        if (r === 'last30')  return 'Last 30 Days Stats';
-        if (r === 'last7')   return 'Last 7 Days Stats';
-        if (r === 'mtd')     return 'Month-to-Date Stats';
-        if (r === 'custom') {
-          const from = document.getElementById('fx_from')?.value || '';
-          const to   = document.getElementById('fx_to')?.value   || '';
-          if (from && to) return `${shortDateMMDDYY(from)} - ${shortDateMMDDYY(to)} Stats`;
-          return 'Custom Range Stats';
+      (function redeemIfNeeded(){
+        const m = (location.hash || '').match(/#sess=([^&]+)/);
+        if (!m) return;
+        const code = decodeURIComponent(m[1]);
+        setGateStatus('Finalizing sign-in…');
+        (async ()=>{
+          let data = await redeemJson(`${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
+          if (!data || !data.profile) {
+            data = await redeemJson(`${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
+          }
+          console.log('redeem_session_code response:', data);
+          if (data && data.profile) {
+            try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
+            history.replaceState(null, '', location.pathname + location.search);
+            showApp();
+            return;
+          }
+          setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
+          showGate();
+        })();
+      })();
+      const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
+      ;(function safeBoot(){
+        try {
+          if (__HAS_SESS_HASH) { showGate(); return; }
+          getSession() ? showApp() : showGate();
+        } catch (e) {
+          console.error('Boot error:', e);
+          showGate();
         }
-        return 'Stats';
-      }
+        setTimeout(() => {
+          if (__HAS_SESS_HASH) return;
+          const gate = document.getElementById('authGate');
+          const app  = document.getElementById('appRoot');
+          if (gate && app && gate.style.display === 'none' && app.style.display === 'none') showGate();
+        }, 300);
+      })();
 
       // Logout
       logoutBtn?.addEventListener('click', ()=>{
@@ -964,134 +735,24 @@ function startDiscord(ev){
         showGate();
       });
 
-      // Receive postMessage from callback (popup -> opener)
-      window.addEventListener('message', (ev)=>{
-        if (!ev || !ev.data) return;
-        if (ev.data.type === 'orders_login_success'){
-          try { localStorage.setItem('orders_user', JSON.stringify(ev.data.profile||{})); } catch(_){}
-          showApp();
-        }
-      });
-
-// --- robust redeem of #sess=… with proxy + direct fallback ---
-// ===== Auth (simple & Netlify-friendly) =====
-
-// (keep your existing showGate(), showApp(), getSession(), startDiscord(), etc. above this block)
-
-// Ensure the Discord button always opens in the top frame (works even if JS is half-broken)
-(function wireDiscord(){
-  const el = document.getElementById('discordBtn');
-  if (el) el.setAttribute('target','_top');
-})();
-
-// Utility: set status text on the gate without exploding if the node is missing
-function setGateStatus(text){
-  const s = document.getElementById('gateStatus');
-  if (s) s.textContent = text || '';
-}
-
-// Try to redeem a one-time code against a URL and always return a JSON object
-async function redeemJson(url){
-  try{
-    const r   = await fetch(url, {
-      method: 'GET',
-      credentials: 'same-origin',
-      cache: 'no-store',
-      headers: { 'Accept': 'application/json' }
-    });
-    const txt = await r.text();
-    try { return JSON.parse(txt); }
-    catch { return { ok:false, error:'Bad JSON: ' + txt.slice(0,160) }; }
-  }catch(err){
-    return { ok:false, error:String(err && (err.message || err)) };
-  }
-}
-
-// Redeem #sess=… if we just returned from Discord (Netlify proxy → direct fallback)
-(function redeemIfNeeded(){
-  const m = (location.hash || '').match(/#sess=([^&]+)/);
-  if (!m) return;
-
-  const code = decodeURIComponent(m[1]);
-  setGateStatus('Finalizing sign-in…');
-
-  (async ()=>{
-    // 1) Try the Netlify proxy first
-    let data = await redeemJson(
-      `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`
-    );
-
-    // 2) Fallback to calling Apps Script directly
-    if (!data || !data.profile) {
-      data = await redeemJson(
-        `${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`
-      );
-    }
-
-    console.log('redeem_session_code response:', data);
-
-    if (data && data.profile) {
-      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
-      // Remove the #sess=… so we don’t re-redeem on refresh
-      history.replaceState(null, '', location.pathname + location.search);
-      showApp();
-      return;
-    }
-
-    // Couldn’t redeem → show gate and message
-    setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
-    showGate();
-  })();
-})();
-
-// ===== Init gate/app on load =====
-const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
-
-// Boot once DOM is ready. If we’re in the middle of redeeming, just show the gate and let the
-// redeem block above take over.
-;(function safeBoot(){
-  try {
-    if (__HAS_SESS_HASH) { showGate(); return; }
-    getSession() ? showApp() : showGate();
-  } catch (e) {
-    console.error('Boot error:', e);
-    showGate();
-  }
-  // last-chance fallback if both were hidden
-  setTimeout(() => {
-    if (__HAS_SESS_HASH) return;
-    const gate = document.getElementById('authGate');
-    const app  = document.getElementById('appRoot');
-    if (gate && app && gate.style.display === 'none' && app.style.display === 'none') showGate();
-  }, 300);
-})();
-
-
-
-
       // ===== Tabs =====
       document.querySelectorAll('.tab').forEach(el=>{
-  el.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    el.classList.add('active');
-    const id = el.dataset.tab;
-    document.querySelectorAll('section').forEach(s=>s.style.display='none');
-    document.getElementById(id).style.display='block';
-
-    if (id==='stats') refreshStats();
-    if (id==='inventory') refreshInventory();
-    if (id==='flex') initFlexDefaults();
-    if (id==='sold') refreshOpen();
-    if (id==='database') loadDatabase();   // ← ADD THIS
-    // ...
-    if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
-      reloadModel();
-    }
-  });
-});
-
-
-
+        el.addEventListener('click', ()=>{
+          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+          el.classList.add('active');
+          const id = el.dataset.tab;
+          document.querySelectorAll('section').forEach(s=>s.style.display='none');
+          document.getElementById(id).style.display='block';
+          if (id==='stats') refreshStats();
+          if (id==='inventory') refreshInventory();
+          if (id==='flex') initFlexDefaults();
+          if (id==='sold') refreshOpen();
+          if (id==='database') loadDatabase();
+          if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
+            reloadModel();
+          }
+        });
+      });
 
       // ==== Helpers ====
       let META=null, CHART=null, STATS_CACHE=null, DB_STATE=null, FLEX={ chart:null, cache:null };
@@ -1100,12 +761,7 @@ const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
       function escapeHtml(s){return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
       function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t.__to);t.__to=setTimeout(()=>t.style.display='none',1500);}
       setChartDefaultsToTheme();
-      function isCategoryName(name){
-        const s=(name||'').trim(); if(!s) return false;
-        return s === s.toUpperCase() && /[A-Z]{2}/.test(s.replace(/[^A-Z]/g,''));
-      }
-
-      // Small fetch->dataURL helper to avoid CORS / taint for html2canvas
+      function isCategoryName(name){ const s=(name||'').trim(); if(!s) return false; return s === s.toUpperCase() && /[A-Z]{2}/.test(s.replace(/[^A-Z]/g,'')); }
       async function toDataUrl(url){
         if(!url) return '';
         try{
@@ -1117,15 +773,12 @@ const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
           catch(_e){ return url; }
         }
       }
+      function cellVal(td){
+        const el = td && td.querySelector ? td.querySelector('input,select') : null;
+        return (el ? el.value : (td?.textContent || '')).trim();
+      }
 
-      // Return the user-visible value from a table cell
-function cellVal(td){
-  const el = td && td.querySelector ? td.querySelector('input,select') : null;
-  return (el ? el.value : (td?.textContent || '')).trim();
-}
-
-
-      // ==== Load model data from server (hardened) ====
+      // ==== Load model data ====
       function reloadModel() {
         google.script.run
           .withSuccessHandler(initModel)
@@ -1146,35 +799,28 @@ function cellVal(td){
           } else {
             META = model;
           }
-
-          // Always use safe arrays
           const items      = Array.isArray(META.items) ? META.items : [];
           const retailers  = Array.isArray(META.retailers) ? META.retailers : [];
           const markets    = Array.isArray(META.marketplaces) ? META.marketplaces : [];
 
-          // Datalists for Quick Add
           const itemsDL = document.getElementById('items');
           const retailDL = document.getElementById('retailers');
           if (itemsDL)  itemsDL.innerHTML  = items.map(x => `<option value="${escapeHtml(x)}">`).join('');
           if (retailDL) retailDL.innerHTML = retailers.map(x => `<option value="${escapeHtml(x)}">`).join('');
 
-          // Market selects (Quick Add / Mark Sold)
           const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
           const qaMarket = document.getElementById('qa_market');
           const msMarket = document.getElementById('ms_market');
           if (qaMarket) qaMarket.innerHTML = mktOptions;
           if (msMarket) msMarket.innerHTML = mktOptions;
           const mktsDL = document.getElementById('marketplaces');
-if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}">`).join('');
+          if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}">`).join('');
 
-
-          // Stats item filter
           const stItem = document.getElementById('st_item');
           if (stItem) {
             stItem.innerHTML = `<option value="">All items</option>` + items.map(i => `<option>${escapeHtml(i)}</option>`).join('');
           }
 
-          // Stats controls (idempotent wiring)
           const rangeSel = document.getElementById('st_range');
           const fromInp  = document.getElementById('st_from');
           const toInp    = document.getElementById('st_to');
@@ -1187,7 +833,6 @@ if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}
             if (hint) hint.textContent = isCustom ? 'Pick a From/To date and click Apply' : '';
           }
 
-          // Remove old listeners (by cloning) to avoid duplicates if init runs twice
           if (rangeSel) {
             const rClone = rangeSel.cloneNode(true);
             rangeSel.parentNode.replaceChild(rClone, rangeSel);
@@ -1219,10 +864,7 @@ if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}
           updateCustomUI();
 
           function defaultSummary(){
-            return {
-              totalQty:0, soldQty:0, revenue:0, costSold:0, fees:0, shipping:0,
-              netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0
-            };
+            return { totalQty:0, soldQty:0, revenue:0, costSold:0, fees:0, shipping:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 };
           }
           function normalizeStatsPayload(res){
             if (!res || typeof res !== 'object') {
@@ -1252,8 +894,6 @@ if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}
               monthly: Array.isArray(res.monthly) ? res.monthly : []
             };
           }
-
-          // expose for later uses
           window.defaultSummary = defaultSummary;
           window.normalizeStatsPayload = normalizeStatsPayload;
 
@@ -1261,6 +901,7 @@ if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}
           console.error('initModel crashed:', e);
         }
       }
+
       // ==== Quick Add ====
       const qaBtn = document.getElementById('qa_btn');
       qaBtn.addEventListener('click', ()=>{
@@ -1399,14 +1040,10 @@ if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}
           const labels=(STATS_CACHE.monthly||[]).map(x=>x.ym);
           const rev=(STATS_CACHE.monthly||[]).map(x=>x.revenue);
           const cogs=(STATS_CACHE.monthly||[]).map(x=>Math.abs(x.cost));
-          CHART=new Chart(ctx,{type:'line',data:{
-            labels,
-            datasets:[
-              {label:'Revenue',data:rev,tension:.25,fill:false,borderColor:'#22c55e'},
-              {label:'COGS',data:cogs,tension:.25,fill:false,borderColor:'#ef4444'}
-            ]},
-            options:{plugins:{legend:{display:true}},scales:{y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}}}
-          });
+          CHART=new Chart(ctx,{type:'line',data:{labels,datasets:[
+            {label:'Revenue',data:rev,tension:.25,fill:false,borderColor:'#22c55e'},
+            {label:'COGS',data:cogs,tension:.25,fill:false,borderColor:'#ef4444'}
+          ]},options:{plugins:{legend:{display:true}},scales:{y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}}}});
         }else{
           const C = STATS_CACHE.charts || {};
           let labels=[], series={};
@@ -1470,73 +1107,46 @@ if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}
       }
 
       // ==== Database ====
+      function normDBShape(raw){
+        const x = (raw && typeof raw === 'object') ? raw : {};
+        const pick = (...keys)=> keys.map(k=> x[k]).find(v => Array.isArray(v));
+        let items        = pick('items','db_items','itemRows','productItems') || [];
+        let retailers    = pick('retailers','stores','vendors','retailerRows') || [];
+        let marketplaces = pick('marketplaces','platforms','salePlatforms','markets','marketRows') || [];
+        items = items.map(r => typeof r === 'string' ? ({ row:null, name:r, release:'', msrp:'', market:'' }) : r);
+        retailers = retailers.map(r => typeof r === 'string' ? ({ row:null, name:r }) : r);
+        marketplaces = marketplaces.map(r => {
+          if (typeof r === 'string') return { row:null, name:r, fee:0 };
+          const fee = r.fee ?? r.feePct ?? r.fee_percent ?? r.feePercent ?? r.feeRate ?? 0;
+          return { ...r, fee };
+        });
+        return { items, retailers, marketplaces };
+      }
 
-      // Normalize DB payload into { items:[{row,name,release,msrp,market}], retailers:[{row,name}], marketplaces:[{row,name,fee}] }
-function normDBShape(raw){
-  const x = (raw && typeof raw === 'object') ? raw : {};
-
-  // pick the first existing array for each group (covers different server key names)
-  const pick = (...keys)=> keys.map(k=> x[k]).find(v => Array.isArray(v));
-
-  let items        = pick('items','db_items','itemRows','productItems') || [];
-  let retailers    = pick('retailers','stores','vendors','retailerRows') || [];
-  let marketplaces = pick('marketplaces','platforms','salePlatforms','markets','marketRows') || [];
-
-  // coerce simple string lists to objects (what your UI expects)
-  items = items.map(r => typeof r === 'string'
-    ? ({ row:null, name:r, release:'', msrp:'', market:'' })
-    : r);
-
-  retailers = retailers.map(r => typeof r === 'string'
-    ? ({ row:null, name:r })
-    : r);
-
-  marketplaces = marketplaces.map(r => {
-    if (typeof r === 'string') return { row:null, name:r, fee:0 };
-    const fee = r.fee ?? r.feePct ?? r.fee_percent ?? r.feePercent ?? r.feeRate ?? 0;
-    return { ...r, fee };
-  });
-
-  return { items, retailers, marketplaces };
-}
-
-      
       async function loadDatabase(){
-  try{
-    // make buttons live immediately
-    try { renderDBCollapsed(); } catch(_) {}
-
-    const [db, sheet] = await Promise.all([
-      gas('getDatabaseFull'),
-      gas('getOrderBookEditable')
-    ]);
-
-    DB_STATE = normDBShape(db);
-renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
-
-
-
-    const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: ' + count;   // stays correct
-  }catch(err){
-    showErr(err || 'Database load error');
-  }
-}
-
-
-
+        try{
+          try { renderDBCollapsed(); } catch(_) {}
+          const [db, sheet] = await Promise.all([ gas('getDatabaseFull'), gas('getOrderBookEditable') ]);
+          DB_STATE = normDBShape(db);
+          renderDBCollapsed();
+          const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
+          const el = document.getElementById('db_sheet_count');
+          if (el) el.textContent = 'Rows: ' + count;
+        }catch(err){
+          showErr(err || 'Database load error');
+        }
+      }
 
       function renderDBCollapsed(){
         try{
           const has = k => (DB_STATE && Array.isArray(DB_STATE[k]));
-const it = has('items') ? DB_STATE.items : null;
-const r  = has('retailers') ? DB_STATE.retailers : null;
-const m  = has('marketplaces') ? DB_STATE.marketplaces : null;
+          const it = has('items') ? DB_STATE.items : null;
+          const r  = has('retailers') ? DB_STATE.retailers : null;
+          const m  = has('marketplaces') ? DB_STATE.marketplaces : null;
 
-document.getElementById('db_items_count').textContent     = it ? ('Total items: ' + it.length)         : 'Loading…';
-document.getElementById('db_retailers_count').textContent = r  ? ('Total retailers: ' + r.length)      : 'Loading…';
-document.getElementById('db_mkt_count').textContent       = m  ? ('Total platforms: ' + m.length)      : 'Loading…';
+          document.getElementById('db_items_count').textContent     = it ? ('Total items: ' + it.length)    : 'Loading…';
+          document.getElementById('db_retailers_count').textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
+          document.getElementById('db_mkt_count').textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
 
           document.querySelectorAll('#database .db-section').forEach(sec=>{
             sec.classList.remove('editing');
@@ -1552,8 +1162,8 @@ document.getElementById('db_mkt_count').textContent       = m  ? ('Total platfor
 
       function renderDBBody(section){
         if (section === 'items') {
-  const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
-  const tb  = document.querySelector('#db_items_tbl tbody');
+          const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
+          const tb  = document.querySelector('#db_items_tbl tbody');
 
           const storeKey = 'db_cat_collapsed';
           let collapsed = {}; try { collapsed = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch(_){ collapsed = {}; }
@@ -1600,17 +1210,16 @@ document.getElementById('db_mkt_count').textContent       = m  ? ('Total platfor
               const market = (x.market==null?'':x.market);
               const rel = (x.release||'');
               html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
-  <td contenteditable="true">${escapeHtml(x.name)}</td>
-  <td contenteditable="true">${escapeHtml(rel)}</td>
-  <td contenteditable="true">${msrp}</td>
-  <td contenteditable="true">${market}</td>
-  <td><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
-</tr>`;
-
+                <td contenteditable="true">${escapeHtml(x.name)}</td>
+                <td contenteditable="true">${escapeHtml(rel)}</td>
+                <td contenteditable="true">${msrp}</td>
+                <td contenteditable="true">${market}</td>
+                <td><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
+              </tr>`;
             }
           }
           if (uncategorised.length){
-            const cat = 'Other'; const isCol = !!collapsed[cat]; const stateClass = isCol ? 'collapsed' : 'expanded';
+                        const cat = 'Other'; const isCol = !!collapsed[cat]; const stateClass = isCol ? 'collapsed' : 'expanded';
             html += `<tr class="cat-row ${stateClass}" data-role="category" data-cat="${cat}">
               <td class="cat-cell" colspan="100">
                 <div class="cat-bar">
@@ -1631,62 +1240,67 @@ document.getElementById('db_mkt_count').textContent       = m  ? ('Total platfor
                 <td contenteditable="true">${escapeHtml(rel)}</td>
                 <td contenteditable="true">${msrp}</td>
                 <td contenteditable="true">${market}</td>
+                <td><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
               </tr>`;
             }
           }
-          tb.innerHTML = html; tb.dataset.cats = JSON.stringify(catOrder);
+          tb.innerHTML = html; 
+          tb.dataset.cats = JSON.stringify(catOrder);
 
+          // category toggle + "Add" inside category bar
           tb.onclick = (ev)=>{
             // per-category Add button
             const addBtn = ev.target.closest('button.cat-add');
             if (addBtn) { insertPendingRowForCategory(addBtn.dataset.cat); return; }
 
-            // expand/collapse category
+            // expand/collapse
             const catRow = ev.target.closest('tr.cat-row');
             if (!catRow) return;
             const cat = catRow.dataset.cat;
             const nowCollapsed = !catRow.classList.contains('collapsed');
             catRow.classList.toggle('collapsed', nowCollapsed);
             catRow.classList.toggle('expanded', !nowCollapsed);
+
             const rows = tb.querySelectorAll('tr[data-cat]:not(.cat-row)');
             rows.forEach(r => { if (r.dataset.cat === cat) r.style.display = nowCollapsed ? 'none' : ''; });
-            const obj = {}; try { Object.assign(obj, JSON.parse(localStorage.getItem(storeKey) || '{}')); } catch(_){}
-            obj[cat] = nowCollapsed ? 1 : 0; localStorage.setItem(storeKey, JSON.stringify(obj));
+
+            const obj = {}; 
+            try { Object.assign(obj, JSON.parse(localStorage.getItem(storeKey) || '{}')); } catch(_){}
+            obj[cat] = nowCollapsed ? 1 : 0; 
+            localStorage.setItem(storeKey, JSON.stringify(obj));
           };
 
         } else if (section === 'retailers') {
-  let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
-  const tb = document.querySelector('#db_retail_tbl tbody');
-
+          let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
+          const tb = document.querySelector('#db_retail_tbl tbody');
           r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
           tb.innerHTML = r.map(x => `
-  <tr data-row="${x.row}">
-    <td contenteditable="true">${escapeHtml(x.name)}</td>
-    <td><button class="db-del" data-kind="retailers" data-row="${x.row}">Delete</button></td>
-  </tr>`).join('');
-
+            <tr data-row="${x.row}">
+              <td contenteditable="true">${escapeHtml(x.name)}</td>
+              <td><button class="db-del" data-kind="retailers" data-row="${x.row}">Delete</button></td>
+            </tr>`).join('');
 
         } else if (section === 'marketplaces') {
-  let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : []; 
-  const tb = document.querySelector('#db_mkt_tbl tbody');
-  m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
-  tb.innerHTML = m.map(x => {
-  const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
-  return `<tr data-row="${x.row}">
-    <td contenteditable="true">${escapeHtml(x.name)}</td>
-    <td contenteditable="true">${fee}</td>
-    <td><button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button></td>
-  </tr>`;
-}).join('');
-
-
+          let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : []; 
+          const tb = document.querySelector('#db_mkt_tbl tbody');
+          m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
+          tb.innerHTML = m.map(x => {
+            const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
+            return `<tr data-row="${x.row}">
+              <td contenteditable="true">${escapeHtml(x.name)}</td>
+              <td contenteditable="true">${fee}</td>
+              <td><button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button></td>
+            </tr>`;
+          }).join('');
 
         } else if (section === 'sheet') {
           const tb = document.querySelector('#db_sheet_tbl tbody');
-          tb.innerHTML = '<tr><td colspan="8" class="muted">Loading…</td></tr>';
+          tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
+
           google.script.run
             .withSuccessHandler(data=>{
               const rows = (data && data.rows) ? data.rows.slice() : [];
+              // newest first by date, then by row id
               rows.sort((a, b) => {
                 const da = a.order_date || '';
                 const db = b.order_date || '';
@@ -1701,34 +1315,31 @@ document.getElementById('db_mkt_count').textContent       = m  ? ('Total platfor
 
               document.getElementById('db_sheet_count').textContent = 'Rows: ' + rows.length;
 
-const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
-  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+              const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+                .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
-tb.innerHTML = rows.map(r => `
-  tb.innerHTML = rows.map(r => `
-  <tr data-row="${r.row}">
-    <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
-    <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
-    <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
-    <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
-    <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
-    <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-    <td><select>${mktOptions}</select></td>
-    <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
-    <td><button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button></td>
-  </tr>
-`).join('');
+              tb.innerHTML = rows.map(r => `
+                <tr data-row="${r.row}">
+                  <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
+                  <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
+                  <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
+                  <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
+                  <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
+                  <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
+                  <td><select>${mktOptions}</select></td>
+                  <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+                  <td><button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button></td>
+                </tr>
+              `).join('');
 
-
-// set selected sale location now that <select> exists
-Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
-  const sel = tr.children[6].querySelector('select');
-  if (sel) sel.value = rows[i]?.sale_location || '';
-});
-
+              // select the saved sale_location now that the <select> exists
+              Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
+                const sel = tr.children[6].querySelector('select');
+                if (sel) sel.value = rows[i]?.sale_location || '';
+              });
             })
             .withFailureHandler(err=>{
-              tb.innerHTML = `<tr><td colspan="8">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
+              tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
             })
             .getOrderBookEditable();
         }
@@ -1752,133 +1363,131 @@ Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
             renderDBBody(sec.dataset.section);
           };
 
-          // Global delete click handler for DB tables
-document.getElementById('database').addEventListener('click', (ev)=>{
-  const btn = ev.target.closest('button.db-del');
-  if (!btn) return;
-  const kind = btn.dataset.kind;
-  const row  = Number(btn.dataset.row||0);
-  if (!row) return;
-  if (!confirm('Delete this row?')) return;
-
-  if (kind === 'items') {
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Item deleted'); const was='items'; loadDatabase(); reopenDBTabAfterLoad(was); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .removeDatabaseItem(row);
-  } else if (kind === 'retailers') {
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Retailer deleted'); const was='retailers'; loadDatabase(); reopenDBTabAfterLoad(was); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .removeDatabaseRetailer(row);
-  } else if (kind === 'marketplaces') {
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Platform deleted'); const was='marketplaces'; loadDatabase(); reopenDBTabAfterLoad(was); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .removeDatabaseMarketplace(row);
-  } else if (kind === 'sheet') {
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Row deleted'); const was='sheet'; loadDatabase(); reopenDBTabAfterLoad(was); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .deleteOrderBookRows([row]); // delete server-side
-  }
-});
-
-
           cancel.onclick = ()=> renderDBCollapsed();
           save.onclick   = ()=> saveDBSection(sec.dataset.section);
           addBtn.onclick = ()=> addPendingRow(sec.dataset.section);
         });
+
+        // One-time delete handler for all DB tables
+        const dbRoot = document.getElementById('database');
+        if (!dbRoot.__wiredDelete) {
+          dbRoot.addEventListener('click', (ev)=>{
+            const btn = ev.target.closest('button.db-del');
+            if (!btn) return;
+            const kind = btn.dataset.kind;
+            const row  = Number(btn.dataset.row||0);
+            if (!row) return;
+            if (!confirm('Delete this row?')) return;
+
+            if (kind === 'items') {
+              google.script.run
+                .withSuccessHandler(()=>{ toast('Item deleted'); const was='items'; loadDatabase(); reopenDBTabAfterLoad(was); })
+                .withFailureHandler(err=>alert(err?.message||err))
+                .removeDatabaseItem(row);
+            } else if (kind === 'retailers') {
+              google.script.run
+                .withSuccessHandler(()=>{ toast('Retailer deleted'); const was='retailers'; loadDatabase(); reopenDBTabAfterLoad(was); })
+                .withFailureHandler(err=>alert(err?.message||err))
+                .removeDatabaseRetailer(row);
+            } else if (kind === 'marketplaces') {
+              google.script.run
+                .withSuccessHandler(()=>{ toast('Platform deleted'); const was='marketplaces'; loadDatabase(); reopenDBTabAfterLoad(was); })
+                .withFailureHandler(err=>alert(err?.message||err))
+                .removeDatabaseMarketplace(row);
+            } else if (kind === 'sheet') {
+              google.script.run
+                .withSuccessHandler(()=>{ toast('Row deleted'); const was='sheet'; loadDatabase(); reopenDBTabAfterLoad(was); })
+                .withFailureHandler(err=>alert(err?.message||err))
+                .deleteOrderBookRows([row]);
+            }
+          });
+          dbRoot.__wiredDelete = true;
+        }
       }
 
       function addPendingRow(section){
-  // ITEMS
-  if (section === 'items') {
-    const tb = document.querySelector('#db_items_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
-    tb.insertBefore(tr, tb.firstChild);
-    const firstCell = tr.querySelector('td[contenteditable="true"]');
-    if (firstCell) {
-      setTimeout(() => {
-        firstCell.focus();
-        const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
-        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-        tr.scrollIntoView({ block: 'nearest' });
-      }, 0);
-    }
-  }
+        // ITEMS
+        if (section === 'items') {
+          const tb = document.querySelector('#db_items_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
+          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
+          tb.insertBefore(tr, tb.firstChild);
+          const firstCell = tr.querySelector('td[contenteditable="true"]');
+          if (firstCell) {
+            setTimeout(() => {
+              firstCell.focus();
+              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+              tr.scrollIntoView({ block: 'nearest' });
+            }, 0);
+          }
+        }
 
-  // RETAILERS
-  if (section === 'retailers') {
-    const tb = document.querySelector('#db_retail_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `<td contenteditable="true"></td>`;
-    tb.insertBefore(tr, tb.firstChild);
-    const firstCell = tr.querySelector('td[contenteditable="true"]');
-    if (firstCell) {
-      setTimeout(() => {
-        firstCell.focus();
-        const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
-        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-        tr.scrollIntoView({ block: 'nearest' });
-      }, 0);
-    }
-  }
+        // RETAILERS
+        if (section === 'retailers') {
+          const tb = document.querySelector('#db_retail_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
+          tr.innerHTML = `<td contenteditable="true"></td>`;
+          tb.insertBefore(tr, tb.firstChild);
+          const firstCell = tr.querySelector('td[contenteditable="true"]');
+          if (firstCell) {
+            setTimeout(() => {
+              firstCell.focus();
+              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+              tr.scrollIntoView({ block: 'nearest' });
+            }, 0);
+          }
+        }
 
-  // MARKETPLACES
-  if (section === 'marketplaces') {
-    const tb = document.querySelector('#db_mkt_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true">0</td>`;
-    tb.insertBefore(tr, tb.firstChild);
-    const firstCell = tr.querySelector('td[contenteditable="true"]');
-    if (firstCell) {
-      setTimeout(() => {
-        firstCell.focus();
-        const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
-        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-        tr.scrollIntoView({ block: 'nearest' });
-      }, 0);
-    }
-  }
+        // MARKETPLACES
+        if (section === 'marketplaces') {
+          const tb = document.querySelector('#db_mkt_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
+          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true">0</td>`;
+          tb.insertBefore(tr, tb.firstChild);
+          const firstCell = tr.querySelector('td[contenteditable="true"]');
+          if (firstCell) {
+            setTimeout(() => {
+              firstCell.focus();
+              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+              tr.scrollIntoView({ block: 'nearest' });
+            }, 0);
+          }
+        }
 
-  // SPREADSHEET (ORDER BOOK)  ← this is the only part that changes
-  if (section === 'sheet') {
-    const tb = document.querySelector('#db_sheet_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
+        // SPREADSHEET (ORDER BOOK)
+        if (section === 'sheet') {
+          const tb = document.querySelector('#db_sheet_tbl tbody');
+          const tr = document.createElement('tr');
+          tr.className='__pending';
 
-    const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
-      .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+          const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+            .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
-    tr.innerHTML = `
-      <td><input type="date" value=""></td>
-      <td><input list="items" value=""></td>
-      <td><input type="number" step="0.01" value="-0"></td>
-      <td><input list="retailers" value=""></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td><input type="date" value=""></td>
-      <td><select>${mktOptions}</select></td>
-      <td><input type="number" step="0.01" value="0"></td>
-    `;
+          tr.innerHTML = `
+            <td><input type="date" value=""></td>
+            <td><input list="items" value=""></td>
+            <td><input type="number" step="0.01" value="0"></td>
+            <td><input list="retailers" value=""></td>
+            <td><input type="number" step="0.01" value="0"></td>
+            <td><input type="date" value=""></td>
+            <td><select>${mktOptions}</select></td>
+            <td><input type="number" step="0.01" value="0"></td>
+            <td><span class="muted">New</span></td>
+          `;
+          tb.insertBefore(tr, tb.firstChild);
 
-    tb.insertBefore(tr, tb.firstChild);
-
-    // ✅ Focus the first input/select (NOT a contenteditable td)
-    const firstInput = tr.querySelector('input,select');
-    if (firstInput) {
-      setTimeout(() => {
-        firstInput.focus();
-        tr.scrollIntoView({ block: 'nearest' });
-      }, 0);
-    }
-  }
-}
-
+          const firstInput = tr.querySelector('input,select');
+          if (firstInput) {
+            setTimeout(() => { firstInput.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
+          }
+        }
+      }
 
       function saveDBSection(section){
         if (section === 'items') {
@@ -1954,65 +1563,46 @@ document.getElementById('database').addEventListener('click', (ev)=>{
         }
 
         if (section === 'sheet') {
-  // pending (new) rows → addOrderBookRow
-  const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
-  pend.forEach(tr=>{
-    const payload = {
-      order_date:   cellVal(tr.children[0]),
-      item:         cellVal(tr.children[1]),
-      buy_price:    cellVal(tr.children[2]),
-      bought_from:  cellVal(tr.children[3]),
-      sell_price:   cellVal(tr.children[4]),
-      sale_date:    cellVal(tr.children[5]),
-      sale_location:cellVal(tr.children[6]),
-      shipping:     cellVal(tr.children[7])
-    };
-    if (payload.item){
-      google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
-    }
-  });
+          // new rows
+          const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
+          pend.forEach(tr=>{
+            const payload = {
+              order_date:   cellVal(tr.children[0]),
+              item:         cellVal(tr.children[1]),
+              buy_price:    cellVal(tr.children[2]),
+              bought_from:  cellVal(tr.children[3]),
+              sell_price:   cellVal(tr.children[4]),
+              sale_date:    cellVal(tr.children[5]),
+              sale_location:cellVal(tr.children[6]),
+              shipping:     cellVal(tr.children[7])
+            };
+            if (payload.item){
+              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
+            }
+          });
 
-  // existing rows → updateOrderBookRows
-  const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
-    .filter(tr => !tr.classList.contains('__pending'))
-    .map(tr => ({
-      row:          Number(tr.dataset.row),
-      order_date:   cellVal(tr.children[0]),
-      item:         cellVal(tr.children[1]),
-      buy_price:    cellVal(tr.children[2]),
-      bought_from:  cellVal(tr.children[3]),
-      sell_price:   cellVal(tr.children[4]),
-      sale_date:    cellVal(tr.children[5]),
-      sale_location:cellVal(tr.children[6]),
-      shipping:     cellVal(tr.children[7])
-    }));
-
-  google.script.run
-    .withSuccessHandler(()=>{
-      toast('Sheet updated ✔');
-      const wasOpen='sheet';
-      loadDatabase(); reopenDBTabAfterLoad(wasOpen);
-    })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .updateOrderBookRows(rows);
-}
-
-
+          // existing rows
           const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
             .filter(tr => !tr.classList.contains('__pending'))
             .map(tr => ({
-              row: Number(tr.dataset.row),
-              order_date:  tr.children[0].textContent.trim(),
-              item:        tr.children[1].textContent.trim(),
-              buy_price:   tr.children[2].textContent.trim(),
-              bought_from: tr.children[3].textContent.trim(),
-              sell_price:  tr.children[4].textContent.trim(),
-              sale_date:   tr.children[5].textContent.trim(),
-              sale_location: tr.children[6].textContent.trim(),
-              shipping:    tr.children[7].textContent.trim()
+              row:          Number(tr.dataset.row),
+              order_date:   cellVal(tr.children[0]),
+              item:         cellVal(tr.children[1]),
+              buy_price:    cellVal(tr.children[2]),
+              bought_from:  cellVal(tr.children[3]),
+              sell_price:   cellVal(tr.children[4]),
+              sale_date:    cellVal(tr.children[5]),
+              sale_location:cellVal(tr.children[6]),
+              shipping:     cellVal(tr.children[7])
             }));
+
           google.script.run
-            .withSuccessHandler(()=>{ toast('Sheet updated ✔'); const wasOpen='sheet'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
+            .withSuccessHandler(()=>{
+              toast('Sheet updated ✔');
+              const wasOpen='sheet';
+              loadDatabase(); 
+              reopenDBTabAfterLoad(wasOpen);
+            })
             .withFailureHandler(err=>alert(err?.message||err))
             .updateOrderBookRows(rows);
         }
@@ -2111,6 +1701,21 @@ document.getElementById('database').addEventListener('click', (ev)=>{
         holder.style.backgroundImage = `url("${dataUri || url}")`;
       }
 
+      function computeFlexStatsTitle(){
+        const r = document.getElementById('fx_range')?.value || 'all';
+        if (r === 'all')     return 'All-Time Stats';
+        if (r === 'last30')  return 'Last 30 Days Stats';
+        if (r === 'last7')   return 'Last 7 Days Stats';
+        if (r === 'mtd')     return 'Month-to-Date Stats';
+        if (r === 'custom') {
+          const from = document.getElementById('fx_from')?.value || '';
+          const to   = document.getElementById('fx_to')?.value   || '';
+          if (from && to) return `${from.slice(5).replace('-','/')} - ${to.slice(5).replace('-','/')} Stats`;
+          return 'Custom Range Stats';
+        }
+        return 'Stats';
+      }
+
       function drawFlexCard(item, stats){
         const msg = document.getElementById('fx_msg');
         if (msg){ msg.textContent='Ready ✔'; setTimeout(()=>{ msg.textContent=''; }, 1200); }
@@ -2144,12 +1749,6 @@ document.getElementById('database').addEventListener('click', (ev)=>{
         const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
         const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
 
-        const getCellVal = td => {
-  const el = td.querySelector('input,select');
-  return (el ? el.value : td.textContent).trim();
-};
-
-    
         // LEFT stats
         const statsEl = document.getElementById('fx_stats');
         statsEl.innerHTML = `
@@ -2185,7 +1784,7 @@ document.getElementById('database').addEventListener('click', (ev)=>{
           options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback:v=>'$'+Number(v).toLocaleString() } } } }
         });
 
-        // right-side metrics (on-hand + unrealized + longest)
+        // right-side metrics
         updateOnHandAndUnrealized(item);
         updateLongestHold(item);
 
@@ -2356,6 +1955,7 @@ document.getElementById('database').addEventListener('click', (ev)=>{
           <td contenteditable="true"></td>
           <td contenteditable="true"></td>
           <td contenteditable="true"></td>
+          <td><span class="muted">New</span></td>
         `;
 
         const firstDataRow = tb.querySelector(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
