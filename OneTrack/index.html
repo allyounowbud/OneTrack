@@ -770,26 +770,22 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
 
   function callApi(action, params = {}) {
   const qs = new URLSearchParams({ route: 'api', action, ...params });
-return fetch(`${GAS_API_URL}?${qs.toString()}`, {
-  method: 'GET',
-  credentials: 'same-origin',   // send/receive your session cookie
-  cache: 'no-store',
-  headers: { 'Accept': 'application/json' }
-})
-+ return fetch(`${GAS_API_URL}?${qs.toString()}`, {
-+   method: 'GET',
-+   credentials: 'same-origin',   // was 'omit' → must send the session cookie
-+   cache: 'no-store'
-+ })
-    .then(async r => {
-      const ct = r.headers.get('content-type') || '';
-      const text = await r.text();
-      if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0, 200)}`);
-      if (/application\/json/i.test(ct)) return JSON.parse(text);
-      try { return JSON.parse(text); }
-      catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0, 200)}`); }
-    });
+  return fetch(`${GAS_API_URL}?${qs.toString()}`, {
+    method: 'GET',
+    credentials: 'same-origin',   // send/receive the Netlify session cookie
+    cache: 'no-store',
+    headers: { 'Accept': 'application/json' }
+  })
+  .then(async r => {
+    const ct = r.headers.get('content-type') || '';
+    const text = await r.text();
+    if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0, 200)}`);
+    if (/application\/json/i.test(ct)) return JSON.parse(text);
+    try { return JSON.parse(text); }
+    catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0, 200)}`); }
+  });
 }
+
 
 
   // Convenience promise wrapper so you can call gas('fnName', payload)
@@ -973,7 +969,7 @@ function startDiscord(ev){
     `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`,
     {
       method: 'GET',
-      credentials: 'same-origin',   // allow Set-Cookie from the function
+      credentials: 'same-origin',
       cache: 'no-store',
       headers: { 'Accept': 'application/json' }
     }
@@ -985,11 +981,8 @@ function startDiscord(ev){
 
     if (data && data.profile) {
       try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
-      history.replaceState(null, '', location.pathname + location.search); // drop #sess
-      // (optional) quick sanity check:
-      if (!document.cookie || !/ot_sess=/.test(document.cookie)) {
-        console.warn('Session cookie missing after redeem. Check Set-Cookie attributes.');
-      }
+      history.replaceState(null, '', location.pathname + location.search); // remove #sess
+      // It’s OK if the cookie isn’t visible; we still show the app.
       showApp();
       return;
     }
@@ -1003,6 +996,7 @@ function startDiscord(ev){
     showGate();
   });
 })();
+
 
 
       // ===== Init gate/app on load =====
