@@ -750,9 +750,7 @@
       </section>
 
       <datalist id="items"></datalist>
-<datalist id="retailers"></datalist>
-<datalist id="marketplaces"></datalist>
-
+      <datalist id="retailers"></datalist>
     </div>
 
     <div id="toast" class="toast" style="display:none"></div>
@@ -764,11 +762,15 @@
 const GAS_API_URL = "/.netlify/functions/gas-proxy";
 const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
 
+
+// ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
       // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
 (function(){
   const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
+  if (hasGAS) return; // running inside Apps Script
   if (hasGAS) return; // running inside Apps Script sandbox
 
+  // 1) Low-level fetch to your Netlify proxy
   // Low-level fetch to your Netlify proxy
   function callApi(action, params = {}) {
     const qs = new URLSearchParams({ route: 'api', action, ...params });
@@ -788,6 +790,7 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
     });
   }
 
+  // 2) Endpoint mapper (same as before)
   // Endpoint mapper
   const map = {
     getInitModel:              () => ({action:'getInitModel'}),
@@ -810,23 +813,30 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
     updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
     updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
 
+    // Optional helper used by html2canvas fallback
     fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
   };
 
+  // 3) Per-request object (no shared state → no races)
+  function GASRequest(){
   // google.script.run-compatible facade
   function Runner(){
     this._ok  = ()=>{};
     this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
   }
+  GASRequest.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
+  GASRequest.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
   Runner.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
   Runner.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
 
   Object.keys(map).forEach(name=>{
+    GASRequest.prototype[name] = function(...args){
     Runner.prototype[name] = function(...args){
       const spec = map[name](...args) || {};
       return callApi(spec.action, spec.params||{})
         .then(res=>{
           if (res && res.ok === false && res.error) throw res;
+          if (name === 'fetchImageAsDataUrl') r
           if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
           this._ok(res);
         })
@@ -1088,33 +1098,15 @@ if (id==='flex') initFlexDefaults();
       }
 
       // ==== Load model data from server (hardened) ====
-      // ==== Load model data from server (hardened) ====
-
-// Promise wrapper for google.script.run (works in GAS + your shim)
-function gas(name, ...args){
-  return new Promise((resolve, reject)=>{
-    try{
-      const req = google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(err => reject(err));
-      if (typeof req[name] !== 'function') return reject(new Error('Unknown RPC: '+name));
-      req[name](...args);
-    }catch(e){
-      reject(e);
-    }
-  });
-}
-
-function reloadModel() {
-  google.script.run
-    .withSuccessHandler(initModel)
-    .withFailureHandler(err => {
-      console.error('getInitModel failed:', err);
-      toast('Could not load metadata.');
-    })
-    .getInitModel();
-}
-
+      function reloadModel() {
+        google.script.run
+          .withSuccessHandler(initModel)
+          .withFailureHandler(err => {
+            console.error('getInitModel failed:', err);
+            toast('Could not load metadata.');
+          })
+          .getInitModel();
+      }
 
       function initModel(model){
         try {
@@ -1139,16 +1131,11 @@ function reloadModel() {
           if (retailDL) retailDL.innerHTML = retailers.map(x => `<option value="${escapeHtml(x)}">`).join('');
 
           // Market selects (Quick Add / Mark Sold)
-const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-const qaMarket = document.getElementById('qa_market');
-const msMarket = document.getElementById('ms_market');
-if (qaMarket) qaMarket.innerHTML = mktOptions;
-if (msMarket) msMarket.innerHTML = mktOptions;
-
-// Also fill datalist for the Spreadsheet editor
-const mktsDL = document.getElementById('marketplaces');
-if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}">`).join('');
-
+          const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+          const qaMarket = document.getElementById('qa_market');
+          const msMarket = document.getElementById('ms_market');
+          if (qaMarket) qaMarket.innerHTML = mktOptions;
+          if (msMarket) msMarket.innerHTML = mktOptions;
 
           // Stats item filter
           const stItem = document.getElementById('st_item');
@@ -1418,33 +1405,16 @@ if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}
             const t = res.totals || {qty:0, cost:0, estValue:0, unrealized:0};
             pill.innerHTML = `On hand: <b>${t.qty}</b> • Cost: <b>${money(t.cost)}</b> • Est. Value: <b>${money(t.estValue)}</b> • Unrealized: <b>${money(t.unrealized)}</b>`;
             const rows = res.items || [];
-            const mktOpts = (META && Array.isArray(META.marketplaces) ? META.marketplaces : [])
-  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-
-tb.innerHTML = rows.map(r => `
-  <tr data-row="${r.row}">
-    <td><input type="date" value="${escapeHtml(r.order_date)}"></td>
-    <td><input list="items" value="${escapeHtml(r.item)}"></td>
-    <td><input type="number" step="0.01" value="${r.buy_price}"></td>
-    <td><input list="retailers" value="${escapeHtml(r.bought_from)}"></td>
-    <td><input type="number" step="0.01" value="${r.sell_price}"></td>
-    <td><input type="date" value="${escapeHtml(r.sale_date)}"></td>
-    <td>
-      <select>
-        ${mktOpts}
-      </select>
-    </td>
-    <td><input type="number" step="0.01" value="${r.shipping}"></td>
-  </tr>
-`).join('');
-
-// set selected marketplace values
-Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
-  const loc = rows[i]?.sale_location || '';
-  const sel = tr.children[6].querySelector('select');
-  if (sel) sel.value = loc;
-});
-
+            tb.innerHTML = rows.map(r => `
+              <tr>
+                <td>${escapeHtml(r.item)}</td>
+                <td>${r.onHandQty}</td>
+                <td>${money(r.avgCost)}</td>
+                <td>${money(r.onHandCost)}</td>
+                <td>${money(r.estPrice)}</td>
+                <td>${money(r.estValue)}</td>
+              </tr>
+            `).join('');
             document.querySelectorAll('#inv_tbl thead th.sort').forEach(th=>{
               th.onclick = ()=>{
                 const key = th.dataset.key;
@@ -1502,7 +1472,7 @@ function normDBShape(raw){
   return { items, retailers, marketplaces };
 }
 
-      
+
       async function loadDatabase(){
   try{
     // make buttons live immediately
@@ -1721,7 +1691,7 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
             edit.style.display = 'none';
             save.style.display = '';
             cancel.style.display = '';
-            addBtn.style.display = '';
+            addBtn.style.display = (sec.dataset.section === 'items') ? 'none' : '';
             renderDBBody(sec.dataset.section);
           };
 
@@ -1736,19 +1706,7 @@ renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
           const tb = document.querySelector('#db_items_tbl tbody');
           const tr = document.createElement('tr');
           tr.className='__pending';
-          const mktOpts = (META && Array.isArray(META.marketplaces) ? META.marketplaces : [])
-  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-
-tr.innerHTML = `
-  <td><input type="date" value=""></td>
-  <td><input list="items" value=""></td>
-  <td><input type="number" step="0.01" value="-0"></td>
-  <td><input list="retailers" value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td><input type="date" value=""></td>
-  <td><select>${mktOpts}</select></td>
-  <td><input type="number" step="0.01" value="0"></td>`;
-
+          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
           tb.insertBefore(tr, tb.firstChild);
           const firstCell = tr.querySelector('td[contenteditable="true"]');
           if (firstCell) {
@@ -1898,38 +1856,37 @@ tr.innerHTML = `
             .updateDatabaseMarketplaces(rows);
         }
 
-        const getCellVal = (td) => {
-  const el = td.querySelector('input,select');
-  return (el ? el.value : td.textContent).trim();
-};
+        if (section === 'sheet') {
+          const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
+          pend.forEach(tr=>{
+            const payload = {
+              order_date:  tr.children[0].textContent.trim(),
+              item:        tr.children[1].textContent.trim(),
+              buy_price:   tr.children[2].textContent.trim(),
+              bought_from: tr.children[3].textContent.trim(),
+              sell_price:  tr.children[4].textContent.trim(),
+              sale_date:   tr.children[5].textContent.trim(),
+              sale_location: tr.children[6].textContent.trim(),
+              shipping:    tr.children[7].textContent.trim()
+            };
+            if (payload.item){
+              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
+            }
+          });
 
-// pending row payload
-const payload = {
-  order_date:    getCellVal(tr.children[0]),
-  item:          getCellVal(tr.children[1]),
-  buy_price:     getCellVal(tr.children[2]),
-  bought_from:   getCellVal(tr.children[3]),
-  sell_price:    getCellVal(tr.children[4]),
-  sale_date:     getCellVal(tr.children[5]),
-  sale_location: getCellVal(tr.children[6]),
-  shipping:      getCellVal(tr.children[7])
-};
-
-// existing rows mapping
-.map(tr => ({
-  row:           Number(tr.dataset.row),
-  order_date:    getCellVal(tr.children[0]),
-  item:          getCellVal(tr.children[1]),
-  buy_price:     getCellVal(tr.children[2]),
-  bought_from:   getCellVal(tr.children[3]),
-  sell_price:    getCellVal(tr.children[4]),
-  sale_date:     getCellVal(tr.children[5]),
-  sale_location: getCellVal(tr.children[6]),
-  shipping:      getCellVal(tr.children[7])
-}));
-
-
-          
+          const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
+            .filter(tr => !tr.classList.contains('__pending'))
+            .map(tr => ({
+              row: Number(tr.dataset.row),
+              order_date:  tr.children[0].textContent.trim(),
+              item:        tr.children[1].textContent.trim(),
+              buy_price:   tr.children[2].textContent.trim(),
+              bought_from: tr.children[3].textContent.trim(),
+              sell_price:  tr.children[4].textContent.trim(),
+              sale_date:   tr.children[5].textContent.trim(),
+              sale_location: tr.children[6].textContent.trim(),
+              shipping:    tr.children[7].textContent.trim()
+            }));
           google.script.run
             .withSuccessHandler(()=>{ toast('Sheet updated ✔'); const wasOpen='sheet'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
             .withFailureHandler(err=>alert(err?.message||err))
@@ -2063,7 +2020,7 @@ const payload = {
         const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
         const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
 
-    
+
         // LEFT stats
         const statsEl = document.getElementById('fx_stats');
         statsEl.innerHTML = `
