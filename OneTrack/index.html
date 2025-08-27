@@ -762,13 +762,12 @@
 const GAS_API_URL = "/.netlify/functions/gas-proxy";
 const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
 
-
-// ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
+      // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
 (function(){
   const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
-  if (hasGAS) return; // running inside Apps Script
+  if (hasGAS) return; // running inside Apps Script sandbox
 
-  // 1) Low-level fetch to your Netlify proxy
+  // Low-level fetch to your Netlify proxy
   function callApi(action, params = {}) {
     const qs = new URLSearchParams({ route: 'api', action, ...params });
     return fetch(`${GAS_API_URL}?${qs.toString()}`, {
@@ -787,7 +786,7 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
     });
   }
 
-  // 2) Endpoint mapper (same as before)
+  // Endpoint mapper
   const map = {
     getInitModel:              () => ({action:'getInitModel'}),
     getOpenPurchases:          () => ({action:'getOpenPurchases'}),
@@ -809,27 +808,48 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
     updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
     updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
 
-    // Optional helper used by html2canvas fallback
     fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
   };
 
-  // 3) Per-request object (no shared state → no races)
-  function GASRequest(){
+  // google.script.run-compatible facade
+  function Runner(){
     this._ok  = ()=>{};
     this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
   }
-  GASRequest.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
-  GASRequest.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
+  Runner.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
+  Runner.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
 
   Object.keys(map).forEach(name=>{
-    GASRequest.prototype[name] = function(...args){
+    Runner.prototype[name] = function(...args){
       const spec = map[name](...args) || {};
       return callApi(spec.action, spec.params||{})
         .then(res=>{
           if (res && res.ok === false && res.error) throw res;
-          if (name === 'fetchImageAsDataUrl') r
+          if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
+          this._ok(res);
+        })
+        .catch(this._err);
+    };
+  });
+
+  // Expose the stubbed surface
+  window.google = { script: { run: new Runner() } };
+
+  // Promise helper so you can call gas('fnName', payload)
+  function gas(name, payload) {
+    return new Promise((resolve, reject) => {
+      const r = window.google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(e => reject(e?.message || String(e)));
+      if (payload === undefined) r[name]();
+      else r[name](payload);
+    });
+  }
+  window.gas = gas;
+})();
 
 
+      
       // ===== Theme toggle (works on gate + app) =====
       const themeBtn = document.getElementById('themeBtn');
       const gateThemeBtn = document.getElementById('gateThemeBtn');
