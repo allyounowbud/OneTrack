@@ -551,6 +551,14 @@
       const GAS_API_URL = "/.netlify/functions/gas-proxy";
       const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
 
+      // ---- Global app state (must exist before any function can run) ----
+let META = null;
+let CHART = null;
+let STATS_CACHE = null;
+let DB_STATE = null;
+let FLEX = { chart: null, cache: null };
+
+
       // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
       (function(){
         const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
@@ -817,7 +825,6 @@ document.querySelectorAll('.tab').forEach(el=>{
 
 
       // ==== Helpers ====
-      let META=null, CHART=null, STATS_CACHE=null, DB_STATE=null, FLEX={ chart:null, cache:null };
       function money(n){return Number(n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});}
       function pct(n){return (Number(n||0)).toLocaleString(undefined,{maximumFractionDigits:2})+'%';}
       function escapeHtml(s){return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
