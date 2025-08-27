@@ -1124,18 +1124,43 @@
       }
 
       async function loadDatabase(){
-        try{
-          try { renderDBCollapsed(); } catch(_) {}
-          const [db, sheet] = await Promise.all([ gas('getDatabaseFull'), gas('getOrderBookEditable') ]);
-          DB_STATE = normDBShape(db);
-          renderDBCollapsed();
-          const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
-          const el = document.getElementById('db_sheet_count');
-          if (el) el.textContent = 'Rows: ' + count;
-        }catch(err){
-          showErr(err || 'Database load error');
-        }
-      }
+  try { renderDBCollapsed(); } catch(_){}
+
+  // Load DB first (fast path for Items/Retailers/Platforms)
+  try{
+    const raw = await gas('getDatabaseFull');
+    DB_STATE = normDBShape(raw?.data || raw);
+    renderDBCollapsed();
+  }catch(err){
+    showErr(err || 'Database load error');
+  }
+
+  // Then (separately) fetch the sheet count; do NOT block the above
+  try{
+    const sheet = await gas('getOrderBookEditable');
+    const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
+    const el = document.getElementById('db_sheet_count');
+    if (el) el.textContent = 'Rows: ' + count;
+  }catch(err){
+    console.warn('getOrderBookEditable failed:', err);
+    const el = document.getElementById('db_sheet_count');
+    if (el) el.textContent = 'Rows: —';
+  }
+}
+
+
+      async function ensureDBLoaded(){
+  if (DB_STATE && Array.isArray(DB_STATE.items)) return DB_STATE;
+  try{
+    const raw = await gas('getDatabaseFull');
+    DB_STATE = normDBShape(raw?.data || raw);
+    return DB_STATE;
+  }catch(e){
+    console.error('getDatabaseFull failed:', e);
+    DB_STATE = { items:[], retailers:[], marketplaces:[] };
+    return DB_STATE;
+  }
+}
 
       function renderDBCollapsed(){
         try{
@@ -1353,15 +1378,22 @@
           const cancel = sec.querySelector('[data-action="cancel"]');
           const addBtn = sec.querySelector('[data-action="add"]');
 
-          edit.onclick = ()=>{
-            sec.classList.add('editing');
-            body.style.display = 'block';
-            edit.style.display = 'none';
-            save.style.display = '';
-            cancel.style.display = '';
-            addBtn.style.display = '';
-            renderDBBody(sec.dataset.section);
-          };
+          // was: edit.onclick = ()=>{
+edit.onclick = async ()=>{
+  sec.classList.add('editing');
+  body.style.display = 'block';
+  edit.style.display = 'none';
+  save.style.display = '';
+  cancel.style.display = '';
+  addBtn.style.display = '';
+
+  // ensure DB ready before rendering items/retailers/platforms
+  if (['items','retailers','marketplaces'].includes(sec.dataset.section)) {
+    await ensureDBLoaded();
+  }
+  renderDBBody(sec.dataset.section);
+};
+
 
           cancel.onclick = ()=> renderDBCollapsed();
           save.onclick   = ()=> saveDBSection(sec.dataset.section);
