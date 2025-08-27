@@ -558,22 +558,34 @@
         if (hasGAS) return;
 
         function callApi(action, params = {}) {
-          const qs = new URLSearchParams({ route: 'api', action, ...params });
-          return fetch(`${GAS_API_URL}?${qs.toString()}`, {
-            method: 'GET',
-            credentials: 'same-origin',
-            cache: 'no-store',
-            headers: { 'Accept': 'application/json' }
-          })
-          .then(async r => {
-            const ct = r.headers.get('content-type') || '';
-            const text = await r.text();
-            if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0,200)}`);
-            if (/application\/json/i.test(ct)) return JSON.parse(text);
-            try { return JSON.parse(text); }
-            catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0,200)}`); }
-          });
-        }
+  const qs = new URLSearchParams({ route: 'api', action, ...params, ts: Date.now().toString() });
+  const url = `${GAS_API_URL}?${qs.toString()}`;
+
+  async function once() {
+    const r = await fetch(url, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    });
+    const ct = r.headers.get('content-type') || '';
+    const text = await r.text();
+    if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0,200)}`);
+    if (/application\/json/i.test(ct)) return JSON.parse(text);
+    try { return JSON.parse(text); }
+    catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0,200)}`); }
+  }
+
+  return once().catch(async (err) => {
+    const msg = String(err || '');
+    if (/504|timeout|Failed to fetch/i.test(msg)) {
+      await new Promise(r => setTimeout(r, 450));
+      return once();
+    }
+    throw err;
+  });
+}
+
 
         const map = {
           getInitModel:              () => ({action:'getInitModel'}),
