@@ -759,10 +759,8 @@
       // ✅ Use your Netlify Function proxy (same-origin) instead of the Apps Script URL here
 // (You’ll set the real GAS URL in the function’s environment variable below.)
 // Use proxy ONLY for JSON API calls (fixes CORS)
-const GAS_API_URL = "/.netlify/functions/gas-proxy";
-
-// Use the direct Apps Script EXEC URL ONLY for OAuth full-page redirects
-const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
+const GAS_API_URL     = "/.netlify/functions/gas-proxy";
+const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec"; // ← single source of truth
 
 
 // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
@@ -890,9 +888,8 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
 function startDiscord(ev){
   try { ev?.preventDefault(); ev?.stopPropagation(); } catch(_) {}
   if (gateStatus) gateStatus.textContent = 'Opening Discord…';
-  const u = "/.netlify/functions/gas-proxy?route=discord_login"; // <- Netlify function
-  try { (window.top || window).location.assign(u); }
-  catch(_) { window.location.href = u; }
+  const u = GAS_EXEC_DIRECT + (GAS_EXEC_DIRECT.includes('?') ? '&' : '?') + 'route=discord_login';
+  (window.top || window).location.href = u; // top-level navigation directly to Apps Script
 }
 
 
