@@ -125,6 +125,13 @@
       }
       .db-cancel:hover{border-color:var(--focus)}
 
+      .db-del{
+  padding:8px 12px; border-radius:10px; border:1px solid var(--border);
+  background:transparent; color:var(--bad); cursor:pointer;
+}
+.db-del:hover{ border-color: var(--focus); }
+
+
       .collapsible-body{display:none;margin-top:10px}
       [contenteditable="true"]{outline:none;border-bottom:2px dashed transparent}
       [contenteditable="true"]:focus{border-bottom-color:var(--focus)}
@@ -585,7 +592,7 @@
           </div>
           <div class="collapsible-body">
             <table id="db_items_tbl" style="margin-top:10px">
-              <thead><tr><th>Name</th><th>Release</th><th>MSRP</th><th>Market Value</th></tr></thead>
+              <thead><tr><th>Name</th><th>Release</th><th>MSRP</th><th>Market Value</th><th>Actions</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -607,7 +614,7 @@
           </div>
           <div class="collapsible-body">
             <table id="db_retail_tbl" style="margin-top:10px">
-              <thead><tr><th>Name</th></tr></thead>
+              <thead><tr><th>Name</th><th>Actions</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -629,7 +636,7 @@
           </div>
           <div class="collapsible-body">
             <table id="db_mkt_tbl" style="margin-top:10px">
-              <thead><tr><th>Platform</th><th>Fee %</th></tr></thead>
+              <thead><tr><th>Platform</th><th>Fee %</th><th>Actions</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -652,17 +659,12 @@
           <div class="collapsible-body">
             <table id="db_sheet_tbl" style="margin-top:10px">
               <thead>
-                <tr>
-                  <th>Order Date</th>
-                  <th>Item</th>
-                  <th>Buy Price</th>
-                  <th>Bought From</th>
-                  <th>Sell Price</th>
-                  <th>Sale Date</th>
-                  <th>Sale Location</th>
-                  <th>Shipping</th>
-                </tr>
-              </thead>
+  <tr>
+    <th>Order Date</th><th>Item</th><th>Buy Price</th><th>Bought From</th>
+    <th>Sell Price</th><th>Sale Date</th><th>Sale Location</th><th>Shipping</th><th>Actions</th>
+  </tr>
+</thead>
+
               <tbody></tbody>
             </table>
           </div>
@@ -809,6 +811,11 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
     updateDatabaseItems:    (rows)  =>({action:'updateDatabaseItems',     params:{rows: JSON.stringify(rows)}}),
     updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
     updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
+    removeDatabaseItem:        (row)  => ({action:'removeDatabaseItem',        params:{row}}),
+    removeDatabaseRetailer:    (row)  => ({action:'removeDatabaseRetailer',    params:{row}}),
+    removeDatabaseMarketplace: (row)  => ({action:'removeDatabaseMarketplace', params:{row}}),
+    deleteOrderBookRows:       (rows) => ({action:'deleteOrderBookRows',       params:{rows: JSON.stringify(rows)}}),
+
 
     fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
   };
@@ -1050,19 +1057,17 @@ const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
     document.getElementById(id).style.display='block';
 
     if (id==='stats') refreshStats();
-if (id==='inventory') refreshInventory();
-// new: wire the buttons immediately, then fetch data
-if (id==='flex') initFlexDefaults();
+    if (id==='inventory') refreshInventory();
+    if (id==='flex') initFlexDefaults();
     if (id==='sold') refreshOpen();
-
-
-
-    // If metadata hasn’t landed yet, make sure we fetch it for UI that needs lists
+    if (id==='database') loadDatabase();   // ← ADD THIS
+    // ...
     if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
       reloadModel();
     }
   });
 });
+
 
 
 
@@ -1090,6 +1095,13 @@ if (id==='flex') initFlexDefaults();
           catch(_e){ return url; }
         }
       }
+
+      // Return the user-visible value from a table cell
+function cellVal(td){
+  const el = td && td.querySelector ? td.querySelector('input,select') : null;
+  return (el ? el.value : (td?.textContent || '')).trim();
+}
+
 
       // ==== Load model data from server (hardened) ====
       function reloadModel() {
@@ -1566,11 +1578,13 @@ document.getElementById('db_mkt_count').textContent       = m  ? ('Total platfor
               const market = (x.market==null?'':x.market);
               const rel = (x.release||'');
               html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
-                <td contenteditable="true">${escapeHtml(x.name)}</td>
-                <td contenteditable="true">${escapeHtml(rel)}</td>
-                <td contenteditable="true">${msrp}</td>
-                <td contenteditable="true">${market}</td>
-              </tr>`;
+  <td contenteditable="true">${escapeHtml(x.name)}</td>
+  <td contenteditable="true">${escapeHtml(rel)}</td>
+  <td contenteditable="true">${msrp}</td>
+  <td contenteditable="true">${market}</td>
+  <td><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
+</tr>`;
+
             }
           }
           if (uncategorised.length){
@@ -1623,16 +1637,26 @@ document.getElementById('db_mkt_count').textContent       = m  ? ('Total platfor
   const tb = document.querySelector('#db_retail_tbl tbody');
 
           r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
-          tb.innerHTML = r.map(x => `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td></tr>`).join('');
+          tb.innerHTML = r.map(x => `
+  <tr data-row="${x.row}">
+    <td contenteditable="true">${escapeHtml(x.name)}</td>
+    <td><button class="db-del" data-kind="retailers" data-row="${x.row}">Delete</button></td>
+  </tr>`).join('');
+
 
         } else if (section === 'marketplaces') {
   let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : []; 
   const tb = document.querySelector('#db_mkt_tbl tbody');
   m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
   tb.innerHTML = m.map(x => {
-    const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
-    return `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td><td contenteditable="true">${fee}</td></tr>`;
-  }).join('');
+  const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
+  return `<tr data-row="${x.row}">
+    <td contenteditable="true">${escapeHtml(x.name)}</td>
+    <td contenteditable="true">${fee}</td>
+    <td><button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button></td>
+  </tr>`;
+}).join('');
+
 
 
         } else if (section === 'sheet') {
@@ -1659,6 +1683,7 @@ const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
   .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
 tb.innerHTML = rows.map(r => `
+  tb.innerHTML = rows.map(r => `
   <tr data-row="${r.row}">
     <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
     <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
@@ -1666,12 +1691,12 @@ tb.innerHTML = rows.map(r => `
     <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
     <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
     <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-    <td>
-      <select>${mktOptions}</select>
-    </td>
+    <td><select>${mktOptions}</select></td>
     <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+    <td><button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button></td>
   </tr>
 `).join('');
+
 
 // set selected sale location now that <select> exists
 Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
@@ -1705,6 +1730,39 @@ Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
             renderDBBody(sec.dataset.section);
           };
 
+          // Global delete click handler for DB tables
+document.getElementById('database').addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('button.db-del');
+  if (!btn) return;
+  const kind = btn.dataset.kind;
+  const row  = Number(btn.dataset.row||0);
+  if (!row) return;
+  if (!confirm('Delete this row?')) return;
+
+  if (kind === 'items') {
+    google.script.run
+      .withSuccessHandler(()=>{ toast('Item deleted'); const was='items'; loadDatabase(); reopenDBTabAfterLoad(was); })
+      .withFailureHandler(err=>alert(err?.message||err))
+      .removeDatabaseItem(row);
+  } else if (kind === 'retailers') {
+    google.script.run
+      .withSuccessHandler(()=>{ toast('Retailer deleted'); const was='retailers'; loadDatabase(); reopenDBTabAfterLoad(was); })
+      .withFailureHandler(err=>alert(err?.message||err))
+      .removeDatabaseRetailer(row);
+  } else if (kind === 'marketplaces') {
+    google.script.run
+      .withSuccessHandler(()=>{ toast('Platform deleted'); const was='marketplaces'; loadDatabase(); reopenDBTabAfterLoad(was); })
+      .withFailureHandler(err=>alert(err?.message||err))
+      .removeDatabaseMarketplace(row);
+  } else if (kind === 'sheet') {
+    google.script.run
+      .withSuccessHandler(()=>{ toast('Row deleted'); const was='sheet'; loadDatabase(); reopenDBTabAfterLoad(was); })
+      .withFailureHandler(err=>alert(err?.message||err))
+      .deleteOrderBookRows([row]); // delete server-side
+  }
+});
+
+
           cancel.onclick = ()=> renderDBCollapsed();
           save.onclick   = ()=> saveDBSection(sec.dataset.section);
           addBtn.onclick = ()=> addPendingRow(sec.dataset.section);
@@ -1712,90 +1770,93 @@ Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
       }
 
       function addPendingRow(section){
-        if (section === 'items') {
-          const tb = document.querySelector('#db_items_tbl tbody');
-          const tr = document.createElement('tr');
-          tr.className='__pending';
-          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
-          tb.insertBefore(tr, tb.firstChild);
-          const firstCell = tr.querySelector('td[contenteditable="true"]');
-          if (firstCell) {
-            setTimeout(() => {
-              firstCell.focus();
-              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
-              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-              tr.scrollIntoView({ block: 'nearest' });
-            }, 0);
-          }
-        }
+  // ITEMS
+  if (section === 'items') {
+    const tb = document.querySelector('#db_items_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
+    tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td><td contenteditable="true"></td>`;
+    tb.insertBefore(tr, tb.firstChild);
+    const firstCell = tr.querySelector('td[contenteditable="true"]');
+    if (firstCell) {
+      setTimeout(() => {
+        firstCell.focus();
+        const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        tr.scrollIntoView({ block: 'nearest' });
+      }, 0);
+    }
+  }
 
-        if (section === 'retailers') {
-          const tb = document.querySelector('#db_retail_tbl tbody');
-          const tr = document.createElement('tr');
-          tr.className='__pending';
-          tr.innerHTML = `<td contenteditable="true"></td>`;
-          tb.insertBefore(tr, tb.firstChild);
-          const firstCell = tr.querySelector('td[contenteditable="true"]');
-          if (firstCell) {
-            setTimeout(() => {
-              firstCell.focus();
-              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
-              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-              tr.scrollIntoView({ block: 'nearest' });
-            }, 0);
-          }
-        }
+  // RETAILERS
+  if (section === 'retailers') {
+    const tb = document.querySelector('#db_retail_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
+    tr.innerHTML = `<td contenteditable="true"></td>`;
+    tb.insertBefore(tr, tb.firstChild);
+    const firstCell = tr.querySelector('td[contenteditable="true"]');
+    if (firstCell) {
+      setTimeout(() => {
+        firstCell.focus();
+        const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        tr.scrollIntoView({ block: 'nearest' });
+      }, 0);
+    }
+  }
 
-        if (section === 'marketplaces') {
-          const tb = document.querySelector('#db_mkt_tbl tbody');
-          const tr = document.createElement('tr');
-          tr.className='__pending';
-          tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true">0</td>`;
-          tb.insertBefore(tr, tb.firstChild);
-          const firstCell = tr.querySelector('td[contenteditable="true"]');
-          if (firstCell) {
-            setTimeout(() => {
-              firstCell.focus();
-              const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
-              const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-              tr.scrollIntoView({ block: 'nearest' });
-            }, 0);
-          }
-        }
+  // MARKETPLACES
+  if (section === 'marketplaces') {
+    const tb = document.querySelector('#db_mkt_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
+    tr.innerHTML = `<td contenteditable="true"></td><td contenteditable="true">0</td>`;
+    tb.insertBefore(tr, tb.firstChild);
+    const firstCell = tr.querySelector('td[contenteditable="true"]');
+    if (firstCell) {
+      setTimeout(() => {
+        firstCell.focus();
+        const r = document.createRange(); r.selectNodeContents(firstCell); r.collapse(false);
+        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        tr.scrollIntoView({ block: 'nearest' });
+      }, 0);
+    }
+  }
 
-        if (section === 'sheet') {
-          const tb = document.querySelector('#db_sheet_tbl tbody');
-          const tr = document.createElement('tr');
-          tr.className='__pending';
-          const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
-  .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+  // SPREADSHEET (ORDER BOOK)  ← this is the only part that changes
+  if (section === 'sheet') {
+    const tb = document.querySelector('#db_sheet_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
 
-tr.innerHTML = `
-  <td><input type="date" value=""></td>
-  <td><input list="items" value=""></td>
-  <td><input type="number" step="0.01" value="-0"></td>
-  <td><input list="retailers" value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td><input type="date" value=""></td>
-  <td><select>${mktOptions}</select></td>
-  <td><input type="number" step="0.01" value="0"></td>`;
+    const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+      .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
-          tb.insertBefore(tr, tb.firstChild);
-          const firstCell = tr.querySelector('td[contenteditable="true"]');
-          if (firstCell) {
-            setTimeout(() => {
-              firstCell.focus();
-              const range = document.createRange();
-              range.selectNodeContents(firstCell);
-              range.collapse(false);
-              const sel = window.getSelection();
-              sel.removeAllRanges();
-              sel.addRange(range);
-              tr.scrollIntoView({ block: 'nearest' });
-            }, 0);
-          }
-        }
-      }
+    tr.innerHTML = `
+      <td><input type="date" value=""></td>
+      <td><input list="items" value=""></td>
+      <td><input type="number" step="0.01" value="-0"></td>
+      <td><input list="retailers" value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td><input type="date" value=""></td>
+      <td><select>${mktOptions}</select></td>
+      <td><input type="number" step="0.01" value="0"></td>
+    `;
+
+    tb.insertBefore(tr, tb.firstChild);
+
+    // ✅ Focus the first input/select (NOT a contenteditable td)
+    const firstInput = tr.querySelector('input,select');
+    if (firstInput) {
+      setTimeout(() => {
+        firstInput.focus();
+        tr.scrollIntoView({ block: 'nearest' });
+      }, 0);
+    }
+  }
+}
+
 
       function saveDBSection(section){
         if (section === 'items') {
@@ -1871,22 +1932,49 @@ tr.innerHTML = `
         }
 
         if (section === 'sheet') {
-          const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
-          pend.forEach(tr=>{
-            const payload = {
-              order_date:  tr.children[0].textContent.trim(),
-              item:        tr.children[1].textContent.trim(),
-              buy_price:   tr.children[2].textContent.trim(),
-              bought_from: tr.children[3].textContent.trim(),
-              sell_price:  tr.children[4].textContent.trim(),
-              sale_date:   tr.children[5].textContent.trim(),
-              sale_location: tr.children[6].textContent.trim(),
-              shipping:    tr.children[7].textContent.trim()
-            };
-            if (payload.item){
-              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
-            }
-          });
+  // pending (new) rows → addOrderBookRow
+  const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
+  pend.forEach(tr=>{
+    const payload = {
+      order_date:   cellVal(tr.children[0]),
+      item:         cellVal(tr.children[1]),
+      buy_price:    cellVal(tr.children[2]),
+      bought_from:  cellVal(tr.children[3]),
+      sell_price:   cellVal(tr.children[4]),
+      sale_date:    cellVal(tr.children[5]),
+      sale_location:cellVal(tr.children[6]),
+      shipping:     cellVal(tr.children[7])
+    };
+    if (payload.item){
+      google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
+    }
+  });
+
+  // existing rows → updateOrderBookRows
+  const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
+    .filter(tr => !tr.classList.contains('__pending'))
+    .map(tr => ({
+      row:          Number(tr.dataset.row),
+      order_date:   cellVal(tr.children[0]),
+      item:         cellVal(tr.children[1]),
+      buy_price:    cellVal(tr.children[2]),
+      bought_from:  cellVal(tr.children[3]),
+      sell_price:   cellVal(tr.children[4]),
+      sale_date:    cellVal(tr.children[5]),
+      sale_location:cellVal(tr.children[6]),
+      shipping:     cellVal(tr.children[7])
+    }));
+
+  google.script.run
+    .withSuccessHandler(()=>{
+      toast('Sheet updated ✔');
+      const wasOpen='sheet';
+      loadDatabase(); reopenDBTabAfterLoad(wasOpen);
+    })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .updateOrderBookRows(rows);
+}
+
 
           const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
             .filter(tr => !tr.classList.contains('__pending'))
