@@ -387,7 +387,7 @@
           </div>
           <div class="collapsible-body">
             <table id="db_items_tbl" style="margin-top:10px">
-              <thead><tr><th>Name</th><th>Release</th><th>MSRP</th><th>Market Value</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Name</th><th>Market Value</th><th>Actions</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -1267,7 +1267,7 @@ tb.innerHTML = rows.map(r => `
         let items        = pick('items','db_items','itemRows','productItems') || [];
         let retailers    = pick('retailers','stores','vendors','retailerRows') || [];
         let marketplaces = pick('marketplaces','platforms','salePlatforms','markets','marketRows') || [];
-        items = items.map(r => typeof r === 'string' ? ({ row:null, name:r, release:'', msrp:'', market:'' }) : r);
+        items = items.map(r => typeof r === 'string' ? ({ row:null, name:r, market:'' }) : r);
         retailers = retailers.map(r => typeof r === 'string' ? ({ row:null, name:r }) : r);
         marketplaces = marketplaces.map(r => {
           if (typeof r === 'string') return { row:null, name:r, fee:0 };
@@ -1385,16 +1385,12 @@ tb.innerHTML = rows.map(r => `
 
       const rows = catMap[cat] || [];
       for (const x of rows) {
-        const msrp = (x.msrp==null?'':x.msrp);
         const market = (x.market==null?'':x.market);
-        const rel = (x.release||'');
-        html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
-          <td><input type="text"  value="${escapeHtml(x.name)}"></td>
-          <td><input type="text"  value="${escapeHtml(rel)}"></td>
-          <td><input type="number" step="0.01" value="${Number(msrp||0)}"></td>
-          <td><input type="number" step="0.01" value="${Number(market||0)}"></td>
-          <td class="td-actions"><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
-        </tr>`;
+html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
+  <td><input type="text"  value="${escapeHtml(x.name)}"></td>
+  <td><input type="number" step="0.01" value="${Number(market||0)}"></td>
+  <td class="td-actions"><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
+</tr>`;
       }
     }
     if (uncategorised.length){
@@ -1411,17 +1407,13 @@ tb.innerHTML = rows.map(r => `
       </tr>`;
 
       for (const x of uncategorised) {
-        const msrp = (x.msrp==null?'':x.msrp);
-        const market = (x.market==null?'':x.market);
-        const rel = (x.release||'');
-        html += `<tr data-row="${x.row}" data-cat="${cat}" style="${isCol?'display:none;':''}">
-          <td><input type="text"  value="${escapeHtml(x.name)}"></td>
-          <td><input type="text"  value="${escapeHtml(rel)}"></td>
-          <td><input type="number" step="0.01" value="${Number(msrp||0)}"></td>
-          <td><input type="number" step="0.01" value="${Number(market||0)}"></td>
-          <td class="td-actions"><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
-        </tr>`;
-      }
+  const market = (x.market==null?'':x.market);
+  html += `<tr data-row="${x.row}" data-cat="${cat}" style="${isCol?'display:none;':''}">
+    <td><input type="text"  value="${escapeHtml(x.name)}"></td>
+    <td><input type="number" step="0.01" value="${Number(market||0)}"></td>
+    <td class="td-actions"><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
+  </tr>`;
+}
     }
     tb.innerHTML = html; tb.dataset.cats = JSON.stringify(catOrder);
 
@@ -1592,12 +1584,10 @@ edit.onclick = async ()=>{
     const tr = document.createElement('tr');
     tr.className='__pending';
     tr.innerHTML = `
-      <td><input type="text"  value=""></td>
-      <td><input type="text"  value=""></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td class="td-actions"></td>
-    `;
+  <td><input type="text"  value=""></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td class="td-actions"></td>
+`;
     tb.insertBefore(tr, tb.firstChild);
     const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
   }
@@ -1663,22 +1653,20 @@ edit.onclick = async ()=>{
           const name = cellVal(tr.children[0]);
           if (!name) return null;
           const payload = {
-            name,
-            release: cellVal(tr.children[1]),
-            msrp:    cellVal(tr.children[2]),
-            market:  cellVal(tr.children[3])
-          };
+  name,
+  market: cellVal(tr.children[1])
+};
+
           google.script.run.withFailureHandler(err=>alert(err?.message||err)).addDatabaseItem(payload);
           return null;
         }
         if (tr.dataset.row){
           return {
-            row:     Number(tr.dataset.row),
-            name:    cellVal(tr.children[0]),
-            release: cellVal(tr.children[1]),
-            msrp:    cellVal(tr.children[2]),
-            market:  cellVal(tr.children[3])
-          };
+  row:     Number(tr.dataset.row),
+  name:    cellVal(tr.children[0]),
+  market:  cellVal(tr.children[1])
+};
+
         }
         return null;
       })
@@ -2117,12 +2105,11 @@ edit.onclick = async ()=>{
 
   const prefix = isOther ? '' : (formatCategoryName(cat) + ': ');
   tr.innerHTML = `
-    <td><input type="text"  value="${escapeHtml(prefix)}"></td>
-    <td><input type="text"  value=""></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td class="td-actions"></td>
-  `;
+  <td><input type="text"  value="${escapeHtml(prefix)}"></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td class="td-actions"></td>
+`;
+
 
   const firstDataRow = tb.querySelector(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
   if (firstDataRow) {
