@@ -886,9 +886,6 @@ window.gas = gas;
   refreshOpen();   // ← add this
 }
 
-// in the tab switcher:
-if (id==='sold') refreshOpen();
-
 
 
       // ===== Auth (simple & Netlify-friendly) =====
@@ -1000,6 +997,8 @@ function startDiscord(ev){
 if (id==='inventory') refreshInventory();
 if (id==='database') loadDatabase();
 if (id==='flex') initFlexDefaults();
+    if (id==='sold') refreshOpen();
+
 
 
     // If metadata hasn’t landed yet, make sure we fetch it for UI that needs lists
