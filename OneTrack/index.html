@@ -769,11 +769,20 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
   const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
   if (hasGAS) return; // running inside Apps Script sandbox
 
-  function callApi(action, params={}) {
-  const qs = new URLSearchParams({ route:'api', action, ...params });
-  return fetch(`${GAS_API_URL}?${qs.toString()}`, { method:'GET', credentials:'omit' })
-    .then(r => r.json());
+  function callApi(action, params = {}) {
+  const qs = new URLSearchParams({ route: 'api', action, ...params });
+  return fetch(`${GAS_API_URL}?${qs.toString()}`, { method: 'GET', credentials: 'omit' })
+    .then(async r => {
+      const ct = r.headers.get('content-type') || '';
+      const text = await r.text();
+      if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0, 200)}`);
+      if (/application\/json/i.test(ct)) return JSON.parse(text);
+      // some proxies don’t set content-type; try JSON, otherwise throw a readable error
+      try { return JSON.parse(text); }
+      catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0, 200)}`); }
+    });
 }
+
 
 
         // Map each function to action + param shaping
@@ -861,11 +870,13 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
       }
       function showGate(){ appRoot.style.display='none'; authGate.style.display=''; }
       function showApp(){
-        authGate.style.display='none';
-        appRoot.style.display='';
-        initFlexUserBits();
-        reloadModel();   // ensure metadata loads when the app is visible
-      }
+  authGate.style.display='none';
+  appRoot.style.display='';
+  initFlexUserBits();
+  reloadModel();   // ensure metadata loads when the app is visible
+  refreshOpen();   // ← prefetch open purchases so the tab is instant
+}
+
 
       // ===== Auth (simple & Netlify-friendly) =====
       function hasAppsScript(){
@@ -973,18 +984,20 @@ function startDiscord(ev){
 
       // ===== Tabs =====
       document.querySelectorAll('.tab').forEach(el=>{
-        el.addEventListener('click', ()=>{
-          document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-          el.classList.add('active');
-          const id = el.dataset.tab;
-          document.querySelectorAll('section').forEach(s=>s.style.display='none');
-          document.getElementById(id).style.display='block';
-          if (id==='stats') refreshStats();
-          if (id==='inventory') refreshInventory();
-          if (id==='database') loadDatabase();
-          if (id==='flex') initFlexDefaults();
-        });
-      });
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    const id = el.dataset.tab;
+    document.querySelectorAll('section').forEach(s=>s.style.display='none');
+    document.getElementById(id).style.display='block';
+    if (id==='stats')     refreshStats();
+    if (id==='inventory') refreshInventory();
+    if (id==='database')  loadDatabase();
+    if (id==='flex')      initFlexDefaults();
+    if (id==='sold')      refreshOpen();       // ← load open purchases when entering the tab
+  });
+});
+
 
       // ==== Helpers ====
       let META=null, CHART=null, STATS_CACHE=null, DB_STATE=null, FLEX={ chart:null, cache:null };
