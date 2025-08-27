@@ -399,6 +399,7 @@
   … Sign in with Discord …
 </a>
 
+
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
       </div>
@@ -900,34 +901,21 @@ if (id==='sold') refreshOpen();
 
       // Single entry point for the button
 function startDiscord(ev){
-  try { ev?.preventDefault(); ev?.stopPropagation(); } catch(_) {}
-  if (gateStatus) gateStatus.textContent = 'Opening Discord…';
+  // Optional safety: if someone binds this handler, still go TOP to the direct GAS URL
+  if (ev) { try { ev.preventDefault(); ev.stopPropagation(); } catch(_) {} }
+  if (typeof gateStatus !== 'undefined' && gateStatus) gateStatus.textContent = 'Opening Discord…';
   const u = GAS_EXEC_DIRECT + (GAS_EXEC_DIRECT.includes('?') ? '&' : '?') + 'route=discord_login';
-  // Force top-level navigation from the Netlify page
-  try { (window.top || window).location.href = u; }
-  catch(_) { window.location.href = u; }
+  try { (window.top || window).location.href = u; } catch(_) { window.location.href = u; }
 }
 
-
-
-
-
-      // Ensure the click handler is globally visible and bound, even if inline onclick fails
-      (function wireDiscord(){
-  // expose for inline onclick="startDiscord(event)"
-  window.startDiscord = startDiscord;
-
-  const btn = document.getElementById('discordBtn');
-  if (!btn) return;
-
-  // Just in case a stale build added an href somewhere, nuke it.
-  btn.removeAttribute('href');
-
-  // Rebind cleanly so no old listeners linger
-  const clone = btn.cloneNode(true);
-  btn.parentNode.replaceChild(clone, btn);
-  clone.addEventListener('click', startDiscord);
+// DO NOT strip href or replace the node. Just ensure target is correct.
+(function wireDiscord(){
+  const el = document.getElementById('discordBtn');
+  if (!el) return;
+  el.setAttribute('target', '_top');
+  // no cloning, no removing href
 })();
+
 
       function shortDateMMDDYY(iso){
         if(!iso) return '';
