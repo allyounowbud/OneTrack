@@ -882,10 +882,12 @@ function gas(name, ...args){
   authGate.style.display='none';
   appRoot.style.display='';
   initFlexUserBits();
-  reloadModel();      // metadata for items/retailers/markets
-  refreshOpen();      // populate “Mark as Sold” list right away
+  reloadModel();
+  refreshOpen();   // ← add this
 }
 
+// in the tab switcher:
+if (id==='sold') refreshOpen();
 
 
 
