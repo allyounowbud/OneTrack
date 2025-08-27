@@ -766,89 +766,69 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
 // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
 (function(){
   const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
-  if (hasGAS) return; // running inside Apps Script sandbox
+  if (hasGAS) return; // running inside Apps Script
 
+  // 1) Low-level fetch to your Netlify proxy
   function callApi(action, params = {}) {
-  const qs = new URLSearchParams({ route: 'api', action, ...params });
-  return fetch(`${GAS_API_URL}?${qs.toString()}`, {
-    method: 'GET',
-    credentials: 'same-origin',   // send/receive the Netlify session cookie
-    cache: 'no-store',
-    headers: { 'Accept': 'application/json' }
-  })
-  .then(async r => {
-    const ct = r.headers.get('content-type') || '';
-    const text = await r.text();
-    if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0, 200)}`);
-    if (/application\/json/i.test(ct)) return JSON.parse(text);
-    try { return JSON.parse(text); }
-    catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0, 200)}`); }
-  });
-}
+    const qs = new URLSearchParams({ route: 'api', action, ...params });
+    return fetch(`${GAS_API_URL}?${qs.toString()}`, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(async r => {
+      const ct = r.headers.get('content-type') || '';
+      const text = await r.text();
+      if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0,200)}`);
+      if (/application\/json/i.test(ct)) return JSON.parse(text);
+      try { return JSON.parse(text); }
+      catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0,200)}`); }
+    });
+  }
 
+  // 2) Endpoint mapper (same as before)
+  const map = {
+    getInitModel:              () => ({action:'getInitModel'}),
+    getOpenPurchases:          () => ({action:'getOpenPurchases'}),
+    getInventory:              () => ({action:'getInventory'}),
+    getDatabaseFull:           () => ({action:'getDatabaseFull'}),
+    getOrderBookEditable:      () => ({action:'getOrderBookEditable'}),
+    getStatsV2:       (range,item,from,to)=>({action:'getStatsV2', params:{rangeKey:range, item, from, to}}),
+    getLongestHoldDays:(item)  => ({action:'getLongestHoldDays', params:{item}}),
 
+    submitQuickAdd:    (payload)=>({action:'submitQuickAdd',    params:{payload: JSON.stringify(payload)}}),
+    submitMarkAsSold:  (payload)=>({action:'submitMarkAsSold',  params:{payload: JSON.stringify(payload)}}),
+    addOrderBookRow:   (payload)=>({action:'addOrderBookRow',   params:{payload: JSON.stringify(payload)}}),
+    updateOrderBookRows:(rows)  =>({action:'updateOrderBookRows',params:{rows: JSON.stringify(rows)}}),
 
-  // Convenience promise wrapper so you can call gas('fnName', payload)
-function gas(name, payload) {
-  return new Promise((resolve, reject) => {
-    const r = google.script.run
-      .withSuccessHandler(resolve)
-      .withFailureHandler(e => reject(e?.message || String(e)));
-    if (payload === undefined) r[name]();
-    else r[name](payload);
-  });
-}
-window.gas = gas;
+    addDatabaseItem:        (payload)=>({action:'addDatabaseItem',        params:{payload: JSON.stringify(payload)}}),
+    addDatabaseRetailer:    (name)  =>({action:'addDatabaseRetailer',     params:{name}}),
+    addDatabaseMarketplace: (payload)=>({action:'addDatabaseMarketplace', params:{payload: JSON.stringify(payload)}}),
+    updateDatabaseItems:    (rows)  =>({action:'updateDatabaseItems',     params:{rows: JSON.stringify(rows)}}),
+    updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
+    updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
 
+    // Optional helper used by html2canvas fallback
+    fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
+  };
 
-        // Map each function to action + param shaping
-        const map = {
-          getInitModel:              () => ({action:'getInitModel'}),
-          getOpenPurchases:          () => ({action:'getOpenPurchases'}),
-          getInventory:              () => ({action:'getInventory'}),
-          getDatabaseFull:           () => ({action:'getDatabaseFull'}),
-          getOrderBookEditable:      () => ({action:'getOrderBookEditable'}),
-          getStatsV2:       (range,item,from,to)=>({action:'getStatsV2', params:{rangeKey:range, item, from, to}}),
-          getLongestHoldDays:(item)  => ({action:'getLongestHoldDays', params:{item}}),
+  // 3) Per-request object (no shared state → no races)
+  function GASRequest(){
+    this._ok  = ()=>{};
+    this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
+  }
+  GASRequest.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
+  GASRequest.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
 
-          submitQuickAdd:    (payload)=>({action:'submitQuickAdd',    params:{payload: JSON.stringify(payload)}}),
-          submitMarkAsSold:  (payload)=>({action:'submitMarkAsSold',  params:{payload: JSON.stringify(payload)}}),
-          addOrderBookRow:   (payload)=>({action:'addOrderBookRow',   params:{payload: JSON.stringify(payload)}}),
-          updateOrderBookRows:(rows)  =>({action:'updateOrderBookRows',params:{rows: JSON.stringify(rows)}}),
+  Object.keys(map).forEach(name=>{
+    GASRequest.prototype[name] = function(...args){
+      const spec = map[name](...args) || {};
+      return callApi(spec.action, spec.params||{})
+        .then(res=>{
+          if (res && res.ok === false && res.error) throw res;
+          if (name === 'fetchImageAsDataUrl') r
 
-          addDatabaseItem:        (payload)=>({action:'addDatabaseItem',        params:{payload: JSON.stringify(payload)}}),
-          addDatabaseRetailer:    (name)  =>({action:'addDatabaseRetailer',     params:{name}}),
-          addDatabaseMarketplace: (payload)=>({action:'addDatabaseMarketplace', params:{payload: JSON.stringify(payload)}}),
-          updateDatabaseItems:    (rows)  =>({action:'updateDatabaseItems',     params:{rows: JSON.stringify(rows)}}),
-          updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
-          updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
-
-          // Optional helper used by html2canvas fallback
-          fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
-        };
-
-        function Runner(){
-          this._ok = ()=>{};
-          this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
-        }
-        Runner.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
-        Runner.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
-
-        Object.keys(map).forEach(name=>{
-          Runner.prototype[name] = function(...args){
-            const spec = map[name](...args) || {};
-            return callApi(spec.action, spec.params||{})
-              .then(res=>{
-                if (res && res.ok === false && res.error) throw res;
-                if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
-                this._ok(res);
-              })
-              .catch(this._err);
-          };
-        });
-
-        window.google = { script: { run: new Runner() } };
-      })();
 
       // ===== Theme toggle (works on gate + app) =====
       const themeBtn = document.getElementById('themeBtn');
