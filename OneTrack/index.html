@@ -1416,6 +1416,37 @@ if (id==='flex') initFlexDefaults();
       }
 
       // ==== Database ====
+
+      // Normalize DB payload into { items:[{row,name,release,msrp,market}], retailers:[{row,name}], marketplaces:[{row,name,fee}] }
+function normDBShape(raw){
+  const x = (raw && typeof raw === 'object') ? raw : {};
+
+  // pick the first existing array for each group (covers different server key names)
+  const pick = (...keys)=> keys.map(k=> x[k]).find(v => Array.isArray(v));
+
+  let items        = pick('items','db_items','itemRows','productItems') || [];
+  let retailers    = pick('retailers','stores','vendors','retailerRows') || [];
+  let marketplaces = pick('marketplaces','platforms','salePlatforms','markets','marketRows') || [];
+
+  // coerce simple string lists to objects (what your UI expects)
+  items = items.map(r => typeof r === 'string'
+    ? ({ row:null, name:r, release:'', msrp:'', market:'' })
+    : r);
+
+  retailers = retailers.map(r => typeof r === 'string'
+    ? ({ row:null, name:r })
+    : r);
+
+  marketplaces = marketplaces.map(r => {
+    if (typeof r === 'string') return { row:null, name:r, fee:0 };
+    const fee = r.fee ?? r.feePct ?? r.fee_percent ?? r.feePercent ?? r.feeRate ?? 0;
+    return { ...r, fee };
+  });
+
+  return { items, retailers, marketplaces };
+}
+
+      
       async function loadDatabase(){
   try{
     // make buttons live immediately
@@ -1426,8 +1457,9 @@ if (id==='flex') initFlexDefaults();
       gas('getOrderBookEditable')
     ]);
 
-    DB_STATE = db || { items:[], retailers:[], marketplaces:[] };
-    renderDBCollapsed(); // refresh counts & keep buttons wired
+    DB_STATE = normDBShape(db);
+renderDBCollapsed(); // wires the Expand/Save/Close/Save/Add buttons
+
 
 
     const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
@@ -1571,14 +1603,14 @@ if (id==='flex') initFlexDefaults();
           tb.innerHTML = r.map(x => `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td></tr>`).join('');
 
         } else if (section === 'marketplaces') {
-  let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : [];
+  let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : []; 
   const tb = document.querySelector('#db_mkt_tbl tbody');
+  m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
+  tb.innerHTML = m.map(x => {
+    const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
+    return `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td><td contenteditable="true">${fee}</td></tr>`;
+  }).join('');
 
-          m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
-          tb.innerHTML = m.map(x => {
-            const fee = Number(x.fee || 0);
-            return `<tr data-row="${x.row}"><td contenteditable="true">${escapeHtml(x.name)}</td><td contenteditable="true">${fee}</td></tr>`;
-          }).join('');
 
         } else if (section === 'sheet') {
           const tb = document.querySelector('#db_sheet_tbl tbody');
