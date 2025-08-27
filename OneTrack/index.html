@@ -706,32 +706,39 @@
         }catch(err){ return { ok:false, error:String(err && (err.message || err)) }; }
       }
       (function redeemIfNeeded(){
-        const m = (location.hash || '').match(/#sess=([^&]+)/);
-        if (!m) return;
-        const code = decodeURIComponent(m[1]);
-        setGateStatus('Finalizing sign-in…');
-        (async ()=>{
-          let data = await redeemJson(`${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
-          if (!data || !data.profile) {
-            data = await redeemJson(`${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
-          }
-          console.log('redeem_session_code response:', data);
-          if (data && data.profile) {
-  try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
-  history.replaceState(null, '', location.pathname + location.search);
-  showApp();
-  return;
-}
-setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
-try { history.replaceState(null, '', location.pathname + location.search); } catch(_){}
-showGate();
+  const m = (location.hash || '').match(/#sess=([^&]+)/);
+  if (!m) return;
+
+  // Show the app immediately while we redeem the code.
+  try { showApp(); } catch(_) {}
+
+  const code = decodeURIComponent(m[1]);
+  setGateStatus('Finalizing sign-in…');
+  (async ()=>{
+    let data = await redeemJson(`${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
+    if (!data || !data.profile) {
+      data = await redeemJson(`${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
+    }
+    console.log('redeem_session_code response:', data);
+    if (data && data.profile) {
+      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
+      history.replaceState(null, '', location.pathname + location.search); // clear #sess
+      showApp();
+      return;
+    }
+    setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
+    try { history.replaceState(null, '', location.pathname + location.search); } catch(_) {} // clear #sess even on failure
+    showGate();
+  })();
+})();
+
         })();
       })();
       const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
 ;(function safeBoot(){
   try {
     // If we arrive with a session code in the hash, show the app immediately
-    // while redemption runs (redeemIfNeeded will store the profile + clear the hash).
+    // while redemption runs (redeemIfNeeded stores the profile + clears the hash).
     if (__HAS_SESS_HASH) { showApp(); return; }
 
     // Otherwise, fall back to saved session or gate.
@@ -750,6 +757,7 @@ showGate();
     }
   }, 300);
 })();
+
 
 
 
