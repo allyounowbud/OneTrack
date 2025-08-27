@@ -983,12 +983,13 @@ function startDiscord(ev){
 // If we're returning from Discord with a one-time code, let the redeem flow win.
 const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
 
-(function safeBoot(){
+// prefix the IIFE with a semicolon in case the previous statement lacked one
+; (function safeBoot(){
   try {
     if (__HAS_SESS_HASH) {
       // pickUpSess() (defined above) will redeem and call showApp().
       // Keep the gate visible with the “Finalizing sign-in…” message, but
-      // DO NOT flip back again here or in the fallback timer.
+      // do not override here or in the fallback timer.
       showGate();
       return;
     }
@@ -1006,6 +1007,7 @@ const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
     if (bothHidden) showGate();
   }, 300);
 })();
+
 
 
       // ===== Tabs =====
