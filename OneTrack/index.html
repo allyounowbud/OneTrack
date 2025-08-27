@@ -956,22 +956,53 @@ function startDiscord(ev){
       });
 
       (function pickUpSess(){
-        const h = location.hash || '';
-        const m = h.match(/#sess=([^&]+)/);
-        if (!m) return;
-        const code = decodeURIComponent(m[1]);
+  const h = location.hash || '';
+  const m = h.match(/#sess=([^&]+)/);
+  if (!m) return;  // no session code in URL
 
-        fetch(GAS_API_URL + '?route=api&action=redeem_session_code&code=' + encodeURIComponent(code))
-          .then(r => r.json())
-          .then(d => {
-            if (d && d.profile) {
-              try { localStorage.setItem('orders_user', JSON.stringify(d.profile)); } catch(_) {}
-              history.replaceState(null, '', location.pathname + location.search); // remove the hash
-              showApp();
-            }
-          })
-          .catch(() => { /* ignore */ });
-      })();
+  const code   = decodeURIComponent(m[1]);
+  const status = document.getElementById('gateStatus');
+  if (status) status.textContent = 'Finalizing sign-in…';
+
+  fetch(
+    `${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`,
+    {
+      method: 'GET',
+      credentials: 'same-origin',   // IMPORTANT: accept Set-Cookie
+      cache: 'no-store'
+    }
+  )
+  .then(async r => {
+    let data;
+    try { data = await r.json(); }
+    catch { data = { ok:false, error:'Bad JSON from redeem_session_code' }; }
+
+    console.log('redeem_session_code response:', data);
+    Set-Cookie: ot_sess=<token>; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000
+
+    if (data && data.profile) {
+      // persist profile for UI and show the app
+      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
+      // drop the #sess=… from the URL
+      history.replaceState(null, '', location.pathname + location.search);
+      // quick sanity: did the cookie stick?
+      if (!document.cookie || !/ot_sess=/.test(document.cookie)) {
+        console.warn('Session cookie missing after redeem. Check Set-Cookie attributes.');
+      }
+      showApp();
+      return;
+    }
+
+    // Didn’t get a profile → show an error and keep the gate up
+    if (status) status.textContent = `Sign-in failed${data && data.error ? ': ' + data.error : ''}`;
+    showGate();
+  })
+  .catch(err => {
+    console.error('redeem_session_code error:', err);
+    if (status) status.textContent = 'Sign-in failed.';
+    showGate();
+  });
+})();
 
       // ===== Init gate/app on load =====
       (function safeBoot(){
