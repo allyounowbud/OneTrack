@@ -874,9 +874,10 @@ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fm
   authGate.style.display='none';
   appRoot.style.display='';
   initFlexUserBits();
-  reloadModel();     // metadata for quick/sold/flex lists
-  refreshOpen();     // ← prime “Mark as Sold” dropdown immediately
+  reloadModel();      // metadata for items/retailers/markets
+  refreshOpen();      // populate “Mark as Sold” list right away
 }
+
 
 
 
@@ -993,11 +994,12 @@ function startDiscord(ev){
     document.querySelectorAll('section').forEach(s=>s.style.display='none');
     document.getElementById(id).style.display='block';
 
-    if (id==='stats')     refreshStats();
-    if (id==='inventory') refreshInventory();
-    if (id==='database')  loadDatabase();
-    if (id==='flex')      initFlexDefaults();
-    if (id==='sold')      refreshOpen();             // ← populate the picker
+    if (id==='stats') refreshStats();
+if (id==='inventory') refreshInventory();
+if (id==='database') loadDatabase();
+if (id==='flex') initFlexDefaults();
+if (id==='sold') refreshOpen();     // <— new
+
 
     // If metadata hasn’t landed yet, make sure we fetch it for UI that needs lists
     if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
@@ -1395,6 +1397,7 @@ function startDiscord(ev){
     alert('Database load error: ' + (err && err.message ? err.message : err));
   }
 }
+
 
 
 
@@ -1916,11 +1919,19 @@ function startDiscord(ev){
         const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
         const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
 
-        function gas(name, ...args){
+        // Promise wrapper around google.script.run calls
+function gas(name, ...args){
   return new Promise((resolve, reject)=>{
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[name](...args);
+    try{
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)[name](...args);
+    }catch(e){
+      reject(e);
+    }
   });
 }
+
 
         // Promise wrapper around google.script.run calls
 function gas(name, ...args){
