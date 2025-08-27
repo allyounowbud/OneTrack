@@ -759,12 +759,8 @@
       // ===== Base URL from server (or current page sans query) =====
       const BASE_URL = location.origin; // cosmetic only
 
-      // ✅ Use your Netlify Function proxy (same-origin) instead of the Apps Script URL here
-// (You’ll set the real GAS URL in the function’s environment variable below.)
-// Use proxy ONLY for JSON API calls (fixes CORS)
-const GAS_API_URL     = "/.netlify/functions/gas-proxy";
-- const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
-+ const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
+const GAS_API_URL = "/.netlify/functions/gas-proxy";
+const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
 
 
 // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
@@ -784,6 +780,19 @@ const GAS_API_URL     = "/.netlify/functions/gas-proxy";
       catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0, 200)}`); }
     });
 }
+
+  // Convenience promise wrapper so you can call gas('fnName', payload)
+function gas(name, payload) {
+  return new Promise((resolve, reject) => {
+    const r = google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(e => reject(e?.message || String(e)));
+    if (payload === undefined) r[name]();
+    else r[name](payload);
+  });
+}
+window.gas = gas;
+
 
         // Map each function to action + param shaping
         const map = {
@@ -892,11 +901,11 @@ if (id==='sold') refreshOpen();
 function startDiscord(ev){
   try { ev?.preventDefault(); ev?.stopPropagation(); } catch(_) {}
   if (gateStatus) gateStatus.textContent = 'Opening Discord…';
-- const u = "/.netlify/functions/gas-proxy?route=discord_login";
-+ const u = GAS_EXEC_DIRECT + "?route=discord_login";
+  const u = GAS_EXEC_DIRECT + "?route=discord_login";
   try { (window.top || window).location.assign(u); }
   catch(_) { window.location.href = u; }
 }
+
 
 
 // DO NOT strip href or replace the node. Just ensure target is correct.
@@ -991,7 +1000,6 @@ function startDiscord(ev){
 if (id==='inventory') refreshInventory();
 if (id==='database') loadDatabase();
 if (id==='flex') initFlexDefaults();
-if (id==='sold') refreshOpen();     // <— new
 
 
     // If metadata hasn’t landed yet, make sure we fetch it for UI that needs lists
@@ -1911,25 +1919,6 @@ if (id==='sold') refreshOpen();     // <— new
         }
         const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
         const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
-
-<script>
-// --- Global GAS convenience wrapper (works with real GAS or the polyfill) ---
-function gas(name, payload) {
-  return new Promise((resolve, reject) => {
-    try {
-      const r = google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(e => reject(e?.message || String(e)));
-      // Call with or without payload
-      if (payload === undefined) r[name]();
-      else r[name](payload);
-    } catch (err) {
-      reject(err?.message || String(err));
-    }
-  });
-}
-window.gas = gas; // expose just in case
-</script>
 
     
         // LEFT stats
