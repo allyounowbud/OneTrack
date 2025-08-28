@@ -1866,14 +1866,19 @@ if (rowUpdBtn) {
         .withSuccessHandler(() => { toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
         .withFailureHandler(err => alert(err?.message || err))
         .removeDatabaseMarketplace(row);
+    // … inside wireDBButtons(), at the end of the delegated click handler:
     } else if (kind === 'sheet') {
       google.script.run
         .withSuccessHandler(() => { toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
         .withFailureHandler(err => alert(err?.message || err))
         .deleteOrderBookRows([row]);
-      dbRoot.__wiredClicks = true;
     }
-  })
+  }); // <-- close dbRoot.addEventListener('click', …)
+
+  dbRoot.__wiredClicks = true; // <-- set the guard after the handler closes
+} // <-- close: if (!dbRoot.__wiredClicks)
+} // <-- close: function wireDBButtons
+
 
   function addPendingRow(section){
     
