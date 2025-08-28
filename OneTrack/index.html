@@ -1552,7 +1552,7 @@ function renderDBBody(section){
     tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
   })
   .getOrderBookEditable();
-
+}
 
 
   if (section === 'items') {
@@ -1679,12 +1679,6 @@ function renderDBBody(section){
         <td class="td-actions"><button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button></td>
       </tr>`;
     }).join('');
-
-  } else if (section === 'sheet') {
-    const tb = document.querySelector('#db_sheet_tbl tbody');
-    tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
-
-
 
       function wireDBButtons(){
   document.querySelectorAll('#database .db-section').forEach(sec=>{
