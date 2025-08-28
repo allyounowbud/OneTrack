@@ -405,7 +405,7 @@
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
           <a id="discordBtn" class="discord-btn"
-   href="https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec?route=discord_login"
+   href="/.netlify/functions/sheet?route=api&action=getInitModel"
    target="_top" rel="noopener">Sign in with Discord</a>
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
@@ -754,7 +754,7 @@
       // ===== Base URL / GAS endpoints =====
       const BASE_URL = location.origin;
       const GAS_API_URL = "/.netlify/functions/gas-proxy";
-      const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
+      const GAS_EXEC_DIRECT = "/.netlify/functions/sheet?route=api&action=getInitModel";
 
       // ---- Global app state (must exist before any function can run) ----
 let META = null;
