@@ -751,10 +751,12 @@
     <div id="toast" class="toast" style="display:none"></div>
 
     <script>
-      // ===== Base URL / GAS endpoints =====
-      const BASE_URL = location.origin;
-      const GAS_API_URL = "/.netlify/functions/gas-proxy";
-      const GAS_EXEC_DIRECT = "/.netlify/functions/sheet?route=api&action=getInitModel";
+      // ===== Base URL / Netlify Function =====
+const BASE_URL = location.origin;
+// point directly at your Netlify function
+const GAS_API_URL = "/.netlify/functions/sheet";
+// (no need for GAS_EXEC_DIRECT anymore)
+
 
       // ---- Global app state (must exist before any function can run) ----
 let META = null;
@@ -770,7 +772,11 @@ let FLEX = { chart: null, cache: null };
         if (hasGAS) return;
 
         function callApi(action, params = {}) {
-  const qs = new URLSearchParams({ route: 'api', action, ...params, ts: Date.now().toString() });
+  // always send params as a single JSON value
+  const qs = new URLSearchParams({ route: 'api', action, ts: Date.now().toString() });
+  if (params && Object.keys(params).length) {
+    qs.set('params', JSON.stringify(params));
+  }
   const url = `${GAS_API_URL}?${qs.toString()}`;
 
   async function once() {
