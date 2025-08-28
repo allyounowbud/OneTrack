@@ -168,7 +168,15 @@
       body:not([data-theme="light"]) #database .collapsible-body table td[contenteditable="true"]{ color: var(--text); background: rgba(255,255,255,.02); border-bottom-color: var(--input-border); }
       body:not([data-theme="light"]) #db_sheet_tbl tbody td{ color: var(--text); }
       body:not([data-theme="light"]) #db_sheet_tbl thead th{ color:#c4ccd6; }
-      #database .db-actions .db-edit{ background: var(--card-bg); border: 1px solid var(--pill-border); }
+      #database .db-actions .db-edit{
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--pill-border);
+  cursor: pointer;
+}
+
       #database .db-actions .db-save, #database .db-actions .db-add{ background: var(--accent); color:#fff; }
       #database .db-actions .db-cancel{ background: transparent; color: var(--text); border: 1px solid var(--pill-border); }
       #database .db-actions button:hover{ border-color: var(--focus); }
