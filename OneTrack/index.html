@@ -1590,8 +1590,34 @@ function renderDBBody(section){
 
     if (cancel) cancel.onclick = ()=> renderDBCollapsed();
     if (save)   save.onclick   = ()=> saveDBSection(sec.dataset.section);
-    if (addBtn) addBtn.onclick = ()=> addPendingRow(sec.dataset.section);
+    if (addBtn) {
+  // Items header uses "Add Category", others stay "Add"
+  addBtn.textContent = (sec.dataset.section === 'items') ? 'Add Category' : 'Add';
+  addBtn.onclick = ()=> {
+    if (sec.dataset.section === 'items') addPendingCategoryRow();
+    else addPendingRow(sec.dataset.section);
+  };
+}
   });
+
+        function addPendingCategoryRow(){
+  const tb = document.querySelector('#db_items_tbl tbody');
+  if (!tb) return;
+
+  const tr = document.createElement('tr');
+  tr.className = '__pending __catadd';
+  tr.innerHTML = `
+    <td colspan="2"><input type="text" placeholder="Category name (ALL CAPS)" value=""></td>
+    <td class="td-actions">
+      <button class="db-row-save" data-role="save-cat" type="button">Save</button>
+      <button class="db-row-cancel" type="button">Cancel</button>
+    </td>
+  `;
+  tb.insertBefore(tr, tb.firstChild);
+  const first = tr.querySelector('input');
+  if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); }, 0); }
+}
+
 
   // Single delegated click handler for all row-level actions (save/update/delete)
   const dbRoot = document.getElementById('database');
@@ -1602,6 +1628,20 @@ function renderDBBody(section){
       if (rowSaveBtn) {
         const tr = rowSaveBtn.closest('tr');
         if (!tr) return;
+
+        // Category SAVE (from the "Add Category" pending row)
+if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__catadd')) {
+  const nameRaw = cellVal(tr.children[0]);         // the input is in the first <td>
+  const catName = (nameRaw || '').trim();
+  if (!catName) { toast('Category name required'); return; }
+
+  google.script.run
+    .withSuccessHandler(()=>{ toast('Category added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .addDatabaseItem({ name: catName.toUpperCase(), market: '' });  // stored as a header marker
+  return;
+}
+
 
         // ITEMS
         if (tr.closest('#db_items_tbl')) {
@@ -2223,10 +2263,13 @@ function renderDBBody(section){
 
   const prefix = isOther ? '' : (formatCategoryName(cat) + ': ');
   tr.innerHTML = `
-    <td><input type="text"  value="${escapeHtml(prefix)}"></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
-  `;
+  <td><input type="text"  value="${escapeHtml(prefix)}"></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td class="td-actions">
+    <button class="db-row-save" type="button">Save</button>
+    <button class="db-row-cancel" type="button">Cancel</button>
+  </td>
+`;
 
   const firstDataRow = tb.querySelector(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
   if (firstDataRow) {
