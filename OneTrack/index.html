@@ -1871,7 +1871,6 @@ if (rowUpdBtn) {
         .withSuccessHandler(() => { toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
         .withFailureHandler(err => alert(err?.message || err))
         .deleteOrderBookRows([row]);
-        });
       dbRoot.__wiredClicks = true;
     }
   }
