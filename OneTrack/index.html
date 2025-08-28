@@ -2261,15 +2261,17 @@ if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__cat
   tr.className = '__pending';
   tr.setAttribute('data-cat', cat);
 
-  const prefix = isOther ? '' : (formatCategoryName(cat) + ': ');
+  // Do not auto-insert the category prefix
   tr.innerHTML = `
-  <td><input type="text"  value="${escapeHtml(prefix)}"></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions">
-    <button class="db-row-save" type="button">Save</button>
-    <button class="db-row-cancel" type="button">Cancel</button>
-  </td>
-`;
+    <td><input type="text" value=""></td>
+    <td><input type="number" step="0.01" value="0"></td>
+    <td class="td-actions">
+      <button class="db-row-save" type="button">Save</button>
+      <button class="db-row-cancel" type="button">Cancel</button>
+    </td>
+  `;
+  // …
+}
 
   const firstDataRow = tb.querySelector(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
   if (firstDataRow) {
