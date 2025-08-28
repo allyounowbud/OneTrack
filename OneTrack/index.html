@@ -1820,8 +1820,6 @@ if (!dbRoot.__wiredClicks) {
           .updateDatabaseItems([{ row: rowId, name, market }]);
         return;
       }
-      // (add other update branches if you need them)
-    }
 
     // Row-level CANCEL (remove pending rows for Category/Items/Retailers)
     const rowCancelBtn = ev.target.closest('button.db-row-cancel');
