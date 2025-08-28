@@ -318,12 +318,17 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
     return true;
   };
 
+  // --- inside getStatsV2, keep everything above your "for (const r of ob.rows) {" loop ---
+
   const summary = { totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, profit:0, orders:0, avgDaysToSell:0 };
-  const breakdownMap = {}; // item -> stats
+  const breakdownMap = {};
   const salesByMonthByItem = {};
   const purchasesByMonthByItem = {};
   const salesByPlatformByItem = {};
   const purchasesByStoreByItem = {};
+
+  // NEW: init monthlyMap correctly
+  const monthlyMap = {}; // ym -> { ym, soldQty, revenue, cost }
 
   let dSellSum = 0, dSellCount = 0;
 
@@ -389,43 +394,36 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
         const ym = yymm(saleDate);
         if (!salesByMonthByItem[ym]) salesByMonthByItem[ym] = {};
         salesByMonthByItem[ym][item] = (salesByMonthByItem[ym][item] || 0) + 1;
-      }
-        if (saleDate instanceof Date) {
-    const ym = yymm(saleDate);
-    // monthly revenue/cost for the revCogs chart
-    if (!monthlyMap[ym]) monthlyMap[ym] = { ym, soldQty: 0, revenue: 0, cost: 0 };
-    monthlyMap[ym].revenue += sellPrice;
-    monthlyMap[ym].cost    += Math.abs(buyPrice); // buyPrice is negative => cost should be positive
-  }
 
-      if (!salesByPlatformByItem[marketplace]) salesByPlatformByItem[marketplace] = {};
-      salesByPlatformByItem[marketplace][item] = (salesByPlatformByItem[marketplace][item] || 0) + 1;
+        // NEW: accumulate revenue/cost for the rev/COGS chart
+        if (!monthlyMap[ym]) monthlyMap[ym] = { ym, soldQty: 0, revenue: 0, cost: 0 };
+        monthlyMap[ym].revenue += sellPrice;
+        monthlyMap[ym].cost    += Math.abs(buyPrice); // buyPrice is negative in sheet
+      }
     }
   }
 
-  // compute profits and table rows
+  // compute profits + onHand per item
   const breakdownRows = Object.values(breakdownMap).map(b => {
-  const profit = b.totalRevenue - b.fees - b.shipping + b.costSold; // costSold negative
-  const onHandQty = Math.max(0, (b.boughtQty || 0) - (b.soldQty || 0));
-  return { ...b, profit, onHandQty };
-}).sort((a,b)=> (b.profit||0)-(a.profit||0));
+    const profit = b.totalRevenue - b.fees - b.shipping + b.costSold; // costSold negative
+    const onHandQty = Math.max(0, (b.boughtQty || 0) - (b.soldQty || 0));
+    return { ...b, profit, onHandQty };
+  }).sort((a,b)=> (b.profit||0)-(a.profit||0));
 
-  summary.profit = summary.revenue - summary.fees - summary.shipping + summary.costSold; // costSold negative
+  summary.profit = summary.revenue - summary.fees - summary.shipping + summary.costSold;
   summary.avgDaysToSell = dSellCount ? Math.round(dSellSum / dSellCount) : 0;
 
-  // monthly summary (combine counts + revenue + cost)
-const monthlyMap = monthlyMap || {}; // (ensure defined above if not already)
-for (const [ym, perItem] of Object.entries(salesByMonthByItem)) {
-  let cnt = 0;
-  for (const v of Object.values(perItem)) cnt += v;
-  if (!monthlyMap[ym]) monthlyMap[ym] = { ym, soldQty: 0, revenue: 0, cost: 0 };
-  monthlyMap[ym].soldQty += cnt;
-}
-const monthlyRows = Object.values(monthlyMap).sort((a,b)=> a.ym.localeCompare(b.ym));
+  // Monthly soldQty from the per-item map
+  for (const [ym, perItem] of Object.entries(salesByMonthByItem)) {
+    let cnt = 0;
+    for (const v of Object.values(perItem)) cnt += v;
+    if (!monthlyMap[ym]) monthlyMap[ym] = { ym, soldQty: 0, revenue: 0, cost: 0 };
+    monthlyMap[ym].soldQty += cnt;
+  }
+  const monthlyRows = Object.values(monthlyMap).sort((a,b)=> a.ym.localeCompare(b.ym));
 
-
-  // top items (as NAMES only, what the frontend expects)
-const topItems = breakdownRows.slice(0, 10).map(b => b.item);
+  // Top items should be names (strings) to avoid [object Object] legend
+  const topItems = breakdownRows.slice(0, 10).map(b => b.item);
 
   return {
     summary,
@@ -439,6 +437,7 @@ const topItems = breakdownRows.slice(0, 10).map(b => b.item);
       salesByPlatformByItem
     }
   };
+
 }
 
 function emptyStatsPayload(){
@@ -792,5 +791,6 @@ exports.handler = async (event) => {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
+
 
 
