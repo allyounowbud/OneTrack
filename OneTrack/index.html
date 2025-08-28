@@ -1764,6 +1764,7 @@ if (sec.dataset.section === 'retailers' && addBtn) {
 const dbRoot = document.getElementById('database');
 if (!dbRoot.__wiredClicks) {
   dbRoot.addEventListener('click', (ev)=>{
+    
     // Row-level CANCEL (remove pending row)
     const rowCancelBtn = ev.target.closest('button.db-row-cancel');
     if (rowCancelBtn) {
@@ -1800,6 +1801,7 @@ if (!dbRoot.__wiredClicks) {
           .addDatabaseRetailer(name);
         return;
       }
+    }
 
     // Row-level UPDATE (existing item rows)
     const rowUpdBtn = ev.target.closest('button.db-row-update');
