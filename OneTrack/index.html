@@ -1506,53 +1506,54 @@ function renderDBBody(section){
     tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
 
     google.script.run
-      .withSuccessHandler(data=>{
-        const rows = (data && data.rows) ? data.rows.slice() : [];
-        // newest by date, then by row desc
-        rows.sort((a, b) => {
-          const da = a.order_date || '';
-          const db = b.order_date || '';
-          if (da && db) {
-            const cmp = db.localeCompare(da);
-            if (cmp !== 0) return cmp;
-          } else if (da || db) {
-            return db ? 1 : -1;
-          }
-          return (b.row || 0) - (a.row || 0);
-        });
+  .withSuccessHandler(data=>{
+    const rows = (data && data.rows) ? data.rows.slice() : [];
 
-        const elCnt = document.getElementById('db_sheet_count');
-        if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
+    // newest by order_date, then by row desc
+    rows.sort((a, b) => {
+      const da = a.order_date || '';
+      const db = b.order_date || '';
+      if (da && db) {
+        const cmp = db.localeCompare(da);
+        if (cmp !== 0) return cmp;
+      } else if (da || db) {
+        return db ? 1 : -1;
+      }
+      return (b.row || 0) - (a.row || 0);
+    });
 
-        const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
-          .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    const elCnt = document.getElementById('db_sheet_count');
+    if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
 
-        tb.innerHTML = rows.map(r => `
-          <tr data-row="${r.row}">
-            <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
-            <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
-            <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
-            <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
-            <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
-            <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-            <td><select>${mktOptions}</select></td>
-            <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
-            <td><button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button></td>
-          </tr>
-        `).join('');
+    const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+      .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
-        // select the saved sale_location now that the <select> exists
-        Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
-          const sel = tr.children[6].querySelector('select');
-          if (sel) sel.value = rows[i]?.sale_location || '';
-        });
-      })
-      .withFailureHandler(err=>{
-        tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
-      })
-      .getOrderBookEditable();
-  }
-}
+    tb.innerHTML = rows.map(r => `
+      <tr data-row="${r.row}">
+        <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
+        <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
+        <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
+        <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
+        <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
+        <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
+        <td><select>${mktOptions}</select></td>
+        <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+        <td><button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button></td>
+      </tr>
+    `).join('');
+
+    // set saved sale_location after the <select> exists
+    Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
+      const sel = tr.children[6].querySelector('select');
+      if (sel) sel.value = rows[i]?.sale_location || '';
+    });
+  }) // ← closes withSuccessHandler
+  .withFailureHandler(err=>{
+    tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
+  })
+  .getOrderBookEditable();
+
+
 
   if (section === 'items') {
     const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
@@ -1682,52 +1683,6 @@ function renderDBBody(section){
   } else if (section === 'sheet') {
     const tb = document.querySelector('#db_sheet_tbl tbody');
     tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
-
-   google.script.run
-  .withSuccessHandler(data=>{
-    const rows = (data && data.rows) ? data.rows.slice() : [];
-    rows.sort((a, b) => {
-      const da = a.order_date || '';
-      const db = b.order_date || '';
-      if (da && db) {
-        const cmp = db.localeCompare(da);
-        if (cmp !== 0) return cmp;
-      } else if (da || db) {
-        return db ? 1 : -1;
-      }
-      return (b.row || 0) - (a.row || 0);
-    });
-
-    const elCnt = document.getElementById('db_sheet_count');
-    if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
-
-    const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
-      .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-
-    tb.innerHTML = rows.map(r => `
-      <tr data-row="${r.row}">
-        <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
-        <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
-        <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
-        <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
-        <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
-        <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-        <td><select>${mktOptions}</select></td>
-        <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
-        <td><button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button></td>
-      </tr>
-    `).join('');
-
-    // set saved sale_location after the <select> exists
-    Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
-      const sel = tr.children[6].querySelector('select');
-      if (sel) sel.value = rows[i]?.sale_location || '';
-    });
-  })
-  .withFailureHandler(err=>{
-    tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
-  })
-  .getOrderBookEditable();
 
 
 
