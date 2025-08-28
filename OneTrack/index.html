@@ -100,6 +100,17 @@
       background: var(--accent); color:#fff; cursor:pointer
       }
       .db-row-save:hover,.db-row-update:hover{ border-color: var(--focus); }
+      /* Inline row cancel button (compact, neutral look) */
+.db-row-cancel{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--pill-border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+}
+.db-row-cancel:hover{ border-color: var(--focus); }
+
       .collapsible-body{display:none;margin-top:10px}
       [contenteditable="true"]{outline:none;border-bottom:2px dashed transparent}
       [contenteditable="true"]:focus{border-bottom-color:var(--focus)}
@@ -1619,6 +1630,14 @@ function renderDBBody(section){
         }
       }
 
+      // Row-level CANCEL (pending rows)
+      const rowCancelBtn = ev.target.closest('button.db-row-cancel');
+      if (rowCancelBtn) {
+        const tr = rowCancelBtn.closest('tr.__pending');
+        if (tr) tr.remove();
+        return;
+      }
+
       // Row-level UPDATE (existing item rows)
       const rowUpdBtn = ev.target.closest('button.db-row-update');
       if (rowUpdBtn) {
@@ -1681,10 +1700,13 @@ function renderDBBody(section){
     const tr = document.createElement('tr');
     tr.className='__pending';
     tr.innerHTML = `
-      <td><input type="text"  value=""></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
-    `;
+  <td><input type="text"  value=""></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td class="td-actions">
+    <button class="db-row-save" type="button">Save</button>
+    <button class="db-row-cancel" type="button">Cancel</button>
+  </td>
+`;
     tb.insertBefore(tr, tb.firstChild);
     const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
   }
