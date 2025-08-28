@@ -1881,7 +1881,7 @@ if (!dbRoot.__wiredClicks) {
     // Row-level SAVE (pending rows)
     const rowSaveBtn = ev.target.closest('button.db-row-save');
     if (rowSaveBtn) {
-      const tr = rowSaveBtn.closest('tr');
+      const tr = rowSaveBtn.closest('tr');      // ✅ add this line
       if (!tr) return;
 
       // Category SAVE (from “Add Category” pending row)
