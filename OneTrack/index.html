@@ -194,18 +194,30 @@
       width:100%;
       text-align:center;
       }
-      /* Body rows: make the Actions cell the same width and keep buttons inside */
-      #db_items_tbl .td-actions{
-      width: var(--actions-col-w);
-      min-width: var(--actions-col-w);
-      max-width: var(--actions-col-w);
-      box-sizing: border-box;
-      padding-right: var(--actions-pr);     /* right padding inside the cell */
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: var(--actions-gap);              /* space between Save / Delete */
-      }
+      /* Actions column: two equal tracks that fill the whole column */
+#db_items_tbl .td-actions{
+  width: var(--actions-col-w);
+  min-width: var(--actions-col-w);
+  max-width: var(--actions-col-w);
+  box-sizing: border-box;
+
+  /* keep the same vertical padding as other TDs, plus your right pad */
+  padding: 10px var(--actions-pr) 10px 10px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* Save | Delete */
+  gap: var(--actions-gap);
+  align-items: stretch;              /* buttons grow to full row height */
+}
+
+      /* Stretch the buttons to fill their grid tracks */
+#db_items_tbl .td-actions .db-row-save,
+#db_items_tbl .td-actions .db-row-update,
+#db_items_tbl .td-actions .db-del{
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
       /* Match the header cell width so the column aligns perfectly */
       #db_items_tbl thead th:last-child{
       width: calc(var(--actions-col-w) + var(--actions-pr));
