@@ -176,28 +176,59 @@
       #database .db-section.editing .db-actions .db-cancel{ background: rgba(255,255,255,.04); border-color: var(--focus); }
       #database .db-section.editing .db-actions .db-cancel:hover{ background: rgba(255,255,255,.06); }
       body:not([data-theme="light"]) button, body:not([data-theme="light"]) .btn, body:not([data-theme="light"]) .discord-btn, body:not([data-theme="light"]) .theme-toggle, body:not([data-theme="light"]) .db-actions button { border: 1px solid var(--pill-border) !important; box-shadow: var(--shadow); }
-      :root { --actions-col-w: 120px; } /* tweak to taste: 136–148px usually looks perfect */
+     
+      :root { --actions-col-w: 148px; }  /* try 144–156px to taste */
+      :root { --actions-gap: 8px; --actions-pr: 10px; }
       #db_items_tbl .cat-row td { border: none !important; box-shadow: none !important; background: transparent !important; }
       #db_items_tbl .cat-btn, #db_items_tbl .cat-btn:hover, #db_items_tbl .cat-btn:focus, #db_items_tbl .cat-btn:focus-visible { border: none !important; box-shadow: none !important; background: transparent !important; outline: none !important; padding: 6px 0; color: var(--muted); }
+      
+      /* Category header bar: label + fixed-width Actions column */
       #db_items_tbl .cat-bar{
-  display: grid;
-  grid-template-columns: 1fr var(--actions-col-w);
-  align-items: center;
-  gap: 8px;
-}
-/* The Add button in the category header fills that Actions column */
-#db_items_tbl .cat-add{ width:100%; text-align:center; }
-/* Lock body + header Actions width so everything lines up */
-#db_items_tbl .td-actions{
-  width: var(--actions-col-w);
-  min-width: var(--actions-col-w);
-  max-width: var(--actions-col-w);
-  white-space: nowrap;
-  text-align: right;
-}
+      display:grid;
+      grid-template-columns: 1fr var(--actions-col-w);
+      align-items:center;
+      gap:8px;
+      }
+      /* Category "Add" fills the Actions column exactly */
+      #db_items_tbl .cat-add{
+      width:100%;
+      text-align:center;
+      }
+      /* Body rows: make the Actions cell the same width and keep buttons inside */
+      #db_items_tbl .td-actions{
+      width: var(--actions-col-w);
+      min-width: var(--actions-col-w);
+      max-width: var(--actions-col-w);
+      box-sizing: border-box;
+      padding-right: var(--actions-pr);     /* right padding inside the cell */
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: var(--actions-gap);              /* space between Save / Delete */
+      }
+      /* Match the header cell width so the column aligns perfectly */
       #db_items_tbl thead th:last-child{
-  width: var(--actions-col-w);
-}
+      width: calc(var(--actions-col-w) + var(--actions-pr));
+      }
+      /* Remove any stray margins that could push the Delete button out */
+      #db_items_tbl .td-actions .db-del,
+      #db_items_tbl .td-actions .db-row-update,
+      #db_items_tbl .td-actions .db-row-save{
+      margin: 0;
+      }
+
+      /* Enable by adding `compact-delete` on <body> if you want the X icon instead of text */
+      body.compact-delete #db_items_tbl .db-del{
+      font-size:0;
+      padding:8px 12px;
+      }
+      body.compact-delete #db_items_tbl .db-del::before{
+      content:'✕';
+      font-size:14px;
+      font-weight:700;
+      color:var(--bad);
+      }
+      
       body:not([data-theme="light"]) .btn:hover, body:not([data-theme="light"]) .btn:focus-visible { border-color: #6366f1 !important; outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.35), var(--shadow); }
       #stats .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:18px; }
       #stats .filters .range-pair{ grid-column: span 2; display:flex; gap:10px; align-items:end; }
