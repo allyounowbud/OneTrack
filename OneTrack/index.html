@@ -293,6 +293,32 @@
       font-weight:700;
       color:var(--bad);
       }
+
+      /* Marketplaces: same Actions column sizing and stretch Save/Delete to fill */
+#db_mkt_tbl thead th:last-child{
+  width: calc(var(--actions-col-w, 148px) + var(--actions-pr, 10px));
+}
+
+#db_mkt_tbl .td-actions{
+  width: var(--actions-col-w, 148px);
+  min-width: var(--actions-col-w, 148px);
+  max-width: var(--actions-col-w, 148px);
+  box-sizing: border-box;
+  padding: 10px var(--actions-pr, 10px) 10px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* Save | Delete */
+  gap: var(--actions-gap, 8px);
+  align-items: stretch;
+}
+
+#db_mkt_tbl .td-actions .db-row-save,
+#db_mkt_tbl .td-actions .db-row-update,
+#db_mkt_tbl .td-actions .db-del{
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
+
       
       body:not([data-theme="light"]) .btn:hover, body:not([data-theme="light"]) .btn:focus-visible { border-color: #6366f1 !important; outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.35), var(--shadow); }
       #stats .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:18px; }
@@ -1636,13 +1662,17 @@ function renderDBBody(section){
     const tb = document.querySelector('#db_mkt_tbl tbody');
     m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
     tb.innerHTML = m.map(x => {
-      const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
-      return `<tr data-row="${x.row}">
-        <td><input type="text" value="${escapeHtml(x.name)}"></td>
-        <td><input type="number" step="0.0001" value="${fee}"></td>
-        <td class="td-actions"><button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button></td>
-      </tr>`;
-    }).join('');
+  const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
+  return `<tr data-row="${x.row}">
+    <td><input type="text" value="${escapeHtml(x.name)}"></td>
+    <td><input type="number" step="0.0001" value="${fee}"></td>
+    <td class="td-actions">
+      <button class="db-row-update" data-row="${x.row}" type="button">Save</button>
+      <button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button>
+    </td>
+  </tr>`;
+}).join('');
+
 
     } else if (section === 'sheet') {
     const tb = document.querySelector('#db_sheet_tbl tbody');
@@ -1710,15 +1740,12 @@ function renderDBBody(section){
       sec.classList.add('editing');
       if (body) body.style.display = 'block';
       edit.style.display = 'none';
-      // Hide top Save only for Items (we do row-level saves)
-      if (save) {
+      // Hide top Save for inline-save sections (items, retailers, marketplaces)
+if (save) {
   const s = sec.dataset.section;
-  // hide top Save for items AND retailers
-  save.style.display = (s === 'items' || s === 'retailers') ? 'none' : '';
+  save.style.display = (s === 'items' || s === 'retailers' || s === 'marketplaces') ? 'none' : '';
 }
-if (sec.dataset.section === 'retailers' && addBtn) {
-  addBtn.textContent = 'Add Retailer';
-}
+
 
       if (cancel) cancel.style.display = '';
       if (addBtn) addBtn.style.display = '';
@@ -1732,8 +1759,12 @@ if (sec.dataset.section === 'retailers' && addBtn) {
     if (cancel) cancel.onclick = ()=> renderDBCollapsed();
     if (save)   save.onclick   = ()=> saveDBSection(sec.dataset.section);
     if (addBtn) {
-  // Items header uses "Add Category", others stay "Add"
-  addBtn.textContent = (sec.dataset.section === 'items') ? 'Add Category' : 'Add';
+  let label = 'Add';
+  if (sec.dataset.section === 'items') label = 'Add Category';
+  else if (sec.dataset.section === 'retailers') label = 'Add Retailer';
+  else if (sec.dataset.section === 'marketplaces') label = 'Add Marketplace';
+
+  addBtn.textContent = label;
   addBtn.onclick = ()=> {
     if (sec.dataset.section === 'items') addPendingCategoryRow();
     else addPendingRow(sec.dataset.section);
@@ -1802,6 +1833,19 @@ if (!dbRoot.__wiredClicks) {
         return;
       }
     }
+
+      // MARKETPLACES (pending new row)
+  if (tr.closest('#db_mkt_tbl')) {
+    const name = cellVal(tr.children[0]);
+    const fee  = cellVal(tr.children[1]);
+    if (!name) { toast('Platform name required'); return; }
+    google.script.run
+      .withSuccessHandler(()=>{ toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
+      .withFailureHandler(err=>alert(err?.message||err))
+      .addDatabaseMarketplace({ name, fee });
+    return;
+  }
+
 
     // Row-level UPDATE (existing rows: items / retailers / marketplaces)
 const rowUpdBtn = ev.target.closest('button.db-row-update');
@@ -1922,17 +1966,22 @@ if (section === 'retailers') {
 
   // MARKETPLACES (keeps inline Save)
   if (section === 'marketplaces') {
-    const tb = document.querySelector('#db_mkt_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `
-      <td><input type="text"  value=""></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
-    `;
-    tb.insertBefore(tr, tb.firstChild);
-    const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
-  }
+  const tb = document.querySelector('#db_mkt_tbl tbody');
+  const tr = document.createElement('tr');
+  tr.className='__pending';
+  tr.innerHTML = `
+    <td><input type="text"  value=""></td>
+    <td><input type="number" step="0.01" value="0"></td>
+    <td class="td-actions">
+      <button class="db-row-save" type="button">Save</button>
+      <button class="db-row-cancel" type="button">Cancel</button>
+    </td>
+  `;
+  tb.insertBefore(tr, tb.firstChild);
+  const first = tr.querySelector('input');
+  if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
+}
+
 
   // SPREADSHEET (ORDER BOOK)
   if (section === 'sheet') {
