@@ -1475,6 +1475,14 @@ function renderDBBody(section){
     tb.innerHTML = html;
     tb.dataset.cats = JSON.stringify(catOrder);
 
+    function __alignCatAddWidth(){
+  const a = document.querySelector('#db_items_tbl .td-actions');
+  if (!a) return;
+  const w = Math.ceil(a.getBoundingClientRect().width);
+  document.documentElement.style.setProperty('--actions-col-w', w + 'px');
+}
+
+
     // toggle & add handlers
     tb.onclick = (ev)=>{
       const addBtn = ev.target.closest('button.cat-add');
