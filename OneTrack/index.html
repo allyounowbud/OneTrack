@@ -1763,71 +1763,50 @@ if (sec.dataset.section === 'retailers' && addBtn) {
   // Single delegated click handler for all row-level actions (save/update/delete)
 const dbRoot = document.getElementById('database');
 if (!dbRoot.__wiredClicks) {
-  dbRoot.addEventListener('click', (ev) => {
+  dbRoot.addEventListener('click', (ev)=>{
+    // Row-level CANCEL (remove pending row)
+    const rowCancelBtn = ev.target.closest('button.db-row-cancel');
+    if (rowCancelBtn) {
+      const tr = rowCancelBtn.closest('tr');
+      if (tr && tr.classList.contains('__pending')) tr.remove();
+      return;
+    }
+
     // Row-level SAVE (pending rows)
     const rowSaveBtn = ev.target.closest('button.db-row-save');
     if (rowSaveBtn) {
       const tr = rowSaveBtn.closest('tr');
       if (!tr) return;
 
-      // CATEGORY pending row (from "Add Category")
+      // Category SAVE (from “Add Category” pending row)
       if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__catadd')) {
         const nameRaw = cellVal(tr.children[0]);
         const catName = (nameRaw || '').trim();
         if (!catName) { toast('Category name required'); return; }
-
         google.script.run
-          .withSuccessHandler(() => { toast('Category added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-          .withFailureHandler(err => alert(err?.message || err))
+          .withSuccessHandler(()=>{ toast('Category added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+          .withFailureHandler(err=>alert(err?.message||err))
           .addDatabaseItem({ name: catName.toUpperCase(), market: '' });
         return;
       }
 
-      // ITEMS pending row
-      if (tr.closest('#db_items_tbl')) {
-        const name   = cellVal(tr.children[0]);
-        const market = cellVal(tr.children[1]);
-        if (!name) { toast('Item name required'); return; }
-
-        google.script.run
-          .withSuccessHandler(() => { toast('Item added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-          .withFailureHandler(err => alert(err?.message || err))
-          .addDatabaseItem({ name, market });
-        return;
-      }
-
-      // MARKETPLACES pending row (if you keep inline add)
-      if (tr.closest('#db_mkt_tbl')) {
-        const name = cellVal(tr.children[0]);
-        const fee  = cellVal(tr.children[1]);
-        if (!name) { toast('Platform name required'); return; }
-
-        google.script.run
-          .withSuccessHandler(() => { toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-          .withFailureHandler(err => alert(err?.message || err))
-          .addDatabaseMarketplace({ name, fee });
-        return;
-      }
-
-      // RETAILERS pending row
+      // RETAILERS (pending new row)
       if (tr.closest('#db_retail_tbl')) {
         const name = cellVal(tr.children[0]);
         if (!name) { toast('Retailer name required'); return; }
-
         google.script.run
-          .withSuccessHandler(() => { toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-          .withFailureHandler(err => alert(err?.message || err))
+          .withSuccessHandler(()=>{ toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+          .withFailureHandler(err=>alert(err?.message||err))
           .addDatabaseRetailer(name);
         return;
       }
-    } // <-- closes if(rowSaveBtn)
 
     // Row-level UPDATE (existing item rows)
     const rowUpdBtn = ev.target.closest('button.db-row-update');
     if (rowUpdBtn) {
-      const tr = rowUpdBtn.closest('tr');
-      const rowId  = Number(tr?.dataset?.row || 0);
-      if (!rowId) return;
+      // ... your existing update logic ...
+      return;
+    }
 
       // Items update
       if (tr.closest('#db_items_tbl')) {
