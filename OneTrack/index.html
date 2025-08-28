@@ -218,6 +218,11 @@
   margin: 0;
   text-align: center;
 }
+
+      /* Optional: if the underline still looks off, hide it on the last cell */
+#db_items_tbl tbody td:last-child{
+  border-bottom-color: transparent;
+}
       /* Match the header cell width so the column aligns perfectly */
       #db_items_tbl thead th:last-child{
       width: calc(var(--actions-col-w) + var(--actions-pr));
