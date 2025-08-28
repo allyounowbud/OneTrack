@@ -237,7 +237,7 @@
   width: calc(var(--actions-col-w, 148px) + var(--actions-pr, 10px));
 }
 
-      /* Spreadsheet (Order Book): Actions column behaves like others */
+/* Spreadsheet: same Actions column sizing and stretch Save/Delete to fill */
 #db_sheet_tbl thead th:last-child{
   width: calc(var(--actions-col-w, 148px) + var(--actions-pr, 10px));
 }
@@ -249,7 +249,7 @@
   box-sizing: border-box;
   padding: 10px var(--actions-pr, 10px) 10px 10px;
   display: grid;
-  grid-template-columns: 1fr 1fr; /* Save | Delete */
+  grid-template-columns: 1fr 1fr;   /* Save | Delete */
   gap: var(--actions-gap, 8px);
   align-items: stretch;
 }
@@ -262,20 +262,20 @@
   text-align: center;
 }
 
-/* Compact red X for Delete (space saving) */
-#db_sheet_tbl .db-del{
-  font-size: 0;
-  padding: 8px 12px;
+      /* Pending row 'Cancel' (neutral look) */
+#db_sheet_tbl .td-actions .db-row-cancel{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--pill-border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
 }
-#db_sheet_tbl .db-del::before{
-  content: '✕';
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--bad);
+#db_sheet_tbl .td-actions .db-row-cancel:hover{
+  border-color: var(--focus);
 }
 
-
-      #db_retail_tbl .td-actions{
+  #db_retail_tbl .td-actions{
   width: var(--actions-col-w, 148px);
   min-width: var(--actions-col-w, 148px);
   max-width: var(--actions-col-w, 148px);
@@ -642,11 +642,11 @@
               <div class="muted" id="db_sheet_count">Rows: 0</div>
             </div>
             <div class="db-actions">
-              <button class="db-edit" data-action="edit">Expand</button>
-              <button class="db-save" data-action="save" style="display:none">Save</button>
-              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
-              <button class="db-add" data-action="add" style="display:none">Add</button>
-            </div>
+  <button class="db-edit" data-action="edit">Expand</button>
+  <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
+  <button class="db-add" data-action="add" style="display:none">Add Order</button>
+</div>
+
           </div>
           <div class="collapsible-body">
             <table id="db_sheet_tbl" style="margin-top:10px">
@@ -1757,6 +1757,7 @@ function renderDBBody(section){
 `).join('');
 
 
+
         // set saved sale_location after the <select> exists
         Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
           const sel = tr.children[6].querySelector('select');
@@ -1785,8 +1786,10 @@ function renderDBBody(section){
       // Hide top Save for inline-save sections (items, retailers, marketplaces, sheet)
 if (save) {
   const s = sec.dataset.section;
-  save.style.display = (s === 'items' || s === 'retailers' || s === 'marketplaces' || s === 'sheet') ? 'none' : '';
+  // hide top Save for items, retailers, and sheet
+  save.style.display = (s === 'items' || s === 'retailers' || s === 'sheet') ? 'none' : '';
 }
+
 
 
 
@@ -1802,13 +1805,12 @@ if (save) {
     if (cancel) cancel.onclick = ()=> renderDBCollapsed();
     if (save)   save.onclick   = ()=> saveDBSection(sec.dataset.section);
     if (addBtn) {
-  let label = 'Add';
-  if (sec.dataset.section === 'items') label = 'Add Category';
-  else if (sec.dataset.section === 'retailers') label = 'Add Retailer';
-  else if (sec.dataset.section === 'marketplaces') label = 'Add Marketplace';
-  else if (sec.dataset.section === 'sheet') label = 'Add Order';
-
-  addBtn.textContent = label;
+  addBtn.textContent =
+    sec.dataset.section === 'items'         ? 'Add Category'   :
+    sec.dataset.section === 'retailers'     ? 'Add Retailer'   :
+    sec.dataset.section === 'marketplaces'  ? 'Add Marketplace' :
+    sec.dataset.section === 'sheet'         ? 'Add Order'      :
+                                              'Add';
   addBtn.onclick = ()=> {
     if (sec.dataset.section === 'items') addPendingCategoryRow();
     else addPendingRow(sec.dataset.section);
@@ -1866,6 +1868,27 @@ if (!dbRoot.__wiredClicks) {
           .addDatabaseItem({ name: catName.toUpperCase(), market: '' });
         return;
       }
+
+      // SHEET (pending new order)
+if (tr.closest('#db_sheet_tbl')) {
+  const payload = {
+    order_date:    cellVal(tr.children[0]),
+    item:          cellVal(tr.children[1]),
+    buy_price:     cellVal(tr.children[2]),
+    bought_from:   cellVal(tr.children[3]),
+    sell_price:    cellVal(tr.children[4]),
+    sale_date:     cellVal(tr.children[5]),
+    sale_location: cellVal(tr.children[6]),
+    shipping:      cellVal(tr.children[7])
+  };
+  if (!payload.item) { toast('Item is required'); return; }
+  google.script.run
+    .withSuccessHandler(()=>{ toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .addOrderBookRow(payload);
+  return;
+}
+
 
       // RETAILERS (pending new row)
       if (tr.closest('#db_retail_tbl')) {
@@ -2068,6 +2091,28 @@ if (section === 'retailers') {
   if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
 }
 
+    // SHEET (update existing order)
+if (tr.closest('#db_sheet_tbl')) {
+  const row = {
+    row:           Number(tr.dataset.row || 0),
+    order_date:    cellVal(tr.children[0]),
+    item:          cellVal(tr.children[1]),
+    buy_price:     cellVal(tr.children[2]),
+    bought_from:   cellVal(tr.children[3]),
+    sell_price:    cellVal(tr.children[4]),
+    sale_date:     cellVal(tr.children[5]),
+    sale_location: cellVal(tr.children[6]),
+    shipping:      cellVal(tr.children[7])
+  };
+  if (!row.row) return;
+  google.script.run
+    .withSuccessHandler(()=>{ toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .updateOrderBookRows([row]);
+  return;
+}
+
+
 
   // SPREADSHEET (ORDER BOOK)
   if (section === 'sheet') {
@@ -2079,19 +2124,20 @@ if (section === 'retailers') {
     .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
   tr.innerHTML = `
-    <td><input type="date" value=""></td>
-    <td><input list="items" value=""></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td><input list="retailers" value=""></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td><input type="date" value=""></td>
-    <td><select>${mktOptions}</select></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td class="td-actions">
-      <button class="db-row-save" type="button">Save</button>
-      <button class="db-row-cancel" type="button">Cancel</button>
-    </td>
-  `;
+  <td><input type="date" value=""></td>
+  <td><input list="items" value=""></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td><input list="retailers" value=""></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td><input type="date" value=""></td>
+  <td><select>${mktOptions}</select></td>
+  <td><input type="number" step="0.01" value="0"></td>
+  <td class="td-actions">
+    <button class="db-row-save" type="button">Save</button>
+    <button class="db-row-cancel" type="button">Cancel</button>
+  </td>
+`;
+
   tb.insertBefore(tr, tb.firstChild);
 
   const firstInput = tr.querySelector('input,select');
