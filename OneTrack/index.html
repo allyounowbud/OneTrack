@@ -1725,63 +1725,73 @@ function renderDBBody(section){
 }).join('');
 
 
+
     } else if (section === 'sheet') {
-    const tb = document.querySelector('#db_sheet_tbl tbody');
-    tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
+  const tb = document.querySelector('#db_sheet_tbl tbody');
+  tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
+  tb.dataset.loading = '1';           // mark as loading
+  delete tb.dataset.addAfterLoad;     // clear any carryover
 
-    google.script.run
-      .withSuccessHandler(data=>{
-        const rows = (data && data.rows) ? data.rows.slice() : [];
+  google.script.run
+    .withSuccessHandler(data=>{
+      const rows = (data && data.rows) ? data.rows.slice() : [];
 
-        // newest by order_date, then by row desc
-        rows.sort((a, b) => {
-          const da = a.order_date || '';
-          const db = b.order_date || '';
-          if (da && db) {
-            const cmp = db.localeCompare(da);
-            if (cmp !== 0) return cmp;
-          } else if (da || db) {
-            return db ? 1 : -1;
-          }
-          return (b.row || 0) - (a.row || 0);
-        });
+      // newest by order_date, then by row desc
+      rows.sort((a, b) => {
+        const da = a.order_date || '';
+        const db = b.order_date || '';
+        if (da && db) {
+          const cmp = db.localeCompare(da);
+          if (cmp !== 0) return cmp;
+        } else if (da || db) {
+          return db ? 1 : -1;
+        }
+        return (b.row || 0) - (a.row || 0);
+      });
 
-        const elCnt = document.getElementById('db_sheet_count');
-        if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
+      const elCnt = document.getElementById('db_sheet_count');
+      if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
 
-        const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
-          .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+      const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+        .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
-        tb.innerHTML = rows.map(r => `
-  <tr data-row="${r.row}">
-    <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
-    <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
-    <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
-    <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
-    <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
-    <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-    <td><select>${mktOptions}</select></td>
-    <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
-    <td class="td-actions">
-      <button class="db-row-update" data-row="${r.row}" type="button">Save</button>
-      <button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button>
-    </td>
-  </tr>
-`).join('');
+      tb.innerHTML = rows.map(r => `
+        <tr data-row="${r.row}">
+          <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
+          <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
+          <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
+          <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
+          <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
+          <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
+          <td><select>${mktOptions}</select></td>
+          <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+          <td class="td-actions">
+            <button class="db-row-update" data-row="${r.row}" type="button">Save</button>
+            <button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button>
+          </td>
+        </tr>
+      `).join('');
 
+      // set saved sale_location after the <select> exists
+      Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
+        const sel = tr.children[6].querySelector('select');
+        if (sel) sel.value = rows[i]?.sale_location || '';
+      });
 
+      // If user clicked "Add Order" while loading, honor it now
+      if (tb.dataset.addAfterLoad === '1') {
+        addPendingRow('sheet');
+        delete tb.dataset.addAfterLoad;
+      }
 
-        // set saved sale_location after the <select> exists
-        Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
-          const sel = tr.children[6].querySelector('select');
-          if (sel) sel.value = rows[i]?.sale_location || '';
-        });
-      })
-      .withFailureHandler(err=>{
-        tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
-      })
-      .getOrderBookEditable();
-  } // ← close: else if (section === 'sheet')
+      delete tb.dataset.loading;   // clear loading flag
+    })
+    .withFailureHandler(err=>{
+      tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
+      delete tb.dataset.loading;   // clear even on error
+    })
+    .getOrderBookEditable();
+} // ← close: else if (section === 'sheet')
 }   // ← close: function renderDBBody(section)
 
       function wireDBButtons(){
@@ -1797,11 +1807,24 @@ function renderDBBody(section){
       if (body) body.style.display = 'block';
       edit.style.display = 'none';
       // Hide top Save for inline-save sections (items, retailers, marketplaces, sheet)
+// Hide top Save for sections that use row-level saves
 if (save) {
   const s = sec.dataset.section;
-  // hide top Save for items, retailers, and sheet
-  save.style.display = (s === 'items' || s === 'retailers' || s === 'sheet') ? 'none' : '';
+  // hide for items, retailers, marketplaces, and sheet
+  save.style.display = (s === 'items' || s === 'retailers' || s === 'marketplaces' || s === 'sheet') ? 'none' : '';
 }
+
+// Set the Add button label per section
+if (addBtn) {
+  const s = sec.dataset.section;
+  addBtn.textContent =
+    s === 'items'        ? 'Add Category'    :
+    s === 'retailers'    ? 'Add Retailer'    :
+    s === 'marketplaces' ? 'Add Marketplace' :
+    s === 'sheet'        ? 'Add Order'       :
+                           'Add';
+}
+
 
 
 
@@ -1824,11 +1847,21 @@ if (save) {
     sec.dataset.section === 'marketplaces'  ? 'Add Marketplace' :
     sec.dataset.section === 'sheet'         ? 'Add Order'      :
                                               'Add';
+  if (addBtn) {
+  const s = sec.dataset.section;
+  addBtn.textContent =
+    s === 'items'        ? 'Add Category'    :
+    s === 'retailers'    ? 'Add Retailer'    :
+    s === 'marketplaces' ? 'Add Marketplace' :
+    s === 'sheet'        ? 'Add Order'       :
+                           'Add';
+
   addBtn.onclick = ()=> {
-    if (sec.dataset.section === 'items') addPendingCategoryRow();
-    else addPendingRow(sec.dataset.section);
+    if (s === 'items') addPendingCategoryRow();
+    else addPendingRow(s);
   };
 }
+
 
   });
 
@@ -1882,25 +1915,26 @@ if (!dbRoot.__wiredClicks) {
         return;
       }
 
-      // SHEET (pending new order)
-if (tr.closest('#db_sheet_tbl')) {
-  const payload = {
-    order_date:    cellVal(tr.children[0]),
-    item:          cellVal(tr.children[1]),
-    buy_price:     cellVal(tr.children[2]),
-    bought_from:   cellVal(tr.children[3]),
-    sell_price:    cellVal(tr.children[4]),
-    sale_date:     cellVal(tr.children[5]),
-    sale_location: cellVal(tr.children[6]),
-    shipping:      cellVal(tr.children[7])
-  };
-  if (!payload.item) { toast('Item is required'); return; }
-  google.script.run
-    .withSuccessHandler(()=>{ toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .addOrderBookRow(payload);
-  return;
-}
+          // SHEET (pending new order)
+    if (tr.closest('#db_sheet_tbl')) {
+      const payload = {
+        order_date:   cellVal(tr.children[0]),
+        item:         cellVal(tr.children[1]),
+        buy_price:    cellVal(tr.children[2]),
+        bought_from:  cellVal(tr.children[3]),
+        sell_price:   cellVal(tr.children[4]),
+        sale_date:    cellVal(tr.children[5]),
+        sale_location:cellVal(tr.children[6]),
+        shipping:     cellVal(tr.children[7])
+      };
+      if (!payload.item) { toast('Item is required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .addOrderBookRow(payload);
+      return;
+    }
+
 
 
       // RETAILERS (pending new row)
@@ -1915,17 +1949,18 @@ if (tr.closest('#db_sheet_tbl')) {
       }
     }
 
-      // MARKETPLACES (pending new row)
-  if (tr.closest('#db_mkt_tbl')) {
-    const name = cellVal(tr.children[0]);
-    const fee  = cellVal(tr.children[1]);
-    if (!name) { toast('Platform name required'); return; }
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .addDatabaseMarketplace({ name, fee });
-    return;
-  }
+          // MARKETPLACES (pending new row)
+    if (tr.closest('#db_mkt_tbl')) {
+      const name = cellVal(tr.children[0]);
+      const fee  = cellVal(tr.children[1]);
+      if (!name) { toast('Platform name required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .addDatabaseMarketplace({ name, fee });
+      return;
+    }
+
 
       // SHEET (pending new row)
   if (tr.closest('#db_sheet_tbl')) {
@@ -1965,6 +2000,24 @@ if (rowUpdBtn) {
       .withFailureHandler(err=>alert(err?.message||err))
       .updateDatabaseItems([{ row: rowId, name, market }]);
     return;
+      if (tr.closest('#db_sheet_tbl')) {
+    const row = {
+      row:          rowId,
+      order_date:   cellVal(tr.children[0]),
+      item:         cellVal(tr.children[1]),
+      buy_price:    cellVal(tr.children[2]),
+      bought_from:  cellVal(tr.children[3]),
+      sell_price:   cellVal(tr.children[4]),
+      sale_date:    cellVal(tr.children[5]),
+      sale_location:cellVal(tr.children[6]),
+      shipping:     cellVal(tr.children[7])
+    };
+    google.script.run
+      .withSuccessHandler(()=>{ toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+      .withFailureHandler(err=>alert(err?.message||err))
+      .updateOrderBookRows([row]);
+    return;
+  }
   }
 
   if (tr.closest('#db_retail_tbl')) {
@@ -2093,16 +2146,16 @@ if (section === 'retailers') {
   tr.className='__pending';
   tr.innerHTML = `
     <td><input type="text"  value=""></td>
-    <td><input type="number" step="0.01" value="0"></td>
+    <td><input type="number" step="0.0001" value="0"></td>
     <td class="td-actions">
       <button class="db-row-save" type="button">Save</button>
       <button class="db-row-cancel" type="button">Cancel</button>
     </td>
   `;
   tb.insertBefore(tr, tb.firstChild);
-  const first = tr.querySelector('input');
-  if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
+  const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
 }
+
 
     // SHEET (update existing order)
 if (tr.closest('#db_sheet_tbl')) {
@@ -2130,6 +2183,15 @@ if (tr.closest('#db_sheet_tbl')) {
   // SPREADSHEET (ORDER BOOK)
   if (section === 'sheet') {
   const tb = document.querySelector('#db_sheet_tbl tbody');
+  if (!tb) return;
+
+  // If the table is still loading, remember the intent and exit
+  if (tb.dataset.loading === '1') {
+    tb.dataset.addAfterLoad = '1';
+    toast('Loading orders… I’ll add a blank row in a moment.');
+    return;
+  }
+
   const tr = document.createElement('tr');
   tr.className='__pending';
 
@@ -2137,19 +2199,19 @@ if (tr.closest('#db_sheet_tbl')) {
     .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
   tr.innerHTML = `
-  <td><input type="date" value=""></td>
-  <td><input list="items" value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td><input list="retailers" value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td><input type="date" value=""></td>
-  <td><select>${mktOptions}</select></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions">
-    <button class="db-row-save" type="button">Save</button>
-    <button class="db-row-cancel" type="button">Cancel</button>
-  </td>
-`;
+    <td><input type="date" value=""></td>
+    <td><input list="items" value=""></td>
+    <td><input type="number" step="0.01" value="0"></td>
+    <td><input list="retailers" value=""></td>
+    <td><input type="number" step="0.01" value="0"></td>
+    <td><input type="date" value=""></td>
+    <td><select>${mktOptions}</select></td>
+    <td><input type="number" step="0.01" value="0"></td>
+    <td class="td-actions">
+      <button class="db-row-save" type="button">Save</button>
+      <button class="db-row-cancel" type="button">Cancel</button>
+    </td>
+  `;
 
   tb.insertBefore(tr, tb.firstChild);
 
@@ -2157,6 +2219,8 @@ if (tr.closest('#db_sheet_tbl')) {
   if (firstInput) {
     setTimeout(() => { firstInput.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
   }
+}
+
 }
 
 }
