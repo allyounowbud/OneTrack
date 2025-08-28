@@ -1480,9 +1480,7 @@ tb.innerHTML = rows.map(r => `
   };
 }
 
-
-
-  } else if (section === 'retailers') {
+else if (section === 'retailers') {
     let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
     const tb = document.querySelector('#db_retail_tbl tbody');
     r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
