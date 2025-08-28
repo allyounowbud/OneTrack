@@ -223,6 +223,16 @@
 #db_items_tbl tbody td:last-child{
   border-bottom-color: transparent;
 }
+
+      /* Hide the underline for ALL rows in the Items table */
+#db_items_tbl tbody td { border-bottom: 0 !important; }
+
+/* If you want the same for the other Settings tables too, add: */
+#db_retail_tbl tbody td,
+#db_mkt_tbl tbody td,
+#db_sheet_tbl tbody td { border-bottom: 0 !important; }
+
+      
       /* Match the header cell width so the column aligns perfectly */
       #db_items_tbl thead th:last-child{
       width: calc(var(--actions-col-w) + var(--actions-pr));
