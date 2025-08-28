@@ -675,6 +675,17 @@ exports.handler = async (event) => {
       let body = {};
       try { body = JSON.parse(event.body || '{}'); } catch {}
 
+      case 'diag':
+      return ok({
+      // do NOT print the key itself; just safe checks
+      emailSet: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      keyLen: (process.env.GOOGLE_PRIVATE_KEY || '').length,
+      hasBEGIN: /BEGIN PRIVATE KEY/.test(process.env.GOOGLE_PRIVATE_KEY || ''),
+      hasRealNewlines: /\n/.test(process.env.GOOGLE_PRIVATE_KEY || ''),
+      hasBackslashN: /\\n/.test(process.env.GOOGLE_PRIVATE_KEY || '')
+      });
+
+
       switch (action) {
         // READS
         case 'getInitModel':         return ok(await getInitModel());
@@ -769,3 +780,4 @@ exports.handler = async (event) => {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
+
