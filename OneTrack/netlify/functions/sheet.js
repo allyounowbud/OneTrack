@@ -519,8 +519,9 @@ async function submitQuickAdd(payload) {
   const id = process.env.SPREADSHEET_ID;
   await appendOrder(s, id, payload || {});
   clearCache();
-  return { ok: true, added: 1 };
+    return { ok: true, added: 1 };
 }
+
 async function submitMarkAsSold(payload) {
   const s = sheetsClient(true);
   const id = process.env.SPREADSHEET_ID;
@@ -535,7 +536,9 @@ async function submitMarkAsSold(payload) {
   clearCache();
   return { ok: true, row };
 }
+
 async function addOrderBookRow(payload) { return submitQuickAdd(payload); }
+
 async function updateOrderBookRows(rows) {
   const s = sheetsClient(true); const id = process.env.SPREADSHEET_ID;
   for (const r of (rows || [])) {
@@ -557,6 +560,7 @@ async function updateOrderBookRows(rows) {
   clearCache();
   return { ok: true, updated: (rows || []).length };
 }
+
 async function deleteOrderBookRows(rows) {
   const s = sheetsClient(true); const id = process.env.SPREADSHEET_ID;
   const numbers = (rows || []).map(r => Number(r.row)).filter(Boolean);
@@ -589,7 +593,7 @@ async function addDatabaseRetailer(name){
 async function addDatabaseMarketplace(payload){
   if (!payload || !payload.name) return { ok:false, error:'Marketplace name required' };
   let fee = toNumber(payload.fee);
-  if (fee > 1) fee = fee / 100; // accept 12.5 -> 0.125
+  if (fee > 1) fee = fee / 100;
   const s = sheetsClient(true), id = process.env.SPREADSHEET_ID;
   await s.spreadsheets.values.append({
     spreadsheetId:id, range:`${TAB_MARKETPLACES}!A1`,
@@ -661,7 +665,7 @@ async function fetchImageAsDataUrl(url) {
   return { dataUrl: `data:${ct};base64,${b64}` };
 }
 
-/** ==== MAIN HANDLER (keeps ?route=api&action=...) ==== */
+/** ==== MAIN HANDLER ==== */
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers: cors, body: 'ok' };
   if (!process.env.SPREADSHEET_ID) return { statusCode: 500, headers: cors, body: JSON.stringify({ error:'Missing SPREADSHEET_ID' }) };
@@ -675,19 +679,18 @@ exports.handler = async (event) => {
       let body = {};
       try { body = JSON.parse(event.body || '{}'); } catch {}
 
-      case 'diag':
-      return ok({
-      // do NOT print the key itself; just safe checks
-      emailSet: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      keyLen: (process.env.GOOGLE_PRIVATE_KEY || '').length,
-      hasBEGIN: /BEGIN PRIVATE KEY/.test(process.env.GOOGLE_PRIVATE_KEY || ''),
-      hasRealNewlines: /\n/.test(process.env.GOOGLE_PRIVATE_KEY || ''),
-      hasBackslashN: /\\n/.test(process.env.GOOGLE_PRIVATE_KEY || '')
-      });
-
+      // Diagnostic endpoint (temporary)
+      if (action === 'diag') {
+        return ok({
+          emailSet: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+          keyLen: (process.env.GOOGLE_PRIVATE_KEY || '').length,
+          hasBEGIN: /BEGIN PRIVATE KEY/.test(process.env.GOOGLE_PRIVATE_KEY || ''),
+          hasRealNewlines: /\n/.test(process.env.GOOGLE_PRIVATE_KEY || ''),
+          hasBackslashN: /\\n/.test(process.env.GOOGLE_PRIVATE_KEY || '')
+        });
+      }
 
       switch (action) {
-        // READS
         case 'getInitModel':         return ok(await getInitModel());
         case 'getDatabaseFull':      return ok(await getDatabaseFull());
         case 'getOpenPurchases':     return ok(await getOpenPurchases());
@@ -702,7 +705,6 @@ exports.handler = async (event) => {
           return ok(await getLongestHoldDays(params.item));
         }
 
-        // MUTATIONS (your UI sends params with payload/rows/name/row)
         case 'submitQuickAdd': {
           const params = JSON.parse(qs.params || '{}') || body.params || {};
           return ok(await submitQuickAdd(JSON.parse(params.payload || '{}')));
