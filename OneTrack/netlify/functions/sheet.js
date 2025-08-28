@@ -390,6 +390,14 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
         if (!salesByMonthByItem[ym]) salesByMonthByItem[ym] = {};
         salesByMonthByItem[ym][item] = (salesByMonthByItem[ym][item] || 0) + 1;
       }
+        if (saleDate instanceof Date) {
+    const ym = yymm(saleDate);
+    // monthly revenue/cost for the revCogs chart
+    if (!monthlyMap[ym]) monthlyMap[ym] = { ym, soldQty: 0, revenue: 0, cost: 0 };
+    monthlyMap[ym].revenue += sellPrice;
+    monthlyMap[ym].cost    += Math.abs(buyPrice); // buyPrice is negative => cost should be positive
+  }
+
       if (!salesByPlatformByItem[marketplace]) salesByPlatformByItem[marketplace] = {};
       salesByPlatformByItem[marketplace][item] = (salesByPlatformByItem[marketplace][item] || 0) + 1;
     }
@@ -397,25 +405,27 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
 
   // compute profits and table rows
   const breakdownRows = Object.values(breakdownMap).map(b => {
-    const profit = b.totalRevenue - b.fees - b.shipping + b.costSold; // costSold negative
-    return { ...b, profit };
-  }).sort((a,b)=> (b.profit||0)-(a.profit||0));
+  const profit = b.totalRevenue - b.fees - b.shipping + b.costSold; // costSold negative
+  const onHandQty = Math.max(0, (b.boughtQty || 0) - (b.soldQty || 0));
+  return { ...b, profit, onHandQty };
+}).sort((a,b)=> (b.profit||0)-(a.profit||0));
 
   summary.profit = summary.revenue - summary.fees - summary.shipping + summary.costSold; // costSold negative
   summary.avgDaysToSell = dSellCount ? Math.round(dSellSum / dSellCount) : 0;
 
-  // monthly summary (combine counts & revenue)
-  const monthlyMap = {};
-  for (const [ym, perItem] of Object.entries(salesByMonthByItem)) {
-    let cnt = 0;
-    for (const v of Object.values(perItem)) cnt += v;
-    monthlyMap[ym] = { ym, soldQty: cnt };
-  }
-  // simple array sorted by ym
-  const monthlyRows = Object.values(monthlyMap).sort((a,b)=>a.ym.localeCompare(b.ym));
+  // monthly summary (combine counts + revenue + cost)
+const monthlyMap = monthlyMap || {}; // (ensure defined above if not already)
+for (const [ym, perItem] of Object.entries(salesByMonthByItem)) {
+  let cnt = 0;
+  for (const v of Object.values(perItem)) cnt += v;
+  if (!monthlyMap[ym]) monthlyMap[ym] = { ym, soldQty: 0, revenue: 0, cost: 0 };
+  monthlyMap[ym].soldQty += cnt;
+}
+const monthlyRows = Object.values(monthlyMap).sort((a,b)=> a.ym.localeCompare(b.ym));
 
-  // top items (by profit)
-  const topItems = breakdownRows.slice(0, 10).map(b => ({ item: b.item, profit: b.profit }));
+
+  // top items (as NAMES only, what the frontend expects)
+const topItems = breakdownRows.slice(0, 10).map(b => b.item);
 
   return {
     summary,
@@ -782,4 +792,5 @@ exports.handler = async (event) => {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
+
 
