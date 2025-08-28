@@ -1375,6 +1375,8 @@ tb.innerHTML = rows.map(r => `
         }catch(err){ alert('Database render error: ' + (err && err.message ? err.message : err)); console.error(err); }
       }
 
+      function renderDBBody(section) {
+
       if (section === 'items') {
       const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
       const tb  = document.querySelector('#db_items_tbl tbody');
@@ -1679,6 +1681,7 @@ else if (section === 'retailers') {
           }
           return (b.row || 0) - (a.row || 0);
         });
+        }
         }
 
         const elCnt = document.getElementById('db_sheet_count');
