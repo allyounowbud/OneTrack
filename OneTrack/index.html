@@ -1376,8 +1376,8 @@ tb.innerHTML = rows.map(r => `
       }
 
       if (section === 'items') {
-  const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
-  const tb  = document.querySelector('#db_items_tbl tbody');
+      const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
+      const tb  = document.querySelector('#db_items_tbl tbody');
 
   // collapsed state storage
   const storeKey = 'db_cat_collapsed';
@@ -1502,26 +1502,7 @@ else if (section === 'retailers') {
         <td class="td-actions"><button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button></td>
       </tr>`;
     }).join('');
-
-        } else if (section === 'sheet') {
-          const tb = document.querySelector('#db_sheet_tbl tbody');
-          tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
-
-          google.script.run
-            .withSuccessHandler(data=>{
-              const rows = (data && data.rows) ? data.rows.slice() : [];
-              // newest first by date, then by row id
-              rows.sort((a, b) => {
-                const da = a.order_date || '';
-                const db = b.order_date || '';
-                if (da && db) {
-                  const cmp = db.localeCompare(da); // desc
-                  if (cmp !== 0) return cmp;
-                } else if (da || db) {
-                  return db ? 1 : -1; // blank dates last
-                }
-                return (b.row || 0) - (a.row || 0);
-              });
+        }
 
               document.getElementById('db_sheet_count').textContent = 'Rows: ' + rows.length;
 
@@ -1698,6 +1679,7 @@ else if (section === 'retailers') {
           }
           return (b.row || 0) - (a.row || 0);
         });
+        }
 
         const elCnt = document.getElementById('db_sheet_count');
         if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
