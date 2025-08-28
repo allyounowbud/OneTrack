@@ -98,7 +98,6 @@ function toNumber(x) {
   return n;
 }
 function parseDateMaybe(x) {
-  // Sheets may send date objects (serialized) or ISO-like strings
   if (!x && x !== 0) return null;
   if (x instanceof Date) return x;
   const s = String(x).trim();
@@ -318,16 +317,12 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
     return true;
   };
 
-  // --- inside getStatsV2, keep everything above your "for (const r of ob.rows) {" loop ---
-
   const summary = { totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, profit:0, orders:0, avgDaysToSell:0 };
   const breakdownMap = {};
   const salesByMonthByItem = {};
   const purchasesByMonthByItem = {};
   const salesByPlatformByItem = {};
   const purchasesByStoreByItem = {};
-
-  // NEW: init monthlyMap correctly
   const monthlyMap = {}; // ym -> { ym, soldQty, revenue, cost }
 
   let dSellSum = 0, dSellCount = 0;
@@ -342,7 +337,10 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
     const feePct     = toNumber(r[OB.colFeesPct-1] || 0);
     const shipping   = toNumber(r[OB.colShipping-1] || 0);
     const retailer   = (r[OB.colRetailer-1] || '').toString().trim();
-    const marketplace= (r[OB.colMarketplace-1] || '').toString().trim();
+
+    // coalesce empty platforms so the chart shows them
+    let marketplace = (r[OB.colMarketplace-1] || '').toString().trim();
+    if (!marketplace) marketplace = 'Unknown/Other';
 
     const orderDate = parseDateMaybe(r[OB.colOrderDate-1]);
     const saleDate  = parseDateMaybe(r[OB.colSaleDate-1]);
@@ -395,11 +393,14 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
         if (!salesByMonthByItem[ym]) salesByMonthByItem[ym] = {};
         salesByMonthByItem[ym][item] = (salesByMonthByItem[ym][item] || 0) + 1;
 
-        // NEW: accumulate revenue/cost for the rev/COGS chart
+        // accumulate revenue/cost for the rev/COGS chart
         if (!monthlyMap[ym]) monthlyMap[ym] = { ym, soldQty: 0, revenue: 0, cost: 0 };
         monthlyMap[ym].revenue += sellPrice;
-        monthlyMap[ym].cost    += Math.abs(buyPrice); // buyPrice is negative in sheet
+        monthlyMap[ym].cost    += Math.abs(buyPrice); // buyPrice is negative in the sheet
       }
+
+      if (!salesByPlatformByItem[marketplace]) salesByPlatformByItem[marketplace] = {};
+      salesByPlatformByItem[marketplace][item] = (salesByPlatformByItem[marketplace][item] || 0) + 1;
     }
   }
 
@@ -410,10 +411,16 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
     return { ...b, profit, onHandQty };
   }).sort((a,b)=> (b.profit||0)-(a.profit||0));
 
+  // === SUMMARY METRICS for pills ===
   summary.profit = summary.revenue - summary.fees - summary.shipping + summary.costSold;
+  summary.netProfit = summary.profit; // UI reads netProfit
+  const costAbs = Math.abs(summary.costSold || 0);
+  summary.roiPct = costAbs ? (summary.netProfit / costAbs) : 0;                // Profit / Cost
+  summary.marginPct = (summary.revenue > 0) ? (summary.netProfit / summary.revenue) : 0; // Profit / Revenue
+  summary.asp = (summary.soldQty > 0) ? (summary.revenue / summary.soldQty) : 0;         // Avg selling price
   summary.avgDaysToSell = dSellCount ? Math.round(dSellSum / dSellCount) : 0;
 
-  // Monthly soldQty from the per-item map
+  // Monthly soldQty from the per-item map; output sorted ascending (Jan -> Dec)
   for (const [ym, perItem] of Object.entries(salesByMonthByItem)) {
     let cnt = 0;
     for (const v of Object.values(perItem)) cnt += v;
@@ -422,7 +429,7 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
   }
   const monthlyRows = Object.values(monthlyMap).sort((a,b)=> a.ym.localeCompare(b.ym));
 
-  // Top items should be names (strings) to avoid [object Object] legend
+  // Top items as strings for legend
   const topItems = breakdownRows.slice(0, 10).map(b => b.item);
 
   return {
@@ -437,13 +444,15 @@ async function getStatsV2(rangeKey, itemFilter, fromISO, toISO) {
       salesByPlatformByItem
     }
   };
-
 }
 
 function emptyStatsPayload(){
-  return { summary:{ totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, profit:0, orders:0, avgDaysToSell:0 },
-           monthly: [], breakdownByItem: [], charts: { topItems:[], purchasesByMonthByItem:{}, salesByMonthByItem:{},
-           purchasesByStoreByItem:{}, salesByPlatformByItem:{} } };
+  return {
+    summary:{ totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, profit:0, netProfit:0, roiPct:0, marginPct:0, asp:0, orders:0, avgDaysToSell:0 },
+    monthly: [],
+    breakdownByItem: [],
+    charts: { topItems:[], purchasesByMonthByItem:{}, salesByMonthByItem:{}, purchasesByStoreByItem:{}, salesByPlatformByItem:{} }
+  };
 }
 
 /** Longest hold days (unsold rows for an item, token match like GAS) */
@@ -528,9 +537,8 @@ async function submitQuickAdd(payload) {
   const id = process.env.SPREADSHEET_ID;
   await appendOrder(s, id, payload || {});
   clearCache();
-    return { ok: true, added: 1 };
+  return { ok: true, added: 1 };
 }
-
 async function submitMarkAsSold(payload) {
   const s = sheetsClient(true);
   const id = process.env.SPREADSHEET_ID;
@@ -545,9 +553,7 @@ async function submitMarkAsSold(payload) {
   clearCache();
   return { ok: true, row };
 }
-
 async function addOrderBookRow(payload) { return submitQuickAdd(payload); }
-
 async function updateOrderBookRows(rows) {
   const s = sheetsClient(true); const id = process.env.SPREADSHEET_ID;
   for (const r of (rows || [])) {
@@ -569,7 +575,6 @@ async function updateOrderBookRows(rows) {
   clearCache();
   return { ok: true, updated: (rows || []).length };
 }
-
 async function deleteOrderBookRows(rows) {
   const s = sheetsClient(true); const id = process.env.SPREADSHEET_ID;
   const numbers = (rows || []).map(r => Number(r.row)).filter(Boolean);
@@ -602,7 +607,7 @@ async function addDatabaseRetailer(name){
 async function addDatabaseMarketplace(payload){
   if (!payload || !payload.name) return { ok:false, error:'Marketplace name required' };
   let fee = toNumber(payload.fee);
-  if (fee > 1) fee = fee / 100;
+  if (fee > 1) fee = fee / 100; // accept 12.5 -> 0.125
   const s = sheetsClient(true), id = process.env.SPREADSHEET_ID;
   await s.spreadsheets.values.append({
     spreadsheetId:id, range:`${TAB_MARKETPLACES}!A1`,
@@ -714,6 +719,7 @@ exports.handler = async (event) => {
           return ok(await getLongestHoldDays(params.item));
         }
 
+        // MUTATIONS
         case 'submitQuickAdd': {
           const params = JSON.parse(qs.params || '{}') || body.params || {};
           return ok(await submitQuickAdd(JSON.parse(params.payload || '{}')));
@@ -791,6 +797,3 @@ exports.handler = async (event) => {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
-
-
-
