@@ -392,10 +392,12 @@
             </div>
           </div>
           <div class="collapsible-body">
-            <table id="db_items_tbl" style="margin-top:10px">
-              <thead><tr><th>Name</th><th>Market Value</th><th>Actions</th></tr></thead>
-              <tbody></tbody>
-            </table>
+  <table id="db_items_tbl" style="margin-top:10px">
+    <thead><tr><th>Name</th><th>Market Value</th><th>Actions</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
           </div>
         </div>
 
@@ -1275,20 +1277,41 @@ tb.innerHTML = rows.map(r => `
 
       // ==== Database ====
       function normDBShape(raw){
-        const x = (raw && typeof raw === 'object') ? raw : {};
-        const pick = (...keys)=> keys.map(k=> x[k]).find(v => Array.isArray(v));
-        let items        = pick('items','db_items','itemRows','productItems') || [];
-        let retailers    = pick('retailers','stores','vendors','retailerRows') || [];
-        let marketplaces = pick('marketplaces','platforms','salePlatforms','markets','marketRows') || [];
-        items = items.map(r => typeof r === 'string' ? ({ row:null, name:r, market:'' }) : r);
-        retailers = retailers.map(r => typeof r === 'string' ? ({ row:null, name:r }) : r);
-        marketplaces = marketplaces.map(r => {
-          if (typeof r === 'string') return { row:null, name:r, fee:0 };
-          const fee = r.fee ?? r.feePct ?? r.fee_percent ?? r.feePercent ?? r.feeRate ?? 0;
-          return { ...r, fee };
-        });
-        return { items, retailers, marketplaces };
-      }
+  const x = (raw && typeof raw === 'object') ? raw : {};
+  const pick = (...keys)=> keys.map(k=> x[k]).find(v => Array.isArray(v));
+
+  let items        = pick('items','db_items','itemRows','productItems') || [];
+  let retailers    = pick('retailers','stores','vendors','retailerRows') || [];
+  let marketplaces = pick('marketplaces','platforms','salePlatforms','markets','marketRows') || [];
+
+  // Canonicalize item fields: keep only name + market (market value)
+  items = items.map(r => {
+    if (typeof r === 'string') return { row:null, name:r, market:'' };
+    const market = r.market ?? r.market_value ?? r.marketValue ?? r.price ?? r.mkt ?? '';
+    return { row: r.row ?? null, name: r.name ?? String(r.item ?? ''), market };
+  });
+
+  retailers = retailers.map(r => typeof r === 'string' ? ({ row:null, name:r }) : r);
+
+  // Canonicalize fee to decimal (0–1)
+  function toFeeDecimal(v){
+    if (v == null) return 0;
+    let s = String(v).trim();
+    if (s.endsWith('%')) s = s.slice(0,-1);
+    let n = Number(s);
+    if (!isFinite(n)) return 0;
+    if (n > 1) n = n/100; // accept 10.9 => 0.109
+    return n;
+  }
+  marketplaces = marketplaces.map(r => {
+    if (typeof r === 'string') return { row:null, name:r, fee:0 };
+    const raw = r.fee ?? r.feePct ?? r.fee_percent ?? r.feePercent ?? r.feeRate ?? r.pct ?? 0;
+    return { ...r, fee: toFeeDecimal(raw) };
+  });
+
+  return { items, retailers, marketplaces };
+}
+
 
       async function loadDatabase(){
   try { renderDBCollapsed(); } catch(_){}
@@ -1352,104 +1375,112 @@ tb.innerHTML = rows.map(r => `
         }catch(err){ alert('Database render error: ' + (err && err.message ? err.message : err)); console.error(err); }
       }
 
-      function renderDBBody(section){
-  if (section === 'items') {
-    const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
-    const tb  = document.querySelector('#db_items_tbl tbody');
+      if (section === 'items') {
+  const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
+  const tb  = document.querySelector('#db_items_tbl tbody');
 
-    const storeKey = 'db_cat_collapsed';
-    let collapsed = {}; try { collapsed = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch(_){ collapsed = {}; }
+  // collapsed state storage
+  const storeKey = 'db_cat_collapsed';
+  let collapsed = {}; try { collapsed = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch(_){ collapsed = {}; }
 
-    const catOrder = []; const catSet = new Set();
-    for (const x of it) { if (isCategoryName(x.name) && !catSet.has(x.name)) { catSet.add(x.name); catOrder.push(x.name); } }
-    const catMap = {}; catOrder.forEach(c => catMap[c] = []);
+  // Build categories by (1) explicit uppercase header rows, and (2) item prefixes "CAT: name"
+  const catMap = new Map(); // cat => items[]
+  const catOrder = [];
+  const headerCats = new Set();
 
-    const explicitCatFor = (name) => {
-      const m = String(name||'').match(/^([^:]+):\s*/);
-      if (!m) return null;
-      const p = m[1].trim().toUpperCase();
-      return catSet.has(p) ? p : null;
-    };
+  const ensureCat = (cat) => { if (!catMap.has(cat)) { catMap.set(cat, []); catOrder.push(cat); } };
 
-    let currentCat = null;
-    for (const x of it) {
-      if (!x || !x.name) continue;
-      if (isCategoryName(x.name)) { currentCat = x.name; continue; }
-      const byPrefix = explicitCatFor(x.name);
-      const target = byPrefix || currentCat;
-      if (target && catMap[target]) catMap[target].push(x);
+  // Pass 1: detect explicit header rows (UPPERCASE names)
+  it.forEach(x => {
+    const nm = (x?.name || '').trim();
+    if (!nm) return;
+    if (isCategoryName(nm)) { headerCats.add(nm); ensureCat(nm); }
+  });
+
+  // Pass 2: assign items (by "CAT: name" prefix or current header)
+  let currentCat = null;
+  it.forEach(x => {
+    const nm = (x?.name || '').trim();
+    if (!nm) return;
+
+    if (isCategoryName(nm)) { currentCat = nm; return; } // skip header rows
+
+    let cat = null;
+    const m = nm.match(/^([^:]+):\s*/); // e.g. "PS5: Controller"
+    if (m) {
+      const pref = m[1].trim().toUpperCase();
+      cat = pref; ensureCat(cat);
+    } else if (currentCat) {
+      cat = currentCat; ensureCat(cat);
+    } else {
+      cat = 'Other'; ensureCat(cat);
     }
-    const assigned = new Set(); Object.values(catMap).flat().forEach(r => assigned.add(r.row));
-    const uncategorised = it.filter(x => x && x.name && !isCategoryName(x.name) && !assigned.has(x.row));
 
-    let html = '';
-    for (const cat of catOrder) {
-      const isCol = !!collapsed[cat]; const stateClass = isCol ? 'collapsed' : 'expanded';
-      html += `<tr class="cat-row ${stateClass}" data-role="category" data-cat="${escapeHtml(cat)}">
-        <td class="cat-cell" colspan="100">
-          <div class="cat-bar">
-            <button class="cat-btn" type="button" aria-expanded="${!isCol}" aria-controls="cat-${escapeHtml(cat)}">
-              <span class="chev">▸</span><span>${escapeHtml(cat)}</span>
-            </button>
-            <button class="db-add cat-add" type="button" data-cat="${escapeHtml(cat)}" title="Add item to ${escapeHtml(cat)}">Add</button>
-          </div>
+    catMap.get(cat).push({
+      row: x.row ?? null,
+      name: x.name,
+      market: x.market ?? ''
+    });
+  });
+
+  if (!catMap.size) ensureCat('Other');
+
+  // Build HTML
+  let html = '';
+  for (const cat of catOrder) {
+    const isCol = !!collapsed[cat];
+    html += `<tr class="cat-row ${isCol?'collapsed':'expanded'}" data-role="category" data-cat="${escapeHtml(cat)}">
+      <td class="cat-cell" colspan="100">
+        <div class="cat-bar">
+          <button class="cat-btn" type="button" aria-expanded="${!isCol}" aria-controls="cat-${escapeHtml(cat)}">
+            <span class="chev">▸</span><span>${escapeHtml(cat)}</span>
+          </button>
+          <button class="db-add cat-add" type="button" data-cat="${escapeHtml(cat)}" title="Add item to ${escapeHtml(cat)}">Add</button>
+        </div>
+      </td>
+    </tr>`;
+
+    const rows = catMap.get(cat) || [];
+    for (const x of rows) {
+      const marketRaw = x.market ?? '';
+      const marketVal = String(marketRaw).replace(/[^0-9.\-]/g,''); // sanitize
+      html += `<tr data-row="${x.row ?? ''}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
+        <td><input type="text"  value="${escapeHtml(x.name)}"></td>
+        <td><input type="number" step="0.01" value="${escapeHtml(marketVal)}"></td>
+        <td class="td-actions">
+          <button class="db-row-update" data-row="${x.row ?? ''}" type="button">Save</button>
+          <button class="db-del" data-kind="items" data-row="${x.row ?? ''}">Delete</button>
         </td>
       </tr>`;
-
-      const rows = catMap[cat] || [];
-      for (const x of rows) {
-        const market = (x.market==null?'':x.market);
-html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
-  <td><input type="text"  value="${escapeHtml(x.name)}"></td>
-  <td><input type="number" step="0.01" value="${Number(market||0)}"></td>
-  <td class="td-actions">
-  <button class="db-row-update" data-row="${x.row}" type="button">Save</button>
-  <button class="db-del" data-kind="items" data-row="${x.row}">Delete</button>
-</td>
-</tr>`;
-      }
     }
-    if (uncategorised.length){
-      const cat = 'Other'; const isCol = !!collapsed[cat]; const stateClass = isCol ? 'collapsed' : 'expanded';
-      html += `<tr class="cat-row ${stateClass}" data-role="category" data-cat="${cat}">
-        <td class="cat-cell" colspan="100">
-          <div class="cat-bar">
-            <button class="cat-btn" type="button" aria-expanded="${!isCol}" aria-controls="cat-${cat}">
-              <span class="chev">▸</span><span>${cat}</span>
-            </button>
-            <button class="db-add cat-add" type="button" data-cat="${cat}" title="Add item to ${cat}">Add</button>
-          </div>
-        </td>
-      </tr>`;
+  }
 
-      for (const x of uncategorised) {
-  const market = (x.market==null?'':x.market);
-  html += `<tr data-row="${x.row}" data-cat="${cat}" style="${isCol?'display:none;':''}">
-    <td><input type="text"  value="${escapeHtml(x.name)}"></td>
-    <td><input type="number" step="0.01" value="${Number(market||0)}"></td>
-    <td class="td-actions"><button class="db-del" data-kind="items" data-row="${x.row}">Delete</button></td>
-  </tr>`;
+  tb.innerHTML = html;
+  tb.dataset.cats = JSON.stringify(catOrder);
+
+  // Category expand/collapse + Add handler
+  tb.onclick = (ev)=>{
+    const addBtn = ev.target.closest('button.cat-add');
+    if (addBtn) { insertPendingRowForCategory(addBtn.dataset.cat); return; }
+
+    const catRow = ev.target.closest('tr.cat-row');
+    if (!catRow) return;
+    const cat = catRow.dataset.cat;
+    const nowCollapsed = !catRow.classList.contains('collapsed');
+    catRow.classList.toggle('collapsed', nowCollapsed);
+    catRow.classList.toggle('expanded', !nowCollapsed);
+    const rows = tb.querySelectorAll(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
+    rows.forEach(r => { r.style.display = nowCollapsed ? 'none' : ''; });
+
+    try {
+      const obj = JSON.parse(localStorage.getItem(storeKey) || '{}');
+      obj[cat] = nowCollapsed ? 1 : 0;
+      localStorage.setItem(storeKey, JSON.stringify(obj));
+    } catch(_) {}
+  };
 }
-    }
-    tb.innerHTML = html; tb.dataset.cats = JSON.stringify(catOrder);
 
-    // Category expand/collapse + Add handler
-    tb.onclick = (ev)=>{
-      const addBtn = ev.target.closest('button.cat-add');
-      if (addBtn) { insertPendingRowForCategory(addBtn.dataset.cat); return; }
 
-      const catRow = ev.target.closest('tr.cat-row');
-      if (!catRow) return;
-      const cat = catRow.dataset.cat;
-      const nowCollapsed = !catRow.classList.contains('collapsed');
-      catRow.classList.toggle('collapsed', nowCollapsed);
-      catRow.classList.toggle('expanded', !nowCollapsed);
-      const rows = tb.querySelectorAll('tr[data-cat]:not(.cat-row)');
-      rows.forEach(r => { if (r.dataset.cat === cat) r.style.display = nowCollapsed ? 'none' : ''; });
-      const obj = {}; const storeKey = 'db_cat_collapsed';
-      try { Object.assign(obj, JSON.parse(localStorage.getItem(storeKey) || '{}')); } catch(_){}
-      obj[cat] = nowCollapsed ? 1 : 0; localStorage.setItem(storeKey, JSON.stringify(obj));
-    };
 
   } else if (section === 'retailers') {
     let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
@@ -1527,113 +1558,124 @@ html += `<tr data-row="${x.row}" data-cat="${escapeHtml(cat)}" style="${isCol?'d
       }
 
       function wireDBButtons(){
-        document.querySelectorAll('#database .db-section').forEach(sec=>{
-          const body   = sec.querySelector('.collapsible-body');
-          const edit   = sec.querySelector('[data-action="edit"]');
-          const save   = sec.querySelector('[data-action="save"]');
-          const cancel = sec.querySelector('[data-action="cancel"]');
-          const addBtn = sec.querySelector('[data-action="add"]');
+  document.querySelectorAll('#database .db-section').forEach(sec=>{
+    const body   = sec.querySelector('.collapsible-body');
+    const edit   = sec.querySelector('[data-action="edit"]');
+    const save   = sec.querySelector('[data-action="save"]');
+    const cancel = sec.querySelector('[data-action="cancel"]');
+    const addBtn = sec.querySelector('[data-action="add"]');
 
-          // was: edit.onclick = ()=>{
-edit.onclick = async ()=>{
-  sec.classList.add('editing');
-  body.style.display = 'block';
-  edit.style.display = 'none';
-  save.style.display = (sec.dataset.section === 'items') ? 'none' : '';
-  cancel.style.display = '';
-  addBtn.style.display = '';
+    edit.onclick = async ()=>{
+      sec.classList.add('editing');
+      if (body) body.style.display = 'block';
+      edit.style.display = 'none';
+      // Hide top Save only for Items (we do row-level saves)
+      if (save) save.style.display = (sec.dataset.section === 'items') ? 'none' : '';
+      if (cancel) cancel.style.display = '';
+      if (addBtn) addBtn.style.display = '';
 
-  // ensure DB ready before rendering items/retailers/platforms
-  if (['items','retailers','marketplaces'].includes(sec.dataset.section)) {
-    await ensureDBLoaded();
-  }
-  renderDBBody(sec.dataset.section);
-};
+      if (['items','retailers','marketplaces'].includes(sec.dataset.section)) {
+        await ensureDBLoaded();
+      }
+      renderDBBody(sec.dataset.section);
+    };
 
+    if (cancel) cancel.onclick = ()=> renderDBCollapsed();
+    if (save)   save.onclick   = ()=> saveDBSection(sec.dataset.section);
+    if (addBtn) addBtn.onclick = ()=> addPendingRow(sec.dataset.section);
+  });
 
-          cancel.onclick = ()=> renderDBCollapsed();
-          save.onclick   = ()=> saveDBSection(sec.dataset.section);
-          addBtn.onclick = ()=> addPendingRow(sec.dataset.section);
-        });
+  // Single delegated click handler for all row-level actions (save/update/delete)
+  const dbRoot = document.getElementById('database');
+  if (!dbRoot.__wiredClicks) {
+    dbRoot.addEventListener('click', (ev)=>{
+      // Row-level SAVE (pending rows)
+      const rowSaveBtn = ev.target.closest('button.db-row-save');
+      if (rowSaveBtn) {
+        const tr = rowSaveBtn.closest('tr');
+        if (!tr) return;
 
-        // One-time delete handler for all DB tables
-        const dbRoot = document.getElementById('database');
-        if (!dbRoot.__wiredDelete) {
-          dbRoot.addEventListener('click', (ev)=>{
-            // Row-level SAVE for a new (pending) item
-const rowSaveBtn = ev.target.closest('button.db-row-save');
-if (rowSaveBtn) {
-  const tr = rowSaveBtn.closest('tr');
-  const name  = cellVal(tr.children[0]);
-  const market= cellVal(tr.children[1]);
-  if (!name) { toast('Item name required'); return; }
+        // ITEMS
+        if (tr.closest('#db_items_tbl')) {
+          const name   = cellVal(tr.children[0]);
+          const market = cellVal(tr.children[1]);
+          if (!name) { toast('Item name required'); return; }
 
-  google.script.run
-    .withSuccessHandler(()=>{
-      toast('Item added ✔');
-      const was='items';
-      loadDatabase();
-      reopenDBTabAfterLoad(was);
-    })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .addDatabaseItem({ name, market });
-  return;
-}
+          google.script.run
+            .withSuccessHandler(()=>{ toast('Item added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+            .withFailureHandler(err=>alert(err?.message||err))
+            .addDatabaseItem({ name, market });
+          return;
+        }
 
-// Row-level UPDATE for an existing item
-const rowUpdBtn = ev.target.closest('button.db-row-update');
-if (rowUpdBtn) {
-  const tr = rowUpdBtn.closest('tr');
-  const rowId = Number(tr.dataset.row||0);
-  if (!rowId) return;
+        // MARKETPLACES (if you keep the inline button there)
+        if (tr.closest('#db_mkt_tbl')) {
+          const name = cellVal(tr.children[0]);
+          const fee  = cellVal(tr.children[1]);
+          if (!name) { toast('Platform name required'); return; }
 
-  const name   = cellVal(tr.children[0]);
-  const market = cellVal(tr.children[1]);
-  if (!name) { toast('Item name required'); return; }
-
-  google.script.run
-    .withSuccessHandler(()=>{
-      toast('Item updated ✔');
-      const was='items';
-      loadDatabase();
-      reopenDBTabAfterLoad(was);
-    })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .updateDatabaseItems([{ row: rowId, name, market }]);
-  return;
-}
-            const btn = ev.target.closest('button.db-del');
-            if (!btn) return;
-            const kind = btn.dataset.kind;
-            const row  = Number(btn.dataset.row||0);
-            if (!row) return;
-            if (!confirm('Delete this row?')) return;
-
-            if (kind === 'items') {
-              google.script.run
-                .withSuccessHandler(()=>{ toast('Item deleted'); const was='items'; loadDatabase(); reopenDBTabAfterLoad(was); })
-                .withFailureHandler(err=>alert(err?.message||err))
-                .removeDatabaseItem(row);
-            } else if (kind === 'retailers') {
-              google.script.run
-                .withSuccessHandler(()=>{ toast('Retailer deleted'); const was='retailers'; loadDatabase(); reopenDBTabAfterLoad(was); })
-                .withFailureHandler(err=>alert(err?.message||err))
-                .removeDatabaseRetailer(row);
-            } else if (kind === 'marketplaces') {
-              google.script.run
-                .withSuccessHandler(()=>{ toast('Platform deleted'); const was='marketplaces'; loadDatabase(); reopenDBTabAfterLoad(was); })
-                .withFailureHandler(err=>alert(err?.message||err))
-                .removeDatabaseMarketplace(row);
-            } else if (kind === 'sheet') {
-              google.script.run
-                .withSuccessHandler(()=>{ toast('Row deleted'); const was='sheet'; loadDatabase(); reopenDBTabAfterLoad(was); })
-                .withFailureHandler(err=>alert(err?.message||err))
-                .deleteOrderBookRows([row]);
-            }
-          });
-          dbRoot.__wiredDelete = true;
+          google.script.run
+            .withSuccessHandler(()=>{ toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
+            .withFailureHandler(err=>alert(err?.message||err))
+            .addDatabaseMarketplace({ name, fee });
+          return;
         }
       }
+
+      // Row-level UPDATE (existing item rows)
+      const rowUpdBtn = ev.target.closest('button.db-row-update');
+      if (rowUpdBtn) {
+        const tr = rowUpdBtn.closest('tr');
+        const rowId = Number(tr?.dataset?.row || 0);
+        if (!rowId) return;
+
+        if (tr.closest('#db_items_tbl')) {
+          const name   = cellVal(tr.children[0]);
+          const market = cellVal(tr.children[1]);
+          if (!name) { toast('Item name required'); return; }
+
+          google.script.run
+            .withSuccessHandler(()=>{ toast('Item updated ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+            .withFailureHandler(err=>alert(err?.message||err))
+            .updateDatabaseItems([{ row: rowId, name, market }]);
+          return;
+        }
+      }
+
+      // DELETE (existing handler)
+      const btn = ev.target.closest('button.db-del');
+      if (!btn) return;
+      const kind = btn.dataset.kind;
+      const row  = Number(btn.dataset.row||0);
+      if (!row) return;
+      if (!confirm('Delete this row?')) return;
+
+      if (kind === 'items') {
+        google.script.run
+          .withSuccessHandler(()=>{ toast('Item deleted'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+          .withFailureHandler(err=>alert(err?.message||err))
+          .removeDatabaseItem(row);
+      } else if (kind === 'retailers') {
+        google.script.run
+          .withSuccessHandler(()=>{ toast('Retailer deleted'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+          .withFailureHandler(err=>alert(err?.message||err))
+          .removeDatabaseRetailer(row);
+      } else if (kind === 'marketplaces') {
+        google.script.run
+          .withSuccessHandler(()=>{ toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
+          .withFailureHandler(err=>alert(err?.message||err))
+          .removeDatabaseMarketplace(row);
+      } else if (kind === 'sheet') {
+        google.script.run
+          .withSuccessHandler(()=>{ toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+          .withFailureHandler(err=>alert(err?.message||err))
+          .deleteOrderBookRows([row]);
+      }
+    });
+    dbRoot.__wiredClicks = true;
+  }
+}
+
 
       function addPendingRow(section){
   // ITEMS
@@ -1642,10 +1684,10 @@ if (rowUpdBtn) {
     const tr = document.createElement('tr');
     tr.className='__pending';
     tr.innerHTML = `
-  <td><input type="text"  value="${escapeHtml(prefix)}"></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
-`;
+      <td><input type="text"  value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
+    `;
     tb.insertBefore(tr, tb.firstChild);
     const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
   }
@@ -1660,48 +1702,49 @@ if (rowUpdBtn) {
     const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
   }
 
-  // MARKETPLACES
+  // MARKETPLACES (keeps inline Save)
   if (section === 'marketplaces') {
     const tb = document.querySelector('#db_mkt_tbl tbody');
     const tr = document.createElement('tr');
     tr.className='__pending';
     tr.innerHTML = `
-  <td><input type="text"  value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
-`;
+      <td><input type="text"  value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
+    `;
     tb.insertBefore(tr, tb.firstChild);
     const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
   }
 
-        // SPREADSHEET (ORDER BOOK)
-        if (section === 'sheet') {
-          const tb = document.querySelector('#db_sheet_tbl tbody');
-          const tr = document.createElement('tr');
-          tr.className='__pending';
+  // SPREADSHEET (ORDER BOOK)
+  if (section === 'sheet') {
+    const tb = document.querySelector('#db_sheet_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
 
-          const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
-            .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+      .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
-          tr.innerHTML = `
-            <td><input type="date" value=""></td>
-            <td><input list="items" value=""></td>
-            <td><input type="number" step="0.01" value="0"></td>
-            <td><input list="retailers" value=""></td>
-            <td><input type="number" step="0.01" value="0"></td>
-            <td><input type="date" value=""></td>
-            <td><select>${mktOptions}</select></td>
-            <td><input type="number" step="0.01" value="0"></td>
-            <td><span class="muted">New</span></td>
-          `;
-          tb.insertBefore(tr, tb.firstChild);
+    tr.innerHTML = `
+      <td><input type="date" value=""></td>
+      <td><input list="items" value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td><input list="retailers" value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td><input type="date" value=""></td>
+      <td><select>${mktOptions}</select></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td><span class="muted">New</span></td>
+    `;
+    tb.insertBefore(tr, tb.firstChild);
 
-          const firstInput = tr.querySelector('input,select');
-          if (firstInput) {
-            setTimeout(() => { firstInput.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
-          }
-        }
-      }
+    const firstInput = tr.querySelector('input,select');
+    if (firstInput) {
+      setTimeout(() => { firstInput.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
+    }
+  }
+}
+
 
       function saveDBSection(section){
   if (section === 'items') {
@@ -2133,7 +2176,7 @@ if (rowUpdBtn) {
         }
       }
 
-      function insertPendingRowForCategory(cat){
+     function insertPendingRowForCategory(cat){
   const tb = document.querySelector('#db_items_tbl tbody');
   if (!tb) return;
   const isOther = (cat === 'Other');
@@ -2153,9 +2196,7 @@ if (rowUpdBtn) {
     } catch(_) {}
   }
 
-  function formatCategoryName(str){
-    return String(str || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-  }
+  function formatCategoryName(str){ return String(str || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
 
   const tr = document.createElement('tr');
   tr.className = '__pending';
@@ -2163,11 +2204,10 @@ if (rowUpdBtn) {
 
   const prefix = isOther ? '' : (formatCategoryName(cat) + ': ');
   tr.innerHTML = `
-  <td><input type="text"  value="${escapeHtml(prefix)}"></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions"></td>
-`;
-
+    <td><input type="text"  value="${escapeHtml(prefix)}"></td>
+    <td><input type="number" step="0.01" value="0"></td>
+    <td class="td-actions"><button class="db-row-save" type="button">Save</button></td>
+  `;
 
   const firstDataRow = tb.querySelector(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
   if (firstDataRow) {
@@ -2183,6 +2223,7 @@ if (rowUpdBtn) {
     setTimeout(() => { first.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
   }
 }
+
 
     </script>
   </body>
