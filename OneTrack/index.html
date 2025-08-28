@@ -256,6 +256,20 @@
   margin: 0;
   text-align: center;
 }
+
+      /* Retailers pending-row Cancel (neutral look) */
+#db_retail_tbl .td-actions .db-row-cancel{
+  padding:8px 12px;
+  border-radius:10px;
+  border:1px solid var(--pill-border);
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+}
+#db_retail_tbl .td-actions .db-row-cancel:hover{
+  border-color: var(--focus);
+}
+
       
       /* Match the header cell width so the column aligns perfectly */
       #db_items_tbl thead th:last-child{
@@ -1747,38 +1761,69 @@ if (sec.dataset.section === 'retailers' && addBtn) {
 
 
   // Single delegated click handler for all row-level actions (save/update/delete)
-  const dbRoot = document.getElementById('database');
-  if (!dbRoot.__wiredClicks) {
-    dbRoot.addEventListener('click', (ev)=>{
-      // Row-level SAVE (pending rows)
-      const rowSaveBtn = ev.target.closest('button.db-row-save');
-      if (rowSaveBtn) {
-        const tr = rowSaveBtn.closest('tr');
-        if (!tr) return;
+const dbRoot = document.getElementById('database');
+if (!dbRoot.__wiredClicks) {
+  dbRoot.addEventListener('click', (ev)=>{
+    // Row-level SAVE (pending rows)
+    const rowSaveBtn = ev.target.closest('button.db-row-save');
+    if (rowSaveBtn) {
+      const tr = rowSaveBtn.closest('tr');
+      if (!tr) return;
 
-        // Category SAVE (from the "Add Category" pending row)
-if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__catadd')) {
-  const nameRaw = cellVal(tr.children[0]);         // the input is in the first <td>
-  const catName = (nameRaw || '').trim();
-  if (!catName) { toast('Category name required'); return; }
+      // Category SAVE (from the "Add Category" pending row)
+      if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__catadd')) {
+        const nameRaw = cellVal(tr.children[0]);
+        const catName = (nameRaw || '').trim();
+        if (!catName) { toast('Category name required'); return; }
 
-  google.script.run
-    .withSuccessHandler(()=>{ toast('Category added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .addDatabaseItem({ name: catName.toUpperCase(), market: '' });  // stored as a header marker
-  return;
+        google.script.run
+          .withSuccessHandler(()=>{ toast('Category added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+          .withFailureHandler(err=>alert(err?.message||err))
+          .addDatabaseItem({ name: catName.toUpperCase(), market: '' });
+        return;
+      }
+
+      // RETAILERS (pending new row)
+      if (tr.closest('#db_retail_tbl')) {
+        const name = cellVal(tr.children[0]);
+        if (!name) { toast('Retailer name required'); return; }
+        google.script.run
+          .withSuccessHandler(()=>{ toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+          .withFailureHandler(err=>alert(err?.message||err))
+          .addDatabaseRetailer(name);
+        return;
+      }
+    }
+
+    // (your Row-level UPDATE handler stays here, unchanged)
+    const rowUpdBtn = ev.target.closest('button.db-row-update');
+    if (rowUpdBtn) {
+      // ... your existing update code ...
+    }
+
+    // ▼ NEW: Row-level CANCEL (remove pending row for Items/Category/Retailers)
+    const rowCancelBtn = ev.target.closest('button.db-row-cancel');
+    if (rowCancelBtn) {
+      const tr = rowCancelBtn.closest('tr');
+      if (tr && (tr.classList.contains('__pending') || tr.classList.contains('__catadd'))) {
+        tr.remove();
+      }
+      return;
+    }
+
+    // DELETE (existing handler)
+    const btn = ev.target.closest('button.db-del');
+    if (!btn) return;
+    const kind = btn.dataset.kind;
+    const row  = Number(btn.dataset.row||0);
+    if (!row) return;
+    if (!confirm('Delete this row?')) return;
+
+    // ... your existing delete switch ...
+  });
+  dbRoot.__wiredClicks = true;
 }
 
-        // RETAILERS (pending new row)
-if (tr.closest('#db_retail_tbl')) {
-  const name = cellVal(tr.children[0]);
-  if (!name) { toast('Retailer name required'); return; }
-  google.script.run
-    .withSuccessHandler(()=>{ toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .addDatabaseRetailer(name);
-  return;
-}
 
 
 
@@ -1911,11 +1956,16 @@ if (section === 'retailers') {
     <td><input type="text" value=""></td>
     <td class="td-actions">
       <button class="db-row-save" type="button">Save</button>
-      <button class="db-del" data-kind="retailers" data-row="0" disabled style="opacity:.5;pointer-events:none">Delete</button>
+      <button class="db-row-cancel" type="button">Cancel</button>
     </td>`;
   tb.insertBefore(tr, tb.firstChild);
-  const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
+
+  const first = tr.querySelector('input');
+  if (first){
+    setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0);
+  }
 }
+
 
 
   // MARKETPLACES (keeps inline Save)
