@@ -1548,18 +1548,31 @@ tb.innerHTML = rows.map(r => `
           const r  = has('retailers') ? DB_STATE.retailers : null;
           const m  = has('marketplaces') ? DB_STATE.marketplaces : null;
 
-          document.getElementById('db_items_count').textContent     = it ? ('Total items: ' + it.length)    : 'Loading…';
-          document.getElementById('db_retailers_count').textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
-          document.getElementById('db_mkt_count').textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
+          const elItemsCount     = document.getElementById('db_items_count');
+const elRetailersCount = document.getElementById('db_retailers_count');
+const elMktCount       = document.getElementById('db_mkt_count');
+
+if (elItemsCount)     elItemsCount.textContent     = it ? ('Total items: ' + it.length)    : 'Loading…';
+if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
+if (elMktCount)       elMktCount.textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
+
 
           document.querySelectorAll('#database .db-section').forEach(sec=>{
-            sec.classList.remove('editing');
-            sec.querySelector('.collapsible-body').style.display = 'none';
-            sec.querySelector('[data-action="edit"]').style.display = '';
-            sec.querySelector('[data-action="save"]').style.display = 'none';
-            sec.querySelector('[data-action="cancel"]').style.display = 'none';
-            sec.querySelector('[data-action="add"]').style.display = 'none';
-          });
+  sec.classList.remove('editing');
+
+  const body   = sec.querySelector('.collapsible-body');
+  const edit   = sec.querySelector('[data-action="edit"]');
+  const save   = sec.querySelector('[data-action="save"]');
+  const cancel = sec.querySelector('[data-action="cancel"]');
+  const addBtn = sec.querySelector('[data-action="add"]');
+
+  if (body)   body.style.display   = 'none';
+  if (edit)   edit.style.display   = '';
+  if (save)   save.style.display   = 'none';
+  if (cancel) cancel.style.display = 'none';
+  if (addBtn) addBtn.style.display = 'none';
+});
+
           wireDBButtons();
         }catch(err){ alert('Database render error: ' + (err && err.message ? err.message : err)); console.error(err); }
       }
