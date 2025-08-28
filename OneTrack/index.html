@@ -232,6 +232,30 @@
 #db_mkt_tbl tbody td,
 #db_sheet_tbl tbody td { border-bottom: 0 !important; }
 
+      /* Retailers: same Actions column sizing and stretch Save/Delete to fill */
+#db_retail_tbl thead th:last-child{
+  width: calc(var(--actions-col-w, 148px) + var(--actions-pr, 10px));
+}
+
+      #db_retail_tbl .td-actions{
+  width: var(--actions-col-w, 148px);
+  min-width: var(--actions-col-w, 148px);
+  max-width: var(--actions-col-w, 148px);
+  box-sizing: border-box;
+  padding: 10px var(--actions-pr, 10px) 10px 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* Save | Delete */
+  gap: var(--actions-gap, 8px);
+  align-items: stretch;
+}
+
+      #db_retail_tbl .td-actions .db-row-save,
+#db_retail_tbl .td-actions .db-row-update,
+#db_retail_tbl .td-actions .db-del{
+  width: 100%;
+  margin: 0;
+  text-align: center;
+}
       
       /* Match the header cell width so the column aligns perfectly */
       #db_items_tbl thead th:last-child{
@@ -1580,14 +1604,18 @@ function renderDBBody(section){
     };
 
   } else if (section === 'retailers') {
-    let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
-    const tb = document.querySelector('#db_retail_tbl tbody');
-    r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
-    tb.innerHTML = r.map(x => `
-      <tr data-row="${x.row}">
-        <td><input type="text" value="${escapeHtml(x.name)}"></td>
-        <td class="td-actions"><button class="db-del" data-kind="retailers" data-row="${x.row}">Delete</button></td>
-      </tr>`).join('');
+  let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
+  const tb = document.querySelector('#db_retail_tbl tbody');
+  r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
+  tb.innerHTML = r.map(x => `
+    <tr data-row="${x.row}">
+      <td><input type="text" value="${escapeHtml(x.name)}"></td>
+      <td class="td-actions">
+        <button class="db-row-update" data-row="${x.row}" type="button">Save</button>
+        <button class="db-del" data-kind="retailers" data-row="${x.row}">Delete</button>
+      </td>
+    </tr>`).join('');
+
 
   } else if (section === 'marketplaces') {
     let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : [];
@@ -1669,7 +1697,15 @@ function renderDBBody(section){
       if (body) body.style.display = 'block';
       edit.style.display = 'none';
       // Hide top Save only for Items (we do row-level saves)
-      if (save) save.style.display = (sec.dataset.section === 'items') ? 'none' : '';
+      if (save) {
+  const s = sec.dataset.section;
+  // hide top Save for items AND retailers
+  save.style.display = (s === 'items' || s === 'retailers') ? 'none' : '';
+}
+if (sec.dataset.section === 'retailers' && addBtn) {
+  addBtn.textContent = 'Add Retailer';
+}
+
       if (cancel) cancel.style.display = '';
       if (addBtn) addBtn.style.display = '';
 
@@ -1733,6 +1769,18 @@ if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__cat
   return;
 }
 
+        // RETAILERS (pending new row)
+if (tr.closest('#db_retail_tbl')) {
+  const name = cellVal(tr.children[0]);
+  if (!name) { toast('Retailer name required'); return; }
+  google.script.run
+    .withSuccessHandler(()=>{ toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .addDatabaseRetailer(name);
+  return;
+}
+
+
 
         // ITEMS
         if (tr.closest('#db_items_tbl')) {
@@ -1789,6 +1837,18 @@ if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__cat
         }
       }
 
+      // RETAILERS
+if (tr.closest('#db_retail_tbl')) {
+  const name = cellVal(tr.children[0]);
+  if (!name) { toast('Retailer name required'); return; }
+  google.script.run
+    .withSuccessHandler(()=>{ toast('Retailer updated ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+    .withFailureHandler(err=>alert(err?.message||err))
+    .updateDatabaseRetailers([{ row: rowId, name }]);
+  return;
+}
+
+
       // DELETE (existing handler)
       const btn = ev.target.closest('button.db-del');
       if (!btn) return;
@@ -1843,14 +1903,20 @@ if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__cat
   }
 
   // RETAILERS
-  if (section === 'retailers') {
-    const tb = document.querySelector('#db_retail_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `<td><input type="text" value=""></td><td class="td-actions"></td>`;
-    tb.insertBefore(tr, tb.firstChild);
-    const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
-  }
+if (section === 'retailers') {
+  const tb = document.querySelector('#db_retail_tbl tbody');
+  const tr = document.createElement('tr');
+  tr.className='__pending';
+  tr.innerHTML = `
+    <td><input type="text" value=""></td>
+    <td class="td-actions">
+      <button class="db-row-save" type="button">Save</button>
+      <button class="db-del" data-kind="retailers" data-row="0" disabled style="opacity:.5;pointer-events:none">Delete</button>
+    </td>`;
+  tb.insertBefore(tr, tb.firstChild);
+  const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
+}
+
 
   // MARKETPLACES (keeps inline Save)
   if (section === 'marketplaces') {
