@@ -523,11 +523,11 @@
             <div>
               <label>Chart:</label>
               <select id="st_chartType">
-                <option value="purchMonth"># of purchases by month</option>
-                <option value="salesMonth"># of sales by month</option>
-                <option value="purchStore"># of purchases by store</option>
-                <option value="salesPlatform"># of sales by platform</option>
-                <option value="revCogs">COGS (red) & Revenue (green) by month</option>
+                <option value="purchMonth">Purchases</option>
+                <option value="salesMonth">Sales</option>
+                <option value="purchStore">Purchases by Retailer</option>
+                <option value="salesPlatform">Sales by Marketplace</option>
+                <option value="revCogs">Costs & Revenues</option>
               </select>
             </div>
           </div>
@@ -539,13 +539,13 @@
           <table id="st_items_tbl">
             <thead>
               <tr>
-                <th class="sort" data-sort="item">Item</th>
+                <th class="sort" data-sort="item">Item Name</th>
                 <th class="sort" data-sort="boughtQty">Bought</th>
                 <th class="sort" data-sort="soldQty">Sold</th>
                 <th class="sort" data-sort="onHandQty">On Hand</th>
                 <th class="sort" data-sort="totalCost">Total Cost</th>
                 <th class="sort" data-sort="totalRevenue">Total Revenue</th>
-                <th class="sort" data-sort="profit">Profit/Loss</th>
+                <th class="sort" data-sort="profit">P&L</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -560,11 +560,11 @@
           <table id="inv_tbl">
             <thead>
               <tr>
-                <th class="sort" data-key="item">Item</th>
+                <th class="sort" data-key="item">Item Name</th>
                 <th class="sort" data-key="onHandQty">On Hand</th>
-                <th class="sort" data-key="avgCost">Avg Cost / item</th>
-                <th class="sort" data-key="onHandCost">On-hand Cost (total)</th>
-                <th class="sort" data-key="estPrice">Est. Price</th>
+                <th class="sort" data-key="avgCost">Avg Cost</th>
+                <th class="sort" data-key="onHandCost">Total Cost</th>
+                <th class="sort" data-key="estPrice">Market Value</th>
                 <th class="sort" data-key="estValue">Est. Value</th>
               </tr>
             </thead>
@@ -629,7 +629,7 @@
             </div>
             <div class="db-actions">
               <button class="db-edit" data-action="edit">Expand</button>
-              <button class="db-save" data-action="save" style="display:none">Save</button>
+        
               <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
               <button class="db-add" data-action="add" style="display:none">Add</button>
             </div>
@@ -1380,8 +1380,8 @@ if (msMarket){
 
   // --- Pills ---
   document.getElementById('st_summary').innerHTML =
-  `<span class="pill">Units (Total): ${s.totalQty}</span>`+
-  `<span class="pill">Units Sold: ${s.soldQty}</span>`+
+  `<span class="pill">Bought: ${s.totalQty}</span>`+
+  `<span class="pill">Sold: ${s.soldQty}</span>`+
   `<span class="pill">Revenue: ${money(s.revenue)}</span>`+
   `<span class="pill">COGS: ${money(s.costSold)}</span>`+   // stays negative as a cost
   `<span class="pill">Fees: ${money(s.fees)}</span>`+
@@ -1389,8 +1389,8 @@ if (msMarket){
   `<span class="pill">P&L: ${money(s.netProfit)}</span>`+   // ← renamed & no <b>
   `<span class="pill">ROI: ${pct(s.roiPct)}</span>`+
   `<span class="pill">Margin: ${pct(s.marginPct)}</span>`+
-  `<span class="pill">ASP: ${money(s.asp)}</span>`+
-  `<span class="pill">Avg Days to Sell: ${s.avgDaysToSell}</span>`;
+  `<span class="pill">Avg Sale Price: ${money(s.asp)}</span>`+
+  `<span class="pill">Avg Days Held: ${s.avgDaysToSell}</span>`;
 
 
   // --- Breakdown table ---
