@@ -404,7 +404,7 @@
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
           <a id="discordBtn" class="discord-btn"
-   href="/.netlify/functions/sheet?route=api&action=getInitModel"
+   href="#"
    target="_top" rel="noopener">Sign in with Discord</a>
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
@@ -925,7 +925,19 @@ function showApp(){
       }
 
       // ===== Auth flow (Discord) =====
-      (function wireDiscord(){ const el = document.getElementById('discordBtn'); if (el) el.setAttribute('target','_top'); })();
+      // Starts Discord OAuth by pointing the button at the Netlify function action
+(function wireDiscord(){
+  const el = document.getElementById('discordBtn');
+  if (!el) return;
+
+  el.setAttribute('target', '_top');
+
+  // where to return after Discord redirects back
+  const returnTo = location.origin + location.pathname;
+
+  // If your function uses a different action name, change start_discord_oauth accordingly.
+  el.href = `${GAS_API_URL}?route=api&action=start_discord_oauth&return=${encodeURIComponent(returnTo)}`;
+})();
       function setGateStatus(text){ const s = document.getElementById('gateStatus'); if (s) s.textContent = text || ''; }
       async function redeemJson(url){
         try{
