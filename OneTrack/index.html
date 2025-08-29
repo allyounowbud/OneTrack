@@ -1632,7 +1632,6 @@ if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' +
 if (elMktCount)       elMktCount.textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
 
 // Spreadsheet card: show Loading… immediately, then fetch row count in background
-const elSheetCount = document.getElementById('db_sheet_count');
 if (elSheetCount) elSheetCount.textContent = 'Loading…';
 google.script.run
   .withSuccessHandler(sheet => {
