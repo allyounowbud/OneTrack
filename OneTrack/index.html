@@ -925,39 +925,14 @@ function showApp(){
       }
 
       // ===== Auth flow (Discord) =====
-// Keep the button pointing at the Apps Script URL set in HTML.
+// The button already points to your Apps Script auth URL in the HTML.
+// We only ensure it opens in the top frame.
 (function wireDiscord(){
   const el = document.getElementById('discordBtn');
   if (!el) return;
-  el.setAttribute('target','_top'); // don’t change href here
+  el.setAttribute('target','_top');
 })();
 
-
-    // Optional fallback: build a Discord authorize URL on the client.
-    // Only works if YOU define these two globals somewhere before this script runs:
-    //   window.DISCORD_CLIENT_ID   = 'your_discord_app_client_id';
-    //   window.DISCORD_REDIRECT_URI = 'https://onetracking.netlify.app/.netlify/functions/sheet?route=api&action=oauth_callback'
-    //
-    // NOTE: Your function must implement that oauth_callback to exchange `code` for a session.
-    if (window.DISCORD_CLIENT_ID && window.DISCORD_REDIRECT_URI) {
-      const params = new URLSearchParams({
-        client_id: window.DISCORD_CLIENT_ID,
-        response_type: 'code',
-        scope: 'identify',
-        redirect_uri: window.DISCORD_REDIRECT_URI,
-        state: btoa(JSON.stringify({ r: returnTo, t: Date.now() }))  // basic CSRF state
-      });
-      window.location.href = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
-      return;
-
-    // If we get here, neither the server-start nor the fallback is usable.
-    btn.disabled = false;
-    alert('Could not start Discord login. Your function returned 400 to all known starters.\n' +
-          'Either re-enable the old start endpoint on the server, or set DISCORD_CLIENT_ID & DISCORD_REDIRECT_URI for client-side start.');
-  }
-
-  btn.addEventListener('click', begin);
-})();
 
 
       function setGateStatus(text){ const s = document.getElementById('gateStatus'); if (s) s.textContent = text || ''; }
@@ -979,9 +954,6 @@ function showApp(){
   setGateStatus('Finalizing sign-in…');
   (async ()=>{
     let data = await redeemJson(`${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
-    if (!data || !data.profile) {
-      data = await redeemJson(`${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
-    }
     console.log('redeem_session_code response:', data);
     if (data && data.profile) {
       try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
