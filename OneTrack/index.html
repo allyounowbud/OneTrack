@@ -1865,9 +1865,11 @@ function renderDBBody(section){
       // Hide top Save for inline-save sections (items, retailers, marketplaces, sheet)
 if (save) {
   const s = sec.dataset.section;
-  // hide top Save for items, retailers, and sheet
-  save.style.display = (s === 'items' || s === 'retailers' || s === 'sheet') ? 'none' : '';
+  // hide top Save for items, retailers, marketplaces, and sheet
+  save.style.display = (s === 'items' || s === 'retailers' || s === 'marketplaces' || s === 'sheet') ? 'none' : '';
 }
+
+
 
 
 
