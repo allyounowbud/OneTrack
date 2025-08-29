@@ -1037,7 +1037,11 @@ document.querySelectorAll('.tab').forEach(el=>{
 
       // ==== Helpers ====
       function money(n){return Number(n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});}
-      function pct(n){return (Number(n||0)).toLocaleString(undefined,{maximumFractionDigits:2})+'%';}
+      function pct(n){
+  if (n == null || isNaN(n)) return '0%';
+  return (n * 100).toFixed(2).replace(/\.00$/,'') + '%';
+}
+
       function escapeHtml(s){return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
       function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t.__to);t.__to=setTimeout(()=>t.style.display='none',1500);}
       setChartDefaultsToTheme();
@@ -1053,6 +1057,12 @@ document.querySelectorAll('.tab').forEach(el=>{
           catch(_e){ return url; }
         }
       }
+
+      function fmtPct(x) {
+  const v = Number(x || 0);
+  // one decimal, e.g. 12.3%
+  return (v * 100).toFixed(1) + '%';
+}
 
       function todayISO(){
   const d = new Date();
@@ -1338,92 +1348,106 @@ if (msMarket){
       }
 
       function drawStats(){
-        if (!STATS_CACHE){ return; }
-        const s = STATS_CACHE.summary || (window.defaultSummary ? window.defaultSummary() : {});
-        document.getElementById('st_summary').innerHTML =
-          `<span class="pill">Units (Total): ${s.totalQty}</span>`+
-          `<span class="pill">Units Sold: ${s.soldQty}</span>`+
-          `<span class="pill">Revenue: ${money(s.revenue)}</span>`+
-          `<span class="pill">COGS: ${money(s.costSold)}</span>`+
-          `<span class="pill">Fees: ${money(s.fees)}</span>`+
-          `<span class="pill">Shipping: ${money(s.shipping)}</span>`+
-          `<span class="pill"><b>Profit:</b> ${money(s.netProfit)}</span>`+
-          `<span class="pill">ROI: ${pct(s.roiPct)}</span>`+
-          `<span class="pill">Margin: ${pct(s.marginPct)}</span>`+
-          `<span class="pill">ASP: ${money(s.asp)}</span>`+
-          `<span class="pill">Avg Days to Sell: ${s.avgDaysToSell}</span>`;
+  if (!STATS_CACHE){ return; }
+  const s = STATS_CACHE.summary || (window.defaultSummary ? window.defaultSummary() : {});
 
-        const tb = document.querySelector('#st_items_tbl tbody');
-let rows = (STATS_CACHE.breakdownByItem||[]);
+  // --- Pills ---
+  document.getElementById('st_summary').innerHTML =
+    `<span class="pill">Units (Total): ${s.totalQty}</span>`+
+    `<span class="pill">Units Sold: ${s.soldQty}</span>`+
+    `<span class="pill">Revenue: ${money(s.revenue)}</span>`+
+    `<span class="pill">COGS: ${money(s.costSold||0)}</span>`+   // keep COGS negative
+    `<span class="pill">Fees: ${money(s.fees)}</span>`+
+    `<span class="pill">Shipping: ${money(s.shipping)}</span>`+
+    `<span class="pill"><b>Profit:</b> ${money(s.profit)}</span>`+
+    `<span class="pill">ROI: ${pct(s.roiPct)}</span>`+
+    `<span class="pill">Margin: ${pct(s.marginPct)}</span>`+
+    `<span class="pill">ASP: ${money(s.asp)}</span>`+
+    `<span class="pill">Avg Days to Sell: ${s.avgDaysToSell}</span>`;
 
-// apply saved sort (if any)
-let pref = null;
-try { pref = JSON.parse(localStorage.getItem('st_sort')||'null'); } catch(_){ pref=null; }
-if (pref && pref.key){
-  const { key, asc } = pref;
-  rows = [...rows].sort((a,b)=>{
-    const va=a[key], vb=b[key];
-    if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
-    return asc?(va-vb):(vb-va);
-  });
-}
+  // --- Breakdown table ---
+  const tb = document.querySelector('#st_items_tbl tbody');
+  let rows = (STATS_CACHE.breakdownByItem||[]);
 
-// initial render
-const renderRows = (arr)=> tb.innerHTML = arr.map(r=>(
-  `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
-  `<td>${money(r.totalCost)}</td><td>${money(r.totalRevenue)}</td><td><b>${money(r.profit)}</b></td></tr>`
-)).join('');
-renderRows(rows);
-
-// click to sort + save preference
-document.querySelectorAll('#st_items_tbl thead th.sort').forEach(th=>{
-  th.onclick=()=>{
-    const key = th.dataset.sort;
-    // toggle asc: if clicking same key, flip; else default desc for numbers, asc for strings
-    let asc = true;
-    if (pref && pref.key===key) asc = !pref.asc;
-    else {
-      const sample = rows[0]?.[key];
-      asc = (typeof sample==='string'); // strings asc by default, numbers desc by default
-    }
-    const sorted = [...rows].sort((a,b)=>{
+  // saved sort preference
+  let pref = null;
+  try { pref = JSON.parse(localStorage.getItem('st_sort')||'null'); } catch(_){ pref=null; }
+  if (pref && pref.key){
+    const { key, asc } = pref;
+    rows = [...rows].sort((a,b)=>{
       const va=a[key], vb=b[key];
       if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
       return asc?(va-vb):(vb-va);
     });
-    rows = sorted;
-    renderRows(rows);
-    try { localStorage.setItem('st_sort', JSON.stringify({key, asc})); } catch(_){}
-  };
-});
+  }
 
+  const renderRows = (arr)=> tb.innerHTML = arr.map(r=>(
+    `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
+    `<td>${money(r.totalCost||0)}</td>`+             // keep negative cost
+    `<td>${money(r.totalRevenue||0)}</td>`+
+    `<td><b>${money(r.profit||0)}</b></td></tr>`
+  )).join('');
+  renderRows(rows);
 
-        if (CHART) CHART.destroy();
-        const ctx=document.getElementById('st_chart');
-        const mode=document.getElementById('st_chartType').value;
-
-        if (mode==='revCogs'){
-          const labels=(STATS_CACHE.monthly||[]).map(x=>x.ym);
-          const rev=(STATS_CACHE.monthly||[]).map(x=>x.revenue);
-          const cogs=(STATS_CACHE.monthly||[]).map(x=>Math.abs(x.cost));
-          CHART=new Chart(ctx,{type:'line',data:{labels,datasets:[
-            {label:'Revenue',data:rev,tension:.25,fill:false,borderColor:'#22c55e'},
-            {label:'COGS',data:cogs,tension:.25,fill:false,borderColor:'#ef4444'}
-          ]},options:{plugins:{legend:{display:true}},scales:{y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}}}});
-        }else{
-          const C = STATS_CACHE.charts || {};
-          let labels=[], series={};
-          if (mode==='purchMonth'){ series=C.purchasesByMonthByItem || {}; }
-          if (mode==='salesMonth'){ series=C.salesByMonthByItem || {}; }
-          if (mode==='purchStore'){ series=C.purchasesByStoreByItem || {}; }
-          if (mode==='salesPlatform'){ series=C.salesByPlatformByItem || {}; }
-          labels = Object.keys(series);
-          const items = C.topItems || [];
-          const datasets = items.map(name=>({ label:name, data:labels.map(k=> (series[k] && series[k][name]) ? series[k][name] : 0 ), type:'bar' }));
-          CHART=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{plugins:{legend:{display:true}},scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}});
-        }
-        window.__redrawChart = drawStats;
+  // sortable headers
+  document.querySelectorAll('#st_items_tbl thead th.sort').forEach(th=>{
+    th.onclick=()=>{
+      const key = th.dataset.sort;
+      let asc = true;
+      if (pref && pref.key===key) asc = !pref.asc;
+      else {
+        const sample = rows[0]?.[key];
+        asc = (typeof sample==='string');
       }
+      const sorted = [...rows].sort((a,b)=>{
+        const va=a[key], vb=b[key];
+        if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
+        return asc?(va-vb):(vb-va);
+      });
+      rows = sorted;
+      renderRows(rows);
+      try { localStorage.setItem('st_sort', JSON.stringify({key, asc})); } catch(_){}
+    };
+  });
+
+  // --- Chart ---
+  if (CHART) CHART.destroy();
+  const ctx=document.getElementById('st_chart');
+  const mode=document.getElementById('st_chartType').value;
+
+  if (mode==='revCogs'){
+    const monthly=(STATS_CACHE.monthly||[]).slice().sort((a,b)=>a.ym.localeCompare(b.ym));
+    const labels=monthly.map(x=>x.ym);
+    const rev=monthly.map(x=>x.revenue);
+    const cogs=monthly.map(x=>-(Math.abs(x.cost||0)));   // plot COGS below zero
+    CHART=new Chart(ctx,{type:'line',data:{labels,datasets:[
+      {label:'Revenue',data:rev,tension:.25,fill:false,borderColor:'#22c55e'},
+      {label:'COGS',data:cogs,tension:.25,fill:false,borderColor:'#ef4444'}
+    ]},options:{plugins:{legend:{display:true}},scales:{
+      y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}
+    }}});
+  }else{
+    const C = STATS_CACHE.charts || {};
+    let labels=[], series={};
+    if (mode==='purchMonth'){ series=C.purchasesByMonthByItem || {}; }
+    if (mode==='salesMonth'){ series=C.salesByMonthByItem || {}; }
+    if (mode==='purchStore'){ series=C.purchasesByStoreByItem || {}; }
+    if (mode==='salesPlatform'){ series=C.salesByPlatformByItem || {}; }
+    labels = Object.keys(series).sort((a,b)=>a.localeCompare(b));  // ascending Jan → Dec
+    const items = C.topItems || [];
+    const datasets = items.map(name=>({
+      label:name,
+      data:labels.map(k=>(series[k] && series[k][name]) ? series[k][name] : 0),
+      type:'bar'
+    }));
+    CHART=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{
+      plugins:{legend:{display:true}},
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}
+    }});
+  }
+  window.__redrawChart = drawStats;
+}
+
 
       // ==== Inventory ====
       function refreshInventory(){
