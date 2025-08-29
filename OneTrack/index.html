@@ -1579,9 +1579,25 @@ tb.innerHTML = rows.map(r => `
     showErr(err || 'Database load error');
   }
 
-  // NOTE: Do NOT fetch getOrderBookEditable() here for the count.
-  // renderDBCollapsed() already sets "Loading…" and updates the count in background.
+  // Then (separately) fetch the sheet count; do NOT block the above
+  try{
+    const el0 = document.getElementById('db_sheet_count');
+    if (el0) el0.textContent = 'Loading…';
+
+    const sheet = await gas('getOrderBookEditable');
+    // The API may return a plain array or { rows: [...] }
+    const sheetRows = Array.isArray(sheet?.rows) ? sheet.rows : (Array.isArray(sheet) ? sheet : []);
+    const count = sheetRows.length;
+    const el = document.getElementById('db_sheet_count');
+    if (el) el.textContent = 'Rows: ' + count;
+
+  }catch(err){
+    console.warn('getOrderBookEditable failed:', err);
+    const el = document.getElementById('db_sheet_count');
+    if (el) el.textContent = 'Rows: —';
+  }
 }
+
 
   // Then (separately) fetch the sheet count; do NOT block the above
   try{
