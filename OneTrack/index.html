@@ -925,11 +925,6 @@ function showApp(){
       }
 
       // ===== Auth flow (Discord) =====
-// 1) Try server-driven OAuth kick-off (old behavior).
-// 2) If the function replies 400, show the exact error.
-// 3) Optional: if you set window.DISCORD_CLIENT_ID and window.DISCORD_REDIRECT_URI,
-//    we can fall back to building the Discord authorize URL client-side.
-// ===== Auth flow (Discord) =====
 // Keep the button pointing at the Apps Script URL set in HTML.
 (function wireDiscord(){
   const el = document.getElementById('discordBtn');
@@ -937,59 +932,6 @@ function showApp(){
   el.setAttribute('target','_top'); // don’t change href here
 })();
 
-
-    // explicit “start login” styles people tend to use:
-    `${GAS_API_URL}?route=api&action=discord_login&return=${encodeURIComponent(returnTo)}`,
-    `${GAS_API_URL}?route=api&action=auth_discord&return=${encodeURIComponent(returnTo)}`,
-    `${GAS_API_URL}?route=api&action=start_discord_oauth&return=${encodeURIComponent(returnTo)}`
-  ];
-
-  async function begin(ev){
-    ev?.preventDefault();
-    btn.disabled = true;
-
-    // Try each server-driven starter
-    for (const url of serverStarts) {
-      try {
-        const r = await fetch(url, { method:'GET', redirect:'manual', credentials:'same-origin', cache:'no-store' });
-
-        // If function issues a redirect, follow it
-        if ([302,303,307,308].includes(r.status)) {
-          const loc = r.headers.get('Location');
-          if (loc) { window.location.href = loc; return; }
-        }
-
-        // If it returns JSON with a URL, use that
-        const ct = r.headers.get('content-type') || '';
-        if (/application\/json/i.test(ct)) {
-          const data = await r.json().catch(()=>null);
-          const next = data?.url || data?.authUrl || data?.redirect;
-          if (next) { window.location.href = next; return; }
-
-          // If it clearly says “Unknown action”, try the next candidate
-          if (String(data?.error||'').toLowerCase().includes('unknown action')) {
-            continue;
-          }
-
-          // Show structured error if present
-          if (data && data.error) {
-            alert(`Auth start failed: ${data.error}`);
-            btn.disabled = false;
-            return;
-          }
-        }
-
-        // If plain 400/other without JSON, show the body snippet to reveal what param it wanted
-        if (r.status >= 400) {
-          const text = await r.text().catch(()=>`HTTP ${r.status}`);
-          alert(`Auth start failed (${r.status}).\n${text.slice(0,300)}`);
-          btn.disabled = false;
-          return;
-        }
-      } catch (e) {
-        // try next candidate
-      }
-    }
 
     // Optional fallback: build a Discord authorize URL on the client.
     // Only works if YOU define these two globals somewhere before this script runs:
