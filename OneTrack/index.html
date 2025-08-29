@@ -1586,9 +1586,12 @@ tb.innerHTML = rows.map(r => `
     if (el0) el0.textContent = 'Loading…';
 
     const sheet = await gas('getOrderBookEditable');
-    const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: ' + count;
+// The API returns a plain array, not { rows: [...] }
+const sheetRows = Array.isArray(sheet?.rows) ? sheet.rows : (Array.isArray(sheet) ? sheet : []);
+const count = sheetRows.length;
+const el = document.getElementById('db_sheet_count');
+if (el) el.textContent = 'Rows: ' + count;
+
   }catch(err){
     console.warn('getOrderBookEditable failed:', err);
     const el = document.getElementById('db_sheet_count');
@@ -1806,8 +1809,10 @@ function renderDBBody(section){
     tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
 
     google.script.run
-      .withSuccessHandler(data=>{
-        const rows = (data && data.rows) ? data.rows.slice() : [];
+  .withSuccessHandler(data=>{
+    // Accept either { rows: [...] } or plain [...]
+    const rows = Array.isArray(data?.rows) ? data.rows.slice()
+               : (Array.isArray(data) ? data.slice() : []);
 
         // newest by order_date, then by row desc
         rows.sort((a, b) => {
