@@ -752,9 +752,11 @@
     <script>
       // ===== Base URL / Netlify Function =====
 const BASE_URL = location.origin;
-// point directly at your Netlify function
+// Netlify function base
 const GAS_API_URL = "/.netlify/functions/sheet";
-// (no need for GAS_EXEC_DIRECT anymore)
+// Apps Script "exec" base — used to redeem the session hash
+const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
+
 
 
       // ---- Global app state (must exist before any function can run) ----
@@ -952,20 +954,35 @@ function showApp(){
 
   const code = decodeURIComponent(m[1]);
   setGateStatus('Finalizing sign-in…');
+
   (async ()=>{
+    // 1) Try Netlify function
     let data = await redeemJson(`${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
+
+    // 2) If Netlify doesn't support it (Unknown action), fall back to Apps Script
+    if (!data || !data.profile) {
+      const msg = (data && data.error || '').toLowerCase();
+      if (msg.includes('unknown action')) {
+        data = await redeemJson(`${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
+      }
+    }
+
     console.log('redeem_session_code response:', data);
+
     if (data && data.profile) {
       try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
       history.replaceState(null, '', location.pathname + location.search); // clear #sess
       showApp();
       return;
     }
+
     setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
-    try { history.replaceState(null, '', location.pathname + location.search); } catch(_) {} // clear #sess even on failure
+    try { history.replaceState(null, '', location.pathname + location.search); } catch(_) {}
     showGate();
-        })();
-      })();
+  })();
+})();
+
+      
       const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
 ;(function safeBoot(){
   try {
