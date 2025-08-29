@@ -1581,17 +1581,20 @@ tb.innerHTML = rows.map(r => `
   }
 
   // Then (separately) fetch the sheet count; do NOT block the above
-  try{
-    const sheet = await gas('getOrderBookEditable');
-    const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: ' + count;
-  }catch(err){
-    console.warn('getOrderBookEditable failed:', err);
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: —';
-  }
+try{
+  const el0 = document.getElementById('db_sheet_count');
+  if (el0) el0.textContent = 'Loading…';  // ← NEW
+
+  const sheet = await gas('getOrderBookEditable');
+  const count = (sheet && sheet.rows) ? sheet.rows.length : 0;
+  const el = document.getElementById('db_sheet_count');
+  if (el) el.textContent = 'Rows: ' + count;
+}catch(err){
+  console.warn('getOrderBookEditable failed:', err);
+  const el = document.getElementById('db_sheet_count');
+  if (el) el.textContent = 'Rows: —';
 }
+
 
 
       async function ensureDBLoaded(){
@@ -1615,8 +1618,9 @@ tb.innerHTML = rows.map(r => `
           const m  = has('marketplaces') ? DB_STATE.marketplaces : null;
 
           const elItemsCount     = document.getElementById('db_items_count');
-const elRetailersCount = document.getElementById('db_retailers_count');
-const elMktCount       = document.getElementById('db_mkt_count');
+          const elRetailersCount = document.getElementById('db_retailers_count');
+          const elMktCount       = document.getElementById('db_mkt_count');
+          const elSheetCount     = document.getElementById('db_sheet_count');
 
 if (elItemsCount)     elItemsCount.textContent     = it ? ('Total items: ' + it.length)    : 'Loading…';
 if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
