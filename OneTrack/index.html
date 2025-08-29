@@ -1219,33 +1219,60 @@ if (msMarket){
             return { totalQty:0, soldQty:0, revenue:0, costSold:0, fees:0, shipping:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 };
           }
           function normalizeStatsPayload(res){
-            if (!res || typeof res !== 'object') {
-              return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
-            }
-            if (res.ok === false && res.error){
-              console.warn('getStatsV2 error:', res.error);
-              return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
-            }
-            const s = res.summary || {};
-            return {
-              summary: {
-                totalQty: +s.totalQty || 0,
-                soldQty: +s.soldQty || 0,
-                revenue: +s.revenue || 0,
-                costSold: +s.costSold || 0,
-                fees: +s.fees || 0,
-                shipping: +s.shipping || 0,
-                netProfit: +s.netProfit || 0,
-                roiPct: +s.roiPct || 0,
-                marginPct: +s.marginPct || 0,
-                asp: +s.asp || 0,
-                avgDaysToSell: +s.avgDaysToSell || 0
-              },
-              breakdownByItem: Array.isArray(res.breakdownByItem) ? res.breakdownByItem : [],
-              charts: res.charts || {},
-              monthly: Array.isArray(res.monthly) ? res.monthly : []
-            };
-          }
+  if (!res || typeof res !== 'object') {
+    return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
+  }
+  if (res.ok === false && res.error){
+    console.warn('getStatsV2 error:', res.error);
+    return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
+  }
+
+  const s = res.summary || {};
+  const summary = {
+    totalQty : +s.totalQty  || 0,
+    soldQty  : +s.soldQty   || 0,
+    revenue  : +s.revenue   || 0,
+    costSold : +s.costSold  || 0,   // negative (COGS)
+    fees     : +s.fees      || 0,
+    shipping : +s.shipping  || 0,
+    avgDaysToSell: +s.avgDaysToSell || 0,
+
+    // We will compute/patch these below if the backend didn't send them
+    netProfit: (typeof s.netProfit === 'number') ? +s.netProfit : NaN,
+    roiPct   : (typeof s.roiPct    === 'number') ? +s.roiPct    : NaN,
+    marginPct: (typeof s.marginPct === 'number') ? +s.marginPct : NaN,
+    asp      : (typeof s.asp       === 'number') ? +s.asp       : NaN
+  };
+
+  // ===== Derive missing numbers on the client =====
+  // P&L (your definition): revenue + costSold  (costSold is negative)
+  if (!isFinite(summary.netProfit)) {
+    summary.netProfit = summary.revenue + summary.costSold;
+  }
+
+  // ASP = revenue / soldQty
+  if (!isFinite(summary.asp)) {
+    summary.asp = summary.soldQty ? (summary.revenue / summary.soldQty) : 0;
+  }
+
+  // ROI% = (revenue + costSold) / |costSold|
+  if (!isFinite(summary.roiPct)) {
+    summary.roiPct = summary.costSold ? ((summary.revenue + summary.costSold) / Math.abs(summary.costSold)) : 0;
+  }
+
+  // Margin% = (revenue + costSold) / revenue
+  if (!isFinite(summary.marginPct)) {
+    summary.marginPct = summary.revenue ? ((summary.revenue + summary.costSold) / summary.revenue) : 0;
+  }
+
+  return {
+    summary,
+    breakdownByItem: Array.isArray(res.breakdownByItem) ? res.breakdownByItem : [],
+    charts: res.charts || {},
+    monthly: Array.isArray(res.monthly) ? res.monthly : []
+  };
+}
+
           window.defaultSummary = defaultSummary;
           window.normalizeStatsPayload = normalizeStatsPayload;
 
@@ -1353,17 +1380,18 @@ if (msMarket){
 
   // --- Pills ---
   document.getElementById('st_summary').innerHTML =
-    `<span class="pill">Units (Total): ${s.totalQty}</span>`+
-    `<span class="pill">Units Sold: ${s.soldQty}</span>`+
-    `<span class="pill">Revenue: ${money(s.revenue)}</span>`+
-    `<span class="pill">COGS: ${money(s.costSold||0)}</span>`+   // keep COGS negative
-    `<span class="pill">Fees: ${money(s.fees)}</span>`+
-    `<span class="pill">Shipping: ${money(s.shipping)}</span>`+
-    `<span class="pill"><b>Profit:</b> ${money(s.profit)}</span>`+
-    `<span class="pill">ROI: ${pct(s.roiPct)}</span>`+
-    `<span class="pill">Margin: ${pct(s.marginPct)}</span>`+
-    `<span class="pill">ASP: ${money(s.asp)}</span>`+
-    `<span class="pill">Avg Days to Sell: ${s.avgDaysToSell}</span>`;
+  `<span class="pill">Units (Total): ${s.totalQty}</span>`+
+  `<span class="pill">Units Sold: ${s.soldQty}</span>`+
+  `<span class="pill">Revenue: ${money(s.revenue)}</span>`+
+  `<span class="pill">COGS: ${money(s.costSold)}</span>`+   // stays negative as a cost
+  `<span class="pill">Fees: ${money(s.fees)}</span>`+
+  `<span class="pill">Shipping: ${money(s.shipping)}</span>`+
+  `<span class="pill">P&L: ${money(s.netProfit)}</span>`+   // ← renamed & no <b>
+  `<span class="pill">ROI: ${pct(s.roiPct)}</span>`+
+  `<span class="pill">Margin: ${pct(s.marginPct)}</span>`+
+  `<span class="pill">ASP: ${money(s.asp)}</span>`+
+  `<span class="pill">Avg Days to Sell: ${s.avgDaysToSell}</span>`;
+
 
   // --- Breakdown table ---
   const tb = document.querySelector('#st_items_tbl tbody');
