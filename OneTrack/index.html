@@ -925,71 +925,103 @@ function showApp(){
       }
 
       // ===== Auth flow (Discord) =====
-// Robust starter: try several likely actions and follow redirect or JSON URL
+// 1) Try server-driven OAuth kick-off (old behavior).
+// 2) If the function replies 400, show the exact error.
+// 3) Optional: if you set window.DISCORD_CLIENT_ID and window.DISCORD_REDIRECT_URI,
+//    we can fall back to building the Discord authorize URL client-side.
 (function wireDiscord(){
   const btn = document.getElementById('discordBtn');
   if (!btn) return;
 
-  btn.setAttribute('target', '_top');
+  btn.setAttribute('target','_top');
 
   const returnTo = location.origin + location.pathname;
 
-  // If you know your exact action, put it first or leave only that one.
-  const candidates = [
-    'discord_login',
-    'auth_discord',
-    'login_with_discord',
-    'begin_discord_oauth',
-    'start_discord_login',
-    'start_discord_oauth',   // your current (but backend says it doesn't exist)
-    'oauth_start_discord'
+  // Endpoints we’ll try on your Netlify function (server-driven start)
+  const serverStarts = [
+    // many backends used to start OAuth when hitting getInitModel unauthenticated:
+    `${GAS_API_URL}?route=api&action=getInitModel&login=1&return=${encodeURIComponent(returnTo)}`,
+
+    // explicit “start login” styles people tend to use:
+    `${GAS_API_URL}?route=api&action=discord_login&return=${encodeURIComponent(returnTo)}`,
+    `${GAS_API_URL}?route=api&action=auth_discord&return=${encodeURIComponent(returnTo)}`,
+    `${GAS_API_URL}?route=api&action=start_discord_oauth&return=${encodeURIComponent(returnTo)}`
   ];
-
-  async function tryAction(action, route='api'){
-    const url = `${GAS_API_URL}?route=${route}&action=${encodeURIComponent(action)}&return=${encodeURIComponent(returnTo)}`;
-    const r = await fetch(url, { method:'GET', redirect:'manual', credentials:'same-origin', cache:'no-store' });
-
-    // Follow server-side redirects
-    if ([302,303,307,308].includes(r.status)) {
-      const loc = r.headers.get('Location') || url;
-      return { to: loc };
-    }
-    // Or accept JSON that hands back an auth URL
-    const ct = r.headers.get('content-type') || '';
-    if (/application\/json/i.test(ct)) {
-      const data = await r.json().catch(()=>null);
-      const u = data?.url || data?.authUrl || data?.redirect;
-      if (u && /^https?:\/\//i.test(u)) return { to: u };
-    }
-    return null;
-  }
 
   async function begin(ev){
     ev?.preventDefault();
     btn.disabled = true;
 
-    // 1) Try route=api first
-    for (const a of candidates) {
+    // Try each server-driven starter
+    for (const url of serverStarts) {
       try {
-        const res = await tryAction(a, 'api');
-        if (res) { window.location.href = res.to; return; }
-      } catch {}
-    }
-    // 2) Some backends split routes; try route=auth
-    for (const a of candidates) {
-      try {
-        const res = await tryAction(a, 'auth');
-        if (res) { window.location.href = res.to; return; }
-      } catch {}
+        const r = await fetch(url, { method:'GET', redirect:'manual', credentials:'same-origin', cache:'no-store' });
+
+        // If function issues a redirect, follow it
+        if ([302,303,307,308].includes(r.status)) {
+          const loc = r.headers.get('Location');
+          if (loc) { window.location.href = loc; return; }
+        }
+
+        // If it returns JSON with a URL, use that
+        const ct = r.headers.get('content-type') || '';
+        if (/application\/json/i.test(ct)) {
+          const data = await r.json().catch(()=>null);
+          const next = data?.url || data?.authUrl || data?.redirect;
+          if (next) { window.location.href = next; return; }
+
+          // If it clearly says “Unknown action”, try the next candidate
+          if (String(data?.error||'').toLowerCase().includes('unknown action')) {
+            continue;
+          }
+
+          // Show structured error if present
+          if (data && data.error) {
+            alert(`Auth start failed: ${data.error}`);
+            btn.disabled = false;
+            return;
+          }
+        }
+
+        // If plain 400/other without JSON, show the body snippet to reveal what param it wanted
+        if (r.status >= 400) {
+          const text = await r.text().catch(()=>`HTTP ${r.status}`);
+          alert(`Auth start failed (${r.status}).\n${text.slice(0,300)}`);
+          btn.disabled = false;
+          return;
+        }
+      } catch (e) {
+        // try next candidate
+      }
     }
 
+    // Optional fallback: build a Discord authorize URL on the client.
+    // Only works if YOU define these two globals somewhere before this script runs:
+    //   window.DISCORD_CLIENT_ID   = 'your_discord_app_client_id';
+    //   window.DISCORD_REDIRECT_URI = 'https://onetracking.netlify.app/.netlify/functions/sheet?route=api&action=oauth_callback'
+    //
+    // NOTE: Your function must implement that oauth_callback to exchange `code` for a session.
+    if (window.DISCORD_CLIENT_ID && window.DISCORD_REDIRECT_URI) {
+      const params = new URLSearchParams({
+        client_id: window.DISCORD_CLIENT_ID,
+        response_type: 'code',
+        scope: 'identify',
+        redirect_uri: window.DISCORD_REDIRECT_URI,
+        state: btoa(JSON.stringify({ r: returnTo, t: Date.now() }))  // basic CSRF state
+      });
+      window.location.href = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
+      return;
+    }
+
+    // If we get here, neither the server-start nor the fallback is usable.
     btn.disabled = false;
-    alert('Could not find a working Discord OAuth start action.\n' +
-          'Please confirm the action name your Netlify function exposes (e.g., "discord_login").');
+    alert('Could not start Discord login. Your function returned 400 to all known starters.\n' +
+          'Either re-enable the old start endpoint on the server, or set DISCORD_CLIENT_ID & DISCORD_REDIRECT_URI for client-side start.');
   }
 
   btn.addEventListener('click', begin);
 })();
+
 
       function setGateStatus(text){ const s = document.getElementById('gateStatus'); if (s) s.textContent = text || ''; }
       async function redeemJson(url){
