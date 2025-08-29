@@ -404,7 +404,7 @@
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
           <a id="discordBtn" class="discord-btn"
-   href="#"
+   href="https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec?route=discord_login"
    target="_top" rel="noopener">Sign in with Discord</a>
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
@@ -929,18 +929,14 @@ function showApp(){
 // 2) If the function replies 400, show the exact error.
 // 3) Optional: if you set window.DISCORD_CLIENT_ID and window.DISCORD_REDIRECT_URI,
 //    we can fall back to building the Discord authorize URL client-side.
+// ===== Auth flow (Discord) =====
+// Keep the button pointing at the Apps Script URL set in HTML.
 (function wireDiscord(){
-  const btn = document.getElementById('discordBtn');
-  if (!btn) return;
+  const el = document.getElementById('discordBtn');
+  if (!el) return;
+  el.setAttribute('target','_top'); // don’t change href here
+})();
 
-  btn.setAttribute('target','_top');
-
-  const returnTo = location.origin + location.pathname;
-
-  // Endpoints we’ll try on your Netlify function (server-driven start)
-  const serverStarts = [
-    // many backends used to start OAuth when hitting getInitModel unauthenticated:
-    `${GAS_API_URL}?route=api&action=getInitModel&login=1&return=${encodeURIComponent(returnTo)}`,
 
     // explicit “start login” styles people tend to use:
     `${GAS_API_URL}?route=api&action=discord_login&return=${encodeURIComponent(returnTo)}`,
