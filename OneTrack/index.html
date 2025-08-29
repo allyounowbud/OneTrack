@@ -1580,6 +1580,10 @@ tb.innerHTML = rows.map(r => `
     showErr(err || 'Database load error');
   }
 
+  // NOTE: Do NOT fetch getOrderBookEditable() here for the count.
+  // renderDBCollapsed() already sets "Loading…" and updates the count in background.
+}
+
   // Then (separately) fetch the sheet count; do NOT block the above
   try{
     const el0 = document.getElementById('db_sheet_count');
@@ -1625,27 +1629,12 @@ if (el) el.textContent = 'Rows: ' + count;
     const elItemsCount     = document.getElementById('db_items_count');
     const elRetailersCount = document.getElementById('db_retailers_count');
     const elMktCount       = document.getElementById('db_mkt_count');
-    const elSheetCount     = document.getElementById('db_sheet_count');
 
     if (elItemsCount)     elItemsCount.textContent     = it ? ('Total items: ' + it.length)    : 'Loading…';
-if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
-if (elMktCount)       elMktCount.textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
+    if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
+    if (elMktCount)       elMktCount.textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
 
-// Spreadsheet card: show Loading… immediately, then fetch row count in background
-if (elSheetCount) elSheetCount.textContent = 'Loading…';
-google.script.run
-  .withSuccessHandler(sheet => {
-    const n = (sheet && sheet.rows && Array.isArray(sheet.rows)) ? sheet.rows.length : 0;
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: ' + n;
-  })
-  .withFailureHandler(() => {
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: —';
-  })
-  .getOrderBookEditable();
-
-
+    // Collapse all sections and reset header buttons
     document.querySelectorAll('#database .db-section').forEach(sec=>{
       sec.classList.remove('editing');
 
@@ -1661,6 +1650,22 @@ google.script.run
       if (cancel) cancel.style.display = 'none';
       if (addBtn) addBtn.style.display = 'none';
     });
+
+    // Spreadsheet card: show Loading… immediately, then fetch row count in background
+    const scEl = document.getElementById('db_sheet_count');
+    if (scEl) scEl.textContent = 'Loading…';
+
+    google.script.run
+      .withSuccessHandler(sheet => {
+        const n = Array.isArray(sheet?.rows) ? sheet.rows.length : 0;
+        const target = document.getElementById('db_sheet_count');
+        if (target) target.textContent = 'Rows: ' + n;
+      })
+      .withFailureHandler(() => {
+        const target = document.getElementById('db_sheet_count');
+        if (target) target.textContent = 'Rows: —';
+      })
+      .getOrderBookEditable();
 
     wireDBButtons();
   }catch(err){
