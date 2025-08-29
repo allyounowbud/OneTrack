@@ -1628,9 +1628,24 @@ if (el) el.textContent = 'Rows: ' + count;
     const elSheetCount     = document.getElementById('db_sheet_count');
 
     if (elItemsCount)     elItemsCount.textContent     = it ? ('Total items: ' + it.length)    : 'Loading…';
-    if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
-    if (elMktCount)       elMktCount.textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
-    if (elSheetCount)     elSheetCount.textContent     = 'Loading…';
+if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
+if (elMktCount)       elMktCount.textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
+
+// Spreadsheet card: show Loading… immediately, then fetch row count in background
+const elSheetCount = document.getElementById('db_sheet_count');
+if (elSheetCount) elSheetCount.textContent = 'Loading…';
+google.script.run
+  .withSuccessHandler(sheet => {
+    const n = (sheet && sheet.rows && Array.isArray(sheet.rows)) ? sheet.rows.length : 0;
+    const el = document.getElementById('db_sheet_count');
+    if (el) el.textContent = 'Rows: ' + n;
+  })
+  .withFailureHandler(() => {
+    const el = document.getElementById('db_sheet_count');
+    if (el) el.textContent = 'Rows: —';
+  })
+  .getOrderBookEditable();
+
 
     document.querySelectorAll('#database .db-section').forEach(sec=>{
       sec.classList.remove('editing');
@@ -1880,9 +1895,9 @@ function renderDBBody(section){
       // Hide top Save for inline-save sections (items, retailers, marketplaces, sheet)
 if (save) {
   const s = sec.dataset.section;
-  // hide top Save for items, retailers, marketplaces, and sheet
   save.style.display = (s === 'items' || s === 'retailers' || s === 'marketplaces' || s === 'sheet') ? 'none' : '';
 }
+
 
 
 
@@ -1938,191 +1953,178 @@ if (save) {
 const dbRoot = document.getElementById('database');
 if (!dbRoot.__wiredClicks) {
   dbRoot.addEventListener('click', (ev)=>{
-    
-    // Row-level CANCEL (remove pending row)
-    const rowCancelBtn = ev.target.closest('button.db-row-cancel');
-    if (rowCancelBtn) {
-      const tr = rowCancelBtn.closest('tr');
-      if (tr && tr.classList.contains('__pending')) tr.remove();
+  // ========== CANCEL (pending rows) ==========
+  const cancelBtn = ev.target.closest('button.db-row-cancel');
+  if (cancelBtn) {
+    const tr = cancelBtn.closest('tr');
+    if (tr && tr.classList.contains('__pending')) tr.remove();
+    return;
+  }
+
+  // Helpers
+  const get = (td) => (td ? cellVal(td) : '');
+  const inTbl = (sel) => !!ev.target.closest(sel);
+
+  // ========== SAVE (pending rows) ==========
+  const saveBtn = ev.target.closest('button.db-row-save');
+  if (saveBtn) {
+    const tr = saveBtn.closest('tr');
+    if (!tr) return;
+
+    // Items: “Add” pending row
+    if (inTbl('#db_items_tbl')) {
+      const name   = get(tr.children[0]);
+      const market = get(tr.children[1]);
+      if (!name) { toast('Item is required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Item added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .addDatabaseItem({ name, market });
       return;
     }
 
-    // Row-level SAVE (pending rows)
-    const rowSaveBtn = ev.target.closest('button.db-row-save');
-    if (rowSaveBtn) {
-      const tr = rowSaveBtn.closest('tr');      // ✅ add this line
-      if (!tr) return;
-
-      // Category SAVE (from “Add Category” pending row)
-      if (rowSaveBtn.matches('[data-role="save-cat"]') || tr.classList.contains('__catadd')) {
-        const nameRaw = cellVal(tr.children[0]);
-        const catName = (nameRaw || '').trim();
-        if (!catName) { toast('Category name required'); return; }
-        google.script.run
-          .withSuccessHandler(()=>{ toast('Category added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-          .withFailureHandler(err=>alert(err?.message||err))
-          .addDatabaseItem({ name: catName.toUpperCase(), market: '' });
-        return;
-      }
-
-      // SHEET (pending new order)
-if (tr.closest('#db_sheet_tbl')) {
-  const payload = {
-    order_date:    cellVal(tr.children[0]),
-    item:          cellVal(tr.children[1]),
-    buy_price:     cellVal(tr.children[2]),
-    bought_from:   cellVal(tr.children[3]),
-    sell_price:    cellVal(tr.children[4]),
-    sale_date:     cellVal(tr.children[5]),
-    sale_location: cellVal(tr.children[6]),
-    shipping:      cellVal(tr.children[7])
-  };
-  if (!payload.item) { toast('Item is required'); return; }
-  google.script.run
-    .withSuccessHandler(()=>{ toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .addOrderBookRow(payload);
-  return;
-}
-
-
-      // RETAILERS (pending new row)
-      if (tr.closest('#db_retail_tbl')) {
-        const name = cellVal(tr.children[0]);
-        if (!name) { toast('Retailer name required'); return; }
-        google.script.run
-          .withSuccessHandler(()=>{ toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-          .withFailureHandler(err=>alert(err?.message||err))
-          .addDatabaseRetailer(name);
-        return;
-      }
+    // Retailers: “Add” pending row
+    if (inTbl('#db_retail_tbl')) {
+      const name = get(tr.children[0]);
+      if (!name) { toast('Retailer name required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .addDatabaseRetailer(name);
+      return;
     }
 
-      // MARKETPLACES (pending new row)
-  if (tr.closest('#db_mkt_tbl')) {
-    const name = cellVal(tr.children[0]);
-    const fee  = cellVal(tr.children[1]);
-    if (!name) { toast('Platform name required'); return; }
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .addDatabaseMarketplace({ name, fee });
-    return;
-  }
+    // Marketplaces: “Add” pending row
+    if (inTbl('#db_mkt_tbl')) {
+      const name = get(tr.children[0]);
+      const fee  = get(tr.children[1]);
+      if (!name) { toast('Platform name required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .addDatabaseMarketplace({ name, fee });
+      return;
+    }
 
-      // SHEET (pending new row)
-  if (tr.closest('#db_sheet_tbl')) {
-    const payload = {
-      order_date:   cellVal(tr.children[0]),
-      item:         cellVal(tr.children[1]),
-      buy_price:    cellVal(tr.children[2]),
-      bought_from:  cellVal(tr.children[3]),
-      sell_price:   cellVal(tr.children[4]),
-      sale_date:    cellVal(tr.children[5]),
-      sale_location:cellVal(tr.children[6]),
-      shipping:     cellVal(tr.children[7])
-    };
-    if (!payload.item) { toast('Item is required'); return; }
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .addOrderBookRow(payload);
-    return;
-  }
+    // Sheet: “Add Order” pending row
+    if (inTbl('#db_sheet_tbl')) {
+      const payload = {
+        order_date:    get(tr.children[0]),
+        item:          get(tr.children[1]),
+        buy_price:     get(tr.children[2]),
+        bought_from:   get(tr.children[3]),
+        sell_price:    get(tr.children[4]),
+        sale_date:     get(tr.children[5]),
+        sale_location: get(tr.children[6]),
+        shipping:      get(tr.children[7])
+      };
+      if (!payload.item) { toast('Item is required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .addOrderBookRow(payload);
+      return;
+    }
+  } // END pending SAVE
 
+  // ========== UPDATE (existing rows) ==========
+  const updBtn = ev.target.closest('button.db-row-update');
+  if (updBtn) {
+    const tr   = updBtn.closest('tr');
+    const rowId = Number(tr?.dataset?.row || 0);
+    if (!rowId) return;
 
+    if (inTbl('#db_items_tbl')) {
+      const name   = get(tr.children[0]);
+      const market = get(tr.children[1]);
+      if (!name) { toast('Item name required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Item updated ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .updateDatabaseItems([{ row: rowId, name, market }]);
+      return;
+    }
 
-    // Row-level UPDATE (existing rows: items / retailers / marketplaces)
-const rowUpdBtn = ev.target.closest('button.db-row-update');
-if (rowUpdBtn) {
-  const tr = rowUpdBtn.closest('tr');
-  const rowId = Number(tr?.dataset?.row || 0);
-  if (!rowId) return;
+    if (inTbl('#db_retail_tbl')) {
+      const name = get(tr.children[0]);
+      if (!name) { toast('Retailer name required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Retailer updated ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .updateDatabaseRetailers([{ row: rowId, name }]);
+      return;
+    }
 
-  if (tr.closest('#db_items_tbl')) {
-    const name   = cellVal(tr.children[0]);
-    const market = cellVal(tr.children[1]);
-    if (!name) { toast('Item name required'); return; }
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Item updated ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .updateDatabaseItems([{ row: rowId, name, market }]);
-    return;
-  }
+    if (inTbl('#db_mkt_tbl')) {
+      const name = get(tr.children[0]);
+      const fee  = get(tr.children[1]);
+      if (!name) { toast('Platform name required'); return; }
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Platform updated ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .updateDatabaseMarketplaces([{ row: rowId, name, fee }]);
+      return;
+    }
 
-  if (tr.closest('#db_retail_tbl')) {
-    const name = cellVal(tr.children[0]);
-    if (!name) { toast('Retailer name required'); return; }
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Retailer updated ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .updateDatabaseRetailers([{ row: rowId, name }]);
-    return;
-  }
+    if (inTbl('#db_sheet_tbl')) {
+      const row = {
+        row:           rowId,
+        order_date:    get(tr.children[0]),
+        item:          get(tr.children[1]),
+        buy_price:     get(tr.children[2]),
+        bought_from:   get(tr.children[3]),
+        sell_price:    get(tr.children[4]),
+        sale_date:     get(tr.children[5]),
+        sale_location: get(tr.children[6]),
+        shipping:      get(tr.children[7])
+      };
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .updateOrderBookRows([row]);
+      return;
+    }
+  } // END UPDATE
 
-  if (tr.closest('#db_mkt_tbl')) {
-    const name = cellVal(tr.children[0]);
-    const fee  = cellVal(tr.children[1]);
-    if (!name) { toast('Platform name required'); return; }
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Platform updated ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .updateDatabaseMarketplaces([{ row: rowId, name, fee }]);
-    return;
-  }
-
-    if (tr.closest('#db_sheet_tbl')) {
-    const row = {
-      row:          rowId,
-      order_date:   cellVal(tr.children[0]),
-      item:         cellVal(tr.children[1]),
-      buy_price:    cellVal(tr.children[2]),
-      bought_from:  cellVal(tr.children[3]),
-      sell_price:   cellVal(tr.children[4]),
-      sale_date:    cellVal(tr.children[5]),
-      sale_location:cellVal(tr.children[6]),
-      shipping:     cellVal(tr.children[7])
-    };
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .updateOrderBookRows([row]);
-    return;
-  }
-
-}
-
-    // DELETE existing rows
-    const btn = ev.target.closest('button.db-del');
-    if (!btn) return;
-    const kind = btn.dataset.kind;
-    const row  = Number(btn.dataset.row || 0);
+  // ========== DELETE (existing rows) ==========
+  const delBtn = ev.target.closest('button.db-del');
+  if (delBtn) {
+    const kind = delBtn.dataset.kind;
+    const row  = Number(delBtn.dataset.row || 0);
     if (!row) return;
     if (!confirm('Delete this row?')) return;
 
     if (kind === 'items') {
       google.script.run
-        .withSuccessHandler(() => { toast('Item deleted'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-        .withFailureHandler(err => alert(err?.message || err))
+        .withSuccessHandler(()=>{ toast('Item deleted'); loadDatabase(); reopenDBTabAfterLoad('items'); })
+        .withFailureHandler(err=>alert(err?.message||err))
         .removeDatabaseItem(row);
-    } else if (kind === 'retailers') {
-      google.script.run
-        .withSuccessHandler(() => { toast('Retailer deleted'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-        .withFailureHandler(err => alert(err?.message || err))
-        .removeDatabaseRetailer(row);
-    } else if (kind === 'marketplaces') {
-      google.script.run
-        .withSuccessHandler(() => { toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-        .withFailureHandler(err => alert(err?.message || err))
-        .removeDatabaseMarketplace(row);
-    // … inside wireDBButtons(), at the end of the delegated click handler:
-    } else if (kind === 'sheet') {
-      google.script.run
-        .withSuccessHandler(() => { toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-        .withFailureHandler(err => alert(err?.message || err))
-        .deleteOrderBookRows([row]);
+      return;
     }
-  }); // <-- close dbRoot.addEventListener('click', …)
+    if (kind === 'retailers') {
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Retailer deleted'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .removeDatabaseRetailer(row);
+      return;
+    }
+    if (kind === 'marketplaces') {
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .removeDatabaseMarketplace(row);
+      return;
+    }
+    if (kind === 'sheet') {
+      google.script.run
+        .withSuccessHandler(()=>{ toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
+        .withFailureHandler(err=>alert(err?.message||err))
+        .deleteOrderBookRows([row]);
+      return;
+    }
+  } // END DELETE
+});
+
 
   dbRoot.__wiredClicks = true; // <-- set the guard after the handler closes
 } // <-- close: if (!dbRoot.__wiredClicks)
