@@ -1599,26 +1599,6 @@ tb.innerHTML = rows.map(r => `
 }
 
 
-  // Then (separately) fetch the sheet count; do NOT block the above
-  try{
-    const el0 = document.getElementById('db_sheet_count');
-    if (el0) el0.textContent = 'Loading…';
-
-    const sheet = await gas('getOrderBookEditable');
-// The API returns a plain array, not { rows: [...] }
-const sheetRows = Array.isArray(sheet?.rows) ? sheet.rows : (Array.isArray(sheet) ? sheet : []);
-const count = sheetRows.length;
-const el = document.getElementById('db_sheet_count');
-if (el) el.textContent = 'Rows: ' + count;
-
-  }catch(err){
-    console.warn('getOrderBookEditable failed:', err);
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: —';
-  }
-}
-
-
 
 
       async function ensureDBLoaded(){
