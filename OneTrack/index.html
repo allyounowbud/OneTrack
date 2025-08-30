@@ -1121,28 +1121,29 @@ function showApp(){
 })();
 
       
-      const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
-;(function safeBoot(){
+      const __HAS_SESS_HASH = /#sess=/.test(location.;(function safeBoot(){
   try {
+    // Always start hidden to avoid flicker/overlap
+    const gate = document.getElementById('authGate');
+    const app  = document.getElementById('appRoot');
+    if (gate) gate.style.display = 'none';
+    if (app)  app.style.display  = 'none';
+
     // If we arrive with a session code in the hash, show the app immediately
     // while redemption runs (redeemIfNeeded stores the profile + clears the hash).
     if (__HAS_SESS_HASH) { showApp(); return; }
 
-    // Otherwise, fall back to saved session or gate.
-    getSession() ? showApp() : showGate();
+    // Otherwise, decide by saved session
+    (getSession() ? showApp : showGate)();
   } catch (e) {
     console.error('Boot error:', e);
     showGate();
   }
 
-  // Safety: if somehow neither is visible, decide based on saved session.
+  // One more pass next tick in case something else flipped visibility
   setTimeout(() => {
-    const gate = document.getElementById('authGate');
-    const app  = document.getElementById('appRoot');
-    if (gate && app && gate.style.display === 'none' && app.style.display === 'none') {
-      try { getSession() ? showApp() : showGate(); } catch(_) { showGate(); }
-    }
-  }, 300);
+    try { (getSession() ? showApp : showGate)(); } catch(_) { showGate(); }
+  }, 0);
 })();
 
 
