@@ -388,6 +388,111 @@
       .qa-actions { margin-top: 16px; margin-bottom: 0; }
       /* Action column stays compact and right-aligned */
       .td-actions{ width:1%; white-space:nowrap; text-align:right; }
+
+/* =========================
+   Mobile-only responsive tweaks
+   (safe to paste at end of your <style>)
+   ========================= */
+
+/* Slightly tighten page chrome on tablets/phones */
+@media (max-width: 900px){
+  .container{ padding: 0 10px; }
+  .card{ padding: 14px; }
+  .subcard{ padding: 12px; }
+}
+
+/* Make the tab strip scrollable (no wrapping issues) */
+@media (max-width: 800px){
+  .tabs{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+  .tab{
+    flex: 0 0 auto;              /* allow horizontal scroll */
+    padding: 9px 12px;
+  }
+}
+
+/* Compact form layout on phones: single-column everywhere */
+@media (max-width: 700px){
+  .row-2, .row-3{ grid-template-columns: 1fr !important; }
+  .filters{ grid-template-columns: 1fr !important; }
+  .filters .range-pair{ grid-column: auto !important; flex-direction: column; align-items: stretch; }
+  .btn-row{ width: 100%; }
+  .btn-row .btn{ flex: 1; }      /* big tap targets */
+}
+
+/* Make big numbers/headers fit better on phones */
+@media (max-width: 700px){
+  h1{ font-size: 20px; }
+  .fx-profit{ font-size: 28px; }
+  .flex-hero{ min-height: 150px; }
+}
+
+/* Tables: make them horizontally scrollable instead of squishing */
+@media (max-width: 800px){
+  table{
+    display: block;              /* enables overflow on small screens */
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;         /* keep cells from wrapping into mess */
+    border-spacing: 0;           /* cleaner look when scrolled */
+  }
+  thead th, td{ padding: 8px 10px; }
+}
+
+/* Keep key tables extra readable on very small screens */
+@media (max-width: 540px){
+  thead th{ font-size: 12px; }
+  td{ font-size: 12px; }
+}
+
+/* Database “Actions” column: shrink on phones so buttons don’t wrap weirdly */
+@media (max-width: 600px){
+  :root{
+    --actions-col-w: 116px;      /* was ~148px on desktop */
+    --actions-gap: 6px;
+    --actions-pr: 8px;
+  }
+  #db_items_tbl .td-actions,
+  #db_retail_tbl .td-actions,
+  #db_mkt_tbl .td-actions,
+  #db_sheet_tbl .td-actions{
+    grid-template-columns: 1fr 1fr;  /* keep two buttons side-by-side */
+  }
+  /* Optionally show shorter button labels on very tight screens */
+  #database .db-row-save::after{ content: 'Save'; }
+  #database .db-row-update::after{ content: 'Save'; }
+  #database .db-del::after{ content: 'Del'; }
+}
+
+/* Inventory / Stats charts: ensure they fit within viewport */
+@media (max-width: 700px){
+  canvas{ max-height: 260px; }
+}
+
+/* Gate buttons: full-width, comfy taps on phones */
+@media (max-width: 480px){
+  .discord-btn{ width: 100%; justify-content: center; }
+  .theme-toggle{ padding: 8px 10px; }
+}
+
+/* Flex card already collapses, but tighten spacing a bit more on phones */
+@media (max-width: 700px){
+  .flex-body{ grid-template-columns: 1fr !important; gap: 12px; }
+  .fx-right{ padding: 10px; }
+  .fx-headline{ padding: 12px; }
+  .fx-right-metrics{ padding: 10px; }
+}
+
+/* Ensure nothing is hidden when both views toggle oddly */
+@media (max-width: 700px){
+  #appRoot[style*="display:"] { display: block !important; } /* safety */
+}
+      
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
