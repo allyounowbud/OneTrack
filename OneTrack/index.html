@@ -1603,70 +1603,42 @@ if (msMarket){
   });
 
     // --- Chart ---
-if (CHART) CHART.destroy();
-const ctx  = document.getElementById('st_chart');
-const mode = document.getElementById('st_chartType').value;
+  if (CHART) CHART.destroy();
+  const ctx=document.getElementById('st_chart');
+  const mode=document.getElementById('st_chartType').value;
 
-if (mode === 'revCogs') {
-  const monthly = (STATS_CACHE.monthly || []).slice().sort((a,b)=>a.ym.localeCompare(b.ym));
-  const labels  = monthly.map(x=>x.ym);
-  const rev     = monthly.map(x=>x.revenue);
-  const cogs    = monthly.map(x=>-(Math.abs(x.cost||0))); // plot COGS below 0
-
-  const MOBILE = isMobileW();
-  CHART = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: shortLabel('Revenue'), data: rev,  tension: .25, fill: false, borderColor: '#22c55e' },
-        { label: shortLabel('COGS'),    data: cogs, tension: .25, fill: false, borderColor: '#ef4444' }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: !MOBILE, labels:{ usePointStyle:true, boxWidth:10, padding:8 } } },
-      scales: {
-        x: { ticks: { autoSkip: true, maxRotation: MOBILE ? 0 : 45 } },
-        y: { ticks: { callback: v => '$' + Number(v).toLocaleString() } }
-      }
-    }
-  });
-} else {
-  const C = STATS_CACHE.charts || {};
-  let labels = [], series = {};
-  if (mode==='purchMonth')     series = C.purchasesByMonthByItem   || {};
-  if (mode==='salesMonth')     series = C.salesByMonthByItem       || {};
-  if (mode==='purchStore')     series = C.purchasesByStoreByItem   || {};
-  if (mode==='salesPlatform')  series = C.salesByPlatformByItem    || {};
-  labels = Object.keys(series).sort((a,b)=>a.localeCompare(b));
-
-  const items = C.topItems || [];
-  const datasets = items.map(name => ({
-    label: shortLabel(name),
-    data: labels.map(k => (series[k] && series[k][name]) ? series[k][name] : 0),
-    type: 'bar'
-  }));
-
-  const MOBILE = isMobileW();
-  CHART = new Chart(ctx, {
-    type: 'bar',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: !MOBILE, labels:{ usePointStyle:true, boxWidth:10, padding:8 } } },
-      scales: {
-        x: { stacked: true, ticks: { autoSkip: true, maxRotation: MOBILE ? 0 : 45 } },
-        y: { stacked: true, beginAtZero: true, ticks: { callback: v => '$' + Number(v).toLocaleString() } }
-      }
-    }
-  });
+  if (mode==='revCogs'){
+    const monthly=(STATS_CACHE.monthly||[]).slice().sort((a,b)=>a.ym.localeCompare(b.ym));
+    const labels=monthly.map(x=>x.ym);
+    const rev=monthly.map(x=>x.revenue);
+    const cogs=monthly.map(x=>-(Math.abs(x.cost||0)));   // plot COGS below zero
+    CHART=new Chart(ctx,{type:'line',data:{labels,datasets:[
+      {label:'Revenue',data:rev,tension:.25,fill:false,borderColor:'#22c55e'},
+      {label:'COGS',data:cogs,tension:.25,fill:false,borderColor:'#ef4444'}
+    ]},options:{plugins:{legend:{display:true}},scales:{
+      y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}
+    }}});
+  }else{
+    const C = STATS_CACHE.charts || {};
+    let labels=[], series={};
+    if (mode==='purchMonth'){ series=C.purchasesByMonthByItem || {}; }
+    if (mode==='salesMonth'){ series=C.salesByMonthByItem || {}; }
+    if (mode==='purchStore'){ series=C.purchasesByStoreByItem || {}; }
+    if (mode==='salesPlatform'){ series=C.salesByPlatformByItem || {}; }
+    labels = Object.keys(series).sort((a,b)=>a.localeCompare(b));  // ascending Jan → Dec
+    const items = C.topItems || [];
+    const datasets = items.map(name=>({
+      label:name,
+      data:labels.map(k=>(series[k] && series[k][name]) ? series[k][name] : 0),
+      type:'bar'
+    }));
+    CHART=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{
+      plugins:{legend:{display:true}},
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}
+    }});
+  }
+  window.__redrawChart = drawStats;
 }
-
-window.__redrawChart = drawStats;  // keep this
-} // ← this closes function drawStats()
 
       // ==== Inventory ====
       function refreshInventory(){
