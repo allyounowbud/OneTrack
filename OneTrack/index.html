@@ -1121,7 +1121,7 @@ function showApp(){
 })();
 
       
-      const __HAS_SESS_HASH = /#sess=/.test(location.;(function safeBoot(){
+      const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
   try {
     // Always start hidden to avoid flicker/overlap
     const gate = document.getElementById('authGate');
