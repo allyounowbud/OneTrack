@@ -1306,9 +1306,6 @@ if (document.querySelector('.tab.active')?.dataset.tab === 'quick'){
   updateQAFeeHint();
 }
 
-function isMobileW(){ return window.matchMedia('(max-width:700px)').matches; }
-function shortLabel(s){ return (isMobileW() && s && s.length>18) ? (s.slice(0,16)+'…') : s; }
-
 
 // ---- Fee hint (Quick Add) ----
 const qaSell = document.getElementById('qa_sell');
