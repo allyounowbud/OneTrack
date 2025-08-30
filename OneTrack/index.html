@@ -1122,6 +1122,7 @@ function showApp(){
 
       
       const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
+  ;(function safeBoot(){
   try {
     // Always start hidden to avoid flicker/overlap
     const gate = document.getElementById('authGate');
@@ -1146,7 +1147,11 @@ function showApp(){
   }, 0);
 })();
 
-
+window.addEventListener('storage', (e) => {
+  if (e.key === 'orders_user') {
+    try { (getSession() ? showApp : showGate)(); } catch(_) {}
+  }
+});
 
       // Logout
       logoutBtn?.addEventListener('click', ()=>{
