@@ -1147,12 +1147,6 @@ function showApp(){
 })();
 
 
-window.addEventListener('storage', (e) => {
-  if (e.key === 'orders_user') {
-    try { (getSession() ? showApp : showGate)(); } catch(_) {}
-  }
-});
-
 
       // Logout
       logoutBtn?.addEventListener('click', ()=>{
