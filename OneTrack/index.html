@@ -492,6 +492,39 @@
 @media (max-width: 700px){
   #appRoot[style*="display:"] { display: block !important; } /* safety */
 }
+
+/* --- Mobile input normalization (iOS Safari date width fix) --- */
+@media (max-width: 900px){
+  /* Make sure grid children can actually shrink */
+  .row > * { min-width: 0; }
+
+  /* Keep all form controls exactly within the container */
+  input, select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* Date/time inputs: remove WebKit’s extra intrinsic width */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="time"]{
+    -webkit-appearance: none; /* prevent over-wide native box */
+    appearance: none;
+    padding-right: 14px;      /* space for the calendar icon */
+    border-radius: 12px;      /* keep visual match */
+  }
+
+  /* Don’t let the calendar icon add mysterious extra width */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator{
+    margin: 0;
+  }
+}
       
     </style>
 
