@@ -712,7 +712,7 @@
         </div>
       </section>
 
-      <!-- Profiles -->
+      <!--  -->
 <section id="profiles" class="card" style="display:none">
   <div class="card-header">
     <h2>Profiles</h2>
@@ -2957,7 +2957,27 @@ if (tr.closest('#db_sheet_tbl')) {
 }
 
       // === Profiles API helpers ===
-async function apiGetProfiles(){
+  function collectProfileEdits(){
+  const out = [];
+  document.querySelectorAll('#pro_tbl tbody tr').forEach(tr=>{
+    const row = Number(tr.children[0].textContent.trim());
+    const get = (k)=> {
+      const cell = tr.querySelector(`[data-k="${k}"]`);
+      return (cell ? cell.textContent : '').trim();
+    };
+    out.push({
+      row,
+      username: get('username'),
+      email:    get('email'),
+      discord:  get('discord'),
+      role:     get('role'),
+      notes:    get('notes'),
+      created:  tr.children[6]?.textContent.trim() || ''
+    });
+  });
+  return out;
+}      
+  async function apiGetProfiles(){
   return fetch(`${GAS_API_URL}?route=api&action=getProfiles`).then(r=>r.json());
 }
 async function apiAddProfile(payload){
