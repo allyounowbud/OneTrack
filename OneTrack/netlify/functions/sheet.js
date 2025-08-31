@@ -5,6 +5,18 @@ const TAB_ORDER_BOOK   = 'Order Book';
 const TAB_ITEMS        = 'Items';
 const TAB_RETAILERS    = 'Retailers';
 const TAB_MARKETPLACES = 'Marketplaces';
+const TAB_PROFILES = 'Profiles';
+  const PRO = {
+    headerRow: 1,
+    colUsername: 1,
+    colEmail: 2,
+    colDiscord: 3,
+    colRole: 4,
+    colNotes: 5,
+    colCreated: 6,
+    colUpdated: 7
+  };
+
 
 // Order Book headers are on row 2 (A:J)
 const OB = {
@@ -67,6 +79,91 @@ async function getSheetMeta(sheets, spreadsheetId) {
   (meta.data.sheets||[]).forEach(s => { byName[s.properties.title] = s.properties.sheetId; });
   return { byName };
 }
+
+/** ==== PROFILES HELPERS ==== */
+// === Profiles helpers ===
+async function getProfilesAPI(sheets, spreadsheetId) {
+  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const values = res.data.values || [];
+  const rows = [];
+  for (let i = 0; i < values.length; i++) {
+    const row = PRO.headerRow + 1 + i;
+    const v = values[i];
+    const get = (n) => (v[n] || '').toString().trim();
+    const username = get(PRO.colUsername - 1);
+    const email    = get(PRO.colEmail    - 1);
+    const discord  = get(PRO.colDiscord  - 1);
+    const role     = get(PRO.colRole     - 1);
+    const notes    = get(PRO.colNotes    - 1);
+    const created  = get(PRO.colCreated  - 1);
+    const updated  = get(PRO.colUpdated  - 1);
+    if (!username && !email && !discord && !role && !notes) continue;
+    rows.push({ row, username, email, discord, role, notes, created, updated });
+  }
+  return rows;
+}
+
+async function addProfileAPI(sheets, spreadsheetId, payload) {
+  const nowISO = new Date().toISOString().slice(0,10);
+  const rec = [[
+    (payload.username||'').trim(),
+    (payload.email||'').trim(),
+    (payload.discord||'').trim(),
+    (payload.role||'').trim(),
+    (payload.notes||'').trim(),
+    nowISO,
+    nowISO
+  ]];
+  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: rec }
+  });
+  return { ok: true };
+}
+
+async function updateProfilesAPI(sheets, spreadsheetId, rows) {
+  if (!Array.isArray(rows)) return { ok:false, error:'Invalid payload' };
+  const updates = [];
+  const nowISO = new Date().toISOString().slice(0,10);
+
+  for (const r of rows) {
+    const row = Number(r.row);
+    if (!row || row < PRO.headerRow + 1) continue;
+    const a1 = `${TAB_PROFILES}!A${row}:G${row}`;
+    updates.push({
+      range: a1,
+      values: [[
+        (r.username||'').trim(),
+        (r.email||'').trim(),
+        (r.discord||'').trim(),
+        (r.role||'').trim(),
+        (r.notes||'').trim(),
+        r.created||nowISO,
+        nowISO
+      ]]
+    });
+  }
+
+  if (!updates.length) return { ok:true };
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId,
+    requestBody: { data: updates, valueInputOption: 'USER_ENTERED' }
+  });
+  return { ok:true };
+}
+
+async function removeProfileAPI(sheets, spreadsheetId, row) {
+  if (!row || row < PRO.headerRow + 1) return { ok:false, error:'Bad row' };
+  const a1 = `${TAB_PROFILES}!A${row}:G${row}`;
+  await sheets.spreadsheets.values.clear({ spreadsheetId, range: a1 });
+  return { ok:true };
+}
+
 
 /** ==== READ HELPERS ==== */
 async function readRange(sheets, spreadsheetId, sheetName, a1) {
@@ -783,6 +880,31 @@ exports.handler = async (event) => {
           return ok(await fetchImageAsDataUrl(params.url));
         }
 
+      case 'getProfiles': {
+        const sheets = sheetsClient(false);
+        const rows = await getProfilesAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID);
+        return ok(rows);
+      }
+      case 'addProfile': {
+        const sheets = sheetsClient(true);
+        const payload = JSON.parse(qs.payload || '{}');
+        const r = await addProfileAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID, payload);
+        return ok(r);
+      }
+      case 'updateProfiles': {
+        const sheets = sheetsClient(true);
+        const rows = JSON.parse(qs.rows || '[]');
+        const r = await updateProfilesAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID, rows);
+        return ok(r);
+      }
+      case 'removeProfile': {
+        const sheets = sheetsClient(true);
+        const row = Number(qs.row || 0);
+        const r = await removeProfileAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID, row);
+        return ok(r);
+      }
+
+          
         default:
           return err(400, `Unknown action: ${action}`);
       }
@@ -797,3 +919,4 @@ exports.handler = async (event) => {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
+
