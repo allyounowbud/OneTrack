@@ -1026,6 +1026,10 @@ let FLEX = { chart: null, cache: null };
           removeDatabaseRetailer:    (row)  => ({action:'removeDatabaseRetailer',    params:{row}}),
           removeDatabaseMarketplace: (row)  => ({action:'removeDatabaseMarketplace', params:{row}}),
           deleteOrderBookRows:       (rows) => ({action:'deleteOrderBookRows',       params:{rows: JSON.stringify(rows)}}),
+          getProfiles:           ()        => ({ action: 'getProfiles' }),
+          addProfile:            (payload) => ({ action: 'addProfile',     params: { payload: JSON.stringify(payload) } }),
+          updateProfiles:        (rows)    => ({ action: 'updateProfiles', params: { rows:    JSON.stringify(rows)    } }),
+          removeProfile:         (row)     => ({ action: 'removeProfile',  params: { row } }),
           fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
         };
 
@@ -2975,50 +2979,34 @@ let PRO_CACHE = [];
 async function renderProfiles(){
   const msg = document.getElementById('pro_msg');
   if (msg) msg.textContent = 'Loading…';
-  const data = await apiGetProfiles();
-  PRO_CACHE = Array.isArray(data) ? data : [];
-  const tb = document.querySelector('#pro_tbl tbody');
-  if (!tb) { if (msg) msg.textContent = ''; return; }
-  tb.innerHTML = '';
-  for (const r of PRO_CACHE) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${r.row}</td>
-      <td contenteditable="true" data-k="username">${escapeHtml(r.username||'')}</td>
-      <td contenteditable="true" data-k="email">${escapeHtml(r.email||'')}</td>
-      <td contenteditable="true" data-k="discord">${escapeHtml(r.discord||'')}</td>
-      <td contenteditable="true" data-k="role">${escapeHtml(r.role||'')}</td>
-      <td contenteditable="true" data-k="notes">${escapeHtml(r.notes||'')}</td>
-      <td>${r.created||''}</td>
-      <td>${r.updated||''}</td>
-      <td><button class="btn danger sm" data-act="del" data-row="${r.row}">Delete</button></td>`;
-    tb.appendChild(tr);
-  }
-  if (msg) msg.textContent = '';
+
+  google.script.run
+    .withSuccessHandler((data)=>{
+      const PRO_CACHE = Array.isArray(data) ? data : [];
+      const tb = document.querySelector('#pro_tbl tbody');
+      if (!tb) { if (msg) msg.textContent = ''; return; }
+      tb.innerHTML = '';
+      for (const r of PRO_CACHE) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.row}</td>
+          <td contenteditable="true" data-k="username">${escapeHtml(r.username||'')}</td>
+          <td contenteditable="true" data-k="email">${escapeHtml(r.email||'')}</td>
+          <td contenteditable="true" data-k="discord">${escapeHtml(r.discord||'')}</td>
+          <td contenteditable="true" data-k="role">${escapeHtml(r.role||'')}</td>
+          <td contenteditable="true" data-k="notes">${escapeHtml(r.notes||'')}</td>
+          <td>${r.created||''}</td>
+          <td>${r.updated||''}</td>
+          <td><button class="btn danger sm" data-act="del" data-row="${r.row}">Delete</button></td>`;
+        tb.appendChild(tr);
+      }
+      if (msg) msg.textContent = '';
+    })
+    .withFailureHandler(err => { if (msg) msg.textContent = ''; toast((err && err.error) || 'Load failed'); })
+    .getProfiles();
 }
 
-function collectProfileEdits(){
-  const out = [];
-  document.querySelectorAll('#pro_tbl tbody tr').forEach(tr=>{
-    const row = Number(tr.children[0].textContent.trim());
-    const get = (k)=> {
-      const cell = tr.querySelector(`[data-k="${k}"]`);
-      return (cell ? cell.textContent : '').trim();
-    };
-    out.push({
-      row,
-      username: get('username'),
-      email:    get('email'),
-      discord:  get('discord'),
-      role:     get('role'),
-      notes:    get('notes'),
-      created:  tr.children[6].textContent.trim() || ''
-    });
-  });
-  return out;
-}
-
-document.getElementById('pro_add_btn')?.addEventListener('click', async ()=>{
+document.getElementById('pro_add_btn')?.addEventListener('click', ()=>{
   const payload = {
     username: document.getElementById('pro_username').value || '',
     email:    document.getElementById('pro_email').value    || '',
@@ -3029,43 +3017,48 @@ document.getElementById('pro_add_btn')?.addEventListener('click', async ()=>{
   if (!payload.username && !payload.email && !payload.discord){
     toast('Provide at least Username, Email or Discord ID'); return;
   }
-  const res = await apiAddProfile(payload);
-  if (!res || res.ok !== true){ toast('Add failed'); return; }
-  document.getElementById('pro_username').value = '';
-  document.getElementById('pro_email').value = '';
-  document.getElementById('pro_discord').value = '';
-  document.getElementById('pro_role').value = '';
-  document.getElementById('pro_notes').value = '';
-  await renderProfiles();
-  toast('Profile added');
+
+  google.script.run
+    .withSuccessHandler(()=>{
+      document.getElementById('pro_username').value = '';
+      document.getElementById('pro_email').value    = '';
+      document.getElementById('pro_discord').value  = '';
+      document.getElementById('pro_role').value     = '';
+      document.getElementById('pro_notes').value    = '';
+      renderProfiles();
+      toast('Profile added');
+    })
+    .withFailureHandler(err => toast((err && err.error) || 'Add failed'))
+    .addProfile(payload);
 });
 
-document.getElementById('pro_save_btn')?.addEventListener('click', async ()=>{
+document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{
   const rows = collectProfileEdits();
-  const res = await apiUpdateProfiles(rows);
-  if (!res || res.ok !== true){ toast('Save failed'); return; }
-  await renderProfiles();
-  toast('Saved');
+  google.script.run
+    .withSuccessHandler(()=>{ renderProfiles(); toast('Saved'); })
+    .withFailureHandler(err => toast((err && err.error) || 'Save failed'))
+    .updateProfiles(rows);
 });
 
-document.querySelector('#pro_tbl tbody')?.addEventListener('click', async (e)=>{
+document.querySelector('#pro_tbl tbody')?.addEventListener('click', (e)=>{
   const btn = e.target.closest('button[data-act="del"]');
   if (!btn) return;
   const row = Number(btn.getAttribute('data-row'));
   if (!row || !confirm('Delete this profile row?')) return;
-  const res = await apiRemoveProfile(row);
-  if (!res || res.ok !== true){ toast('Delete failed'); return; }
-  await renderProfiles();
-  toast('Deleted');
+
+  google.script.run
+    .withSuccessHandler(()=>{ renderProfiles(); toast('Deleted'); })
+    .withFailureHandler(err => toast((err && err.error) || 'Delete failed'))
+    .removeProfile(row);
 });
 
-// Load data when switching to the tab
+// When switching to Profiles tab, load data
 document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   tab.addEventListener('click', ()=>{
-    const t = tab.getAttribute('data-tab');
-    if (t === 'profiles') renderProfiles();
+    if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
   });
 });
+
 
     </script>
   </body>
