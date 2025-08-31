@@ -565,8 +565,10 @@
         <div class="tab" data-tab="stats">Stats</div>
         <div class="tab" data-tab="inventory">Inventory</div>
         <div class="tab" data-tab="flex">Flex</div>
+        <div class="tab" data-tab="profiles">Profiles</div>  <!-- NEW -->
         <div class="tab" data-tab="database">Settings</div>
-      </div>
+</div>
+
 
       <!-- Quick Add -->
       <section id="quick" class="card">
@@ -709,6 +711,64 @@
           </table>
         </div>
       </section>
+
+      <!-- Profiles -->
+<section id="profiles" class="card" style="display:none">
+  <div class="card-header">
+    <h2>Profiles</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="field">
+      <label>Username</label>
+      <input id="pro_username" type="text" placeholder="e.g., james.roland" />
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input id="pro_email" type="email" placeholder="e.g., you@example.com" />
+    </div>
+    <div class="field">
+      <label>Discord ID</label>
+      <input id="pro_discord" type="text" placeholder="e.g., 123456789012345678" />
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <input id="pro_role" type="text" placeholder="e.g., admin, member" />
+    </div>
+    <div class="field" style="grid-column:1/-1">
+      <label>Notes</label>
+      <input id="pro_notes" type="text" placeholder="optional notes" />
+    </div>
+  </div>
+
+  <div class="actions mt-2">
+    <button id="pro_add_btn" class="btn primary">Add Profile</button>
+    <span id="pro_msg" class="muted"></span>
+  </div>
+
+  <div class="table-wrap mt-3">
+    <table id="pro_tbl" class="table">
+      <thead>
+        <tr>
+          <th>Row</th>
+          <th>Username</th>
+          <th>Email</th>
+          <th>Discord</th>
+          <th>Role</th>
+          <th>Notes</th>
+          <th>Created</th>
+          <th>Updated</th>
+          <th style="width:120px">Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="actions mt-2">
+    <button id="pro_save_btn" class="btn">Save Changes</button>
+  </div>
+</section>
 
       <!-- Database -->
       <section id="database" class="card" style="display:none">
@@ -2891,6 +2951,122 @@ if (tr.closest('#db_sheet_tbl')) {
     setTimeout(() => { first.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
   }
 }
+
+      // === Profiles API helpers ===
+async function apiGetProfiles(){
+  return fetch(`${GAS_API_URL}?route=api&action=getProfiles`).then(r=>r.json());
+}
+async function apiAddProfile(payload){
+  const qs = new URLSearchParams({ route:'api', action:'addProfile', payload: JSON.stringify(payload) });
+  return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
+}
+async function apiUpdateProfiles(rows){
+  const qs = new URLSearchParams({ route:'api', action:'updateProfiles', rows: JSON.stringify(rows) });
+  return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
+}
+async function apiRemoveProfile(row){
+  const qs = new URLSearchParams({ route:'api', action:'removeProfile', row: String(row) });
+  return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
+}
+
+// === Profiles UI ===
+let PRO_CACHE = [];
+
+async function renderProfiles(){
+  const msg = document.getElementById('pro_msg');
+  if (msg) msg.textContent = 'Loading…';
+  const data = await apiGetProfiles();
+  PRO_CACHE = Array.isArray(data) ? data : [];
+  const tb = document.querySelector('#pro_tbl tbody');
+  if (!tb) { if (msg) msg.textContent = ''; return; }
+  tb.innerHTML = '';
+  for (const r of PRO_CACHE) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.row}</td>
+      <td contenteditable="true" data-k="username">${escapeHtml(r.username||'')}</td>
+      <td contenteditable="true" data-k="email">${escapeHtml(r.email||'')}</td>
+      <td contenteditable="true" data-k="discord">${escapeHtml(r.discord||'')}</td>
+      <td contenteditable="true" data-k="role">${escapeHtml(r.role||'')}</td>
+      <td contenteditable="true" data-k="notes">${escapeHtml(r.notes||'')}</td>
+      <td>${r.created||''}</td>
+      <td>${r.updated||''}</td>
+      <td><button class="btn danger sm" data-act="del" data-row="${r.row}">Delete</button></td>`;
+    tb.appendChild(tr);
+  }
+  if (msg) msg.textContent = '';
+}
+
+function collectProfileEdits(){
+  const out = [];
+  document.querySelectorAll('#pro_tbl tbody tr').forEach(tr=>{
+    const row = Number(tr.children[0].textContent.trim());
+    const get = (k)=> {
+      const cell = tr.querySelector(`[data-k="${k}"]`);
+      return (cell ? cell.textContent : '').trim();
+    };
+    out.push({
+      row,
+      username: get('username'),
+      email:    get('email'),
+      discord:  get('discord'),
+      role:     get('role'),
+      notes:    get('notes'),
+      created:  tr.children[6].textContent.trim() || ''
+    });
+  });
+  return out;
+}
+
+document.getElementById('pro_add_btn')?.addEventListener('click', async ()=>{
+  const payload = {
+    username: document.getElementById('pro_username').value || '',
+    email:    document.getElementById('pro_email').value    || '',
+    discord:  document.getElementById('pro_discord').value  || '',
+    role:     document.getElementById('pro_role').value     || '',
+    notes:    document.getElementById('pro_notes').value    || ''
+  };
+  if (!payload.username && !payload.email && !payload.discord){
+    toast('Provide at least Username, Email or Discord ID'); return;
+  }
+  const res = await apiAddProfile(payload);
+  if (!res || res.ok !== true){ toast('Add failed'); return; }
+  document.getElementById('pro_username').value = '';
+  document.getElementById('pro_email').value = '';
+  document.getElementById('pro_discord').value = '';
+  document.getElementById('pro_role').value = '';
+  document.getElementById('pro_notes').value = '';
+  await renderProfiles();
+  toast('Profile added');
+});
+
+document.getElementById('pro_save_btn')?.addEventListener('click', async ()=>{
+  const rows = collectProfileEdits();
+  const res = await apiUpdateProfiles(rows);
+  if (!res || res.ok !== true){ toast('Save failed'); return; }
+  await renderProfiles();
+  toast('Saved');
+});
+
+document.querySelector('#pro_tbl tbody')?.addEventListener('click', async (e)=>{
+  const btn = e.target.closest('button[data-act="del"]');
+  if (!btn) return;
+  const row = Number(btn.getAttribute('data-row'));
+  if (!row || !confirm('Delete this profile row?')) return;
+  const res = await apiRemoveProfile(row);
+  if (!res || res.ok !== true){ toast('Delete failed'); return; }
+  await renderProfiles();
+  toast('Deleted');
+});
+
+// Load data when switching to the tab
+document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    const t = tab.getAttribute('data-tab');
+    if (t === 'profiles') renderProfiles();
+  });
+});
+
     </script>
   </body>
 </html>
