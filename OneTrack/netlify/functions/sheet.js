@@ -6,16 +6,16 @@ const TAB_ITEMS        = 'Items';
 const TAB_RETAILERS    = 'Retailers';
 const TAB_MARKETPLACES = 'Marketplaces';
 const TAB_PROFILES = 'Profiles';
-  const PRO = {
-    headerRow: 1,
-    colUsername: 1,
-    colEmail: 2,
-    colDiscord: 3,
-    colRole: 4,
-    colNotes: 5,
-    colCreated: 6,
-    colUpdated: 7
-  };
+const PRO = {
+  headerRow: 1,
+  colUsername: 1,
+  colEmail: 2,
+  colDiscord: 3,
+  colRole: 4,
+  colNotes: 5,
+  colCreated: 6,
+  colUpdated: 7
+};
 
 
 // Order Book headers are on row 2 (A:J)
@@ -128,15 +128,14 @@ async function addProfileAPI(sheets, spreadsheetId, payload) {
 
 async function updateProfilesAPI(sheets, spreadsheetId, rows) {
   if (!Array.isArray(rows)) return { ok:false, error:'Invalid payload' };
-  const updates = [];
   const nowISO = new Date().toISOString().slice(0,10);
+  const updates = [];
 
   for (const r of rows) {
     const row = Number(r.row);
     if (!row || row < PRO.headerRow + 1) continue;
-    const a1 = `${TAB_PROFILES}!A${row}:G${row}`;
     updates.push({
-      range: a1,
+      range: `${TAB_PROFILES}!A${row}:G${row}`,
       values: [[
         (r.username||'').trim(),
         (r.email||'').trim(),
@@ -159,10 +158,13 @@ async function updateProfilesAPI(sheets, spreadsheetId, rows) {
 
 async function removeProfileAPI(sheets, spreadsheetId, row) {
   if (!row || row < PRO.headerRow + 1) return { ok:false, error:'Bad row' };
-  const a1 = `${TAB_PROFILES}!A${row}:G${row}`;
-  await sheets.spreadsheets.values.clear({ spreadsheetId, range: a1 });
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: `${TAB_PROFILES}!A${row}:G${row}`
+  });
   return { ok:true };
 }
+
 
 
 /** ==== READ HELPERS ==== */
@@ -881,28 +883,25 @@ exports.handler = async (event) => {
         }
 
       case 'getProfiles': {
-        const sheets = sheetsClient(false);
-        const rows = await getProfilesAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID);
-        return ok(rows);
-      }
-      case 'addProfile': {
-        const sheets = sheetsClient(true);
-        const payload = JSON.parse(qs.payload || '{}');
-        const r = await addProfileAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID, payload);
-        return ok(r);
-      }
-      case 'updateProfiles': {
-        const sheets = sheetsClient(true);
-        const rows = JSON.parse(qs.rows || '[]');
-        const r = await updateProfilesAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID, rows);
-        return ok(r);
-      }
-      case 'removeProfile': {
-        const sheets = sheetsClient(true);
-        const row = Number(qs.row || 0);
-        const r = await removeProfileAPI(sheets, process.env.GOOGLE_SPREADSHEET_ID, row);
-        return ok(r);
-      }
+  const sheets = sheetsClient(false);
+  return ok(await getProfilesAPI(sheets, process.env.SPREADSHEET_ID));
+}
+case 'addProfile': {
+  const params = JSON.parse(qs.params || '{}') || body.params || {};
+  const sheets = sheetsClient(true);
+  return ok(await addProfileAPI(sheets, process.env.SPREADSHEET_ID, JSON.parse(params.payload || '{}')));
+}
+case 'updateProfiles': {
+  const params = JSON.parse(qs.params || '{}') || body.params || {};
+  const sheets = sheetsClient(true);
+  return ok(await updateProfilesAPI(sheets, process.env.SPREADSHEET_ID, JSON.parse(params.rows || '[]')));
+}
+case 'removeProfile': {
+  const params = JSON.parse(qs.params || '{}') || body.params || {};
+  const sheets = sheetsClient(true);
+  return ok(await removeProfileAPI(sheets, process.env.SPREADSHEET_ID, Number(params.row)));
+}
+
 
           
         default:
@@ -919,4 +918,5 @@ exports.handler = async (event) => {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
+
 
