@@ -18,6 +18,7 @@ const PRO = {
 };
 
 
+
 // Order Book headers are on row 2 (A:J)
 const OB = {
   headerRow: 2,
@@ -164,6 +165,97 @@ async function removeProfileAPI(sheets, spreadsheetId, row) {
   });
   return { ok:true };
 }
+
+// === Astral Import/Export (SAFE) ===
+
+// Import an array of Astral-style profiles safely.
+async function importProfilesAstralAPI(sheets, spreadsheetId, arr) {
+  if (!Array.isArray(arr)) return { ok:false, error:'Payload must be an array' };
+  const nowISO = new Date().toISOString().slice(0,10);
+
+  const values = [];
+  for (const p of arr) {
+    const billing = p?.billingAddress || {};
+    const username = (billing.name || p?.paymentDetails?.nameOnCard || p?.name || '').toString().trim();
+    const email    = (billing.email || '').toString().trim();
+    const role     = (p?.profileGroup || '').toString().trim();
+    const notes    = (p?.notes || '').toString().trim();
+    // We intentionally do not store full card or CVV in Sheets
+    values.push([ username, email, /* discord */ '', role, notes, nowISO, nowISO ]);
+  }
+  if (!values.length) return { ok:true, imported: 0 };
+
+  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values }
+  });
+  return { ok:true, imported: values.length };
+}
+
+// Export current Profiles to Astral-style JSON (sensitive fields left blank by default).
+async function exportProfilesAstralAPI(sheets, spreadsheetId) {
+  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const rows = res.data.values || [];
+  const out = [];
+
+  for (const v of rows) {
+    const get = (i) => (v[i] || '').toString().trim();
+    const username = get(PRO.colUsername - 1);
+    const email    = get(PRO.colEmail    - 1);
+    const role     = get(PRO.colRole     - 1);
+    const notes    = get(PRO.colNotes    - 1);
+    if (!username && !email && !role && !notes) continue;
+
+    out.push({
+      name: username || '',
+      size: "",
+      profileGroup: role || "",
+      notes: notes || "",
+      billingAddress: {
+        name: username || "",
+        email: email || "",
+        phone: "",
+        line1: "",
+        line2: "",
+        line3: "",
+        postCode: "",
+        city: "",
+        country: "",
+        state: ""
+      },
+      shippingAddress: {
+        name: username || "",
+        email: email || "",
+        phone: "",
+        line1: "",
+        line2: "",
+        line3: "",
+        postCode: "",
+        city: "",
+        country: "",
+        state: ""
+      },
+      paymentDetails: {
+        nameOnCard: username || "",
+        cardType: "",
+        cardNumber: "",      // left blank for safety
+        cardExpMonth: "",
+        cardExpYear: "",
+        cardCvv: ""          // left blank for safety
+      },
+      sameBillingAndShippingAddress: true,
+      onlyCheckoutOnce: false,
+      matchNameOnCardAndAddress: true
+    });
+  }
+  return out;
+}
+
 
 
 
@@ -918,5 +1010,6 @@ case 'removeProfile': {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
+
 
 
