@@ -3086,7 +3086,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   tab.addEventListener('click', ()=>{
     if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
   });
-});
+
 
       // Small helper to trigger a download of JSON
 function downloadJSON(filename, data){
@@ -3134,7 +3134,7 @@ document.getElementById('profiles_export_btn')?.addEventListener('click', ()=>{
     .withFailureHandler(err => toast((err && err.error) || 'Export failed'))
     .exportProfilesAstral();
 });
-
+});
 
 
     </script>
