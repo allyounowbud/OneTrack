@@ -5,19 +5,7 @@ const TAB_ORDER_BOOK   = 'Order Book';
 const TAB_ITEMS        = 'Items';
 const TAB_RETAILERS    = 'Retailers';
 const TAB_MARKETPLACES = 'Marketplaces';
-const TAB_PROFILES = 'Profiles';
-const PRO = {
-  headerRow: 1,
-  colUsername: 1,
-  colEmail: 2,
-  colDiscord: 3,
-  colRole: 4,
-  colNotes: 5,
-  colCreated: 6,
-  colUpdated: 7
-};
-
-
+const TAB_PROFILES     = 'Profiles';
 
 // Order Book headers are on row 2 (A:J)
 const OB = {
@@ -81,183 +69,210 @@ async function getSheetMeta(sheets, spreadsheetId) {
   return { byName };
 }
 
-/** ==== PROFILES HELPERS ==== */
-// === Profiles helpers ===
-async function getProfilesAPI(sheets, spreadsheetId) {
-  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-  const values = res.data.values || [];
-  const rows = [];
-  for (let i = 0; i < values.length; i++) {
-    const row = PRO.headerRow + 1 + i;
-    const v = values[i];
-    const get = (n) => (v[n] || '').toString().trim();
-    const username = get(PRO.colUsername - 1);
-    const email    = get(PRO.colEmail    - 1);
-    const discord  = get(PRO.colDiscord  - 1);
-    const role     = get(PRO.colRole     - 1);
-    const notes    = get(PRO.colNotes    - 1);
-    const created  = get(PRO.colCreated  - 1);
-    const updated  = get(PRO.colUpdated  - 1);
-    if (!username && !email && !discord && !role && !notes) continue;
-    rows.push({ row, username, email, discord, role, notes, created, updated });
+/** ==== PROFILES (33 Astral columns only) ==== */
+const PROFILE_HEADERS_33 = [
+  'name','size','profileGroup','notes',
+  'sameBillingAndShippingAddress','onlyCheckoutOnce','matchNameOnCardAndAddress',
+
+  'billingAddress.name','billingAddress.email','billingAddress.phone',
+  'billingAddress.line1','billingAddress.line2','billingAddress.line3',
+  'billingAddress.postCode','billingAddress.city','billingAddress.country','billingAddress.state',
+
+  'shippingAddress.name','shippingAddress.email','shippingAddress.phone',
+  'shippingAddress.line1','shippingAddress.line2','shippingAddress.line3',
+  'shippingAddress.postCode','shippingAddress.city','shippingAddress.country','shippingAddress.state',
+
+  'paymentDetails.nameOnCard','paymentDetails.cardType','paymentDetails.cardNumber',
+  'paymentDetails.cardExpMonth','paymentDetails.cardExpYear','paymentDetails.cardCvv'
+];
+
+async function ensureProfilesHeaderAPI(sheets, spreadsheetId){
+  const want = PROFILE_HEADERS_33;
+  const got = (await sheets.spreadsheets.values.get({ spreadsheetId, range: `${TAB_PROFILES}!1:1` })).data.values?.[0] || [];
+  if (got.length !== want.length || got.some((h,i)=> (want[i]||'') !== (h||''))){
+    const endCol = colNumberToA1(want.length);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId, valueInputOption:'RAW',
+      range: `${TAB_PROFILES}!A1:${endCol}1`,
+      requestBody: { values: [want] }
+    });
   }
-  return rows;
+}
+
+async function readProfilesGridAPI(sheets, spreadsheetId){
+  const hdrRes = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${TAB_PROFILES}!1:1` });
+  const header = hdrRes.data.values?.[0] || PROFILE_HEADERS_33;
+  const endCol = colNumberToA1(header.length);
+  const bodyRes = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${TAB_PROFILES}!A2:${endCol}` });
+  return { header, rows: bodyRes.data.values || [] };
+}
+
+function setPath(obj, path, value){
+  const parts = path.split('.'); let cur = obj;
+  for (let i=0;i<parts.length-1;i++){ const k=parts[i]; if(!cur[k] || typeof cur[k]!=='object') cur[k]={}; cur = cur[k]; }
+  cur[parts[parts.length-1]] = value;
+}
+
+/** ==== PROFILES HELPERS (33-col) ==== */
+// Return a minimal list for the UI table, with backward-compat keys too.
+async function getProfilesAPI(sheets, spreadsheetId) {
+  await ensureProfilesHeaderAPI(sheets, spreadsheetId);
+  const { header, rows } = await readProfilesGridAPI(sheets, spreadsheetId);
+  const idx = Object.fromEntries(header.map((h,i)=>[h,i]));
+  const get = (r, k) => { const i = idx[k]; return (i==null || r[i]==null) ? '' : String(r[i]).trim(); };
+
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    const rowNum = 2 + i; // sheet data starts at row 2
+    const r = rows[i];
+    const name  = get(r,'name');
+    const email = get(r,'billingAddress.email') || get(r,'shippingAddress.email');
+    const group = get(r,'profileGroup');
+    const notes = get(r,'notes');
+    if (!name && !email && !group && !notes) continue;
+    // include aliases for legacy UI
+    out.push({
+      row: rowNum,
+      name,
+      email,
+      profileGroup: group,
+      notes,
+      username: name,
+      role: group,
+      discord: ''
+    });
+  }
+  return out;
 }
 
 async function addProfileAPI(sheets, spreadsheetId, payload) {
-  const nowISO = new Date().toISOString().slice(0,10);
-  const rec = [[
-    (payload.username||'').trim(),
-    (payload.email||'').trim(),
-    (payload.discord||'').trim(),
-    (payload.role||'').trim(),
-    (payload.notes||'').trim(),
-    nowISO,
-    nowISO
-  ]];
-  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
+  await ensureProfilesHeaderAPI(sheets, spreadsheetId);
+
+  // Allow old keys for compatibility
+  const name         = (payload.name ?? payload.username ?? '').toString().trim();
+  const profileGroup = (payload.profileGroup ?? payload.role ?? '').toString().trim();
+  const notes        = (payload.notes ?? '').toString().trim();
+  const email        = (payload.email ?? '').toString().trim();
+
+  const vals = new Array(PROFILE_HEADERS_33.length).fill('');
+  const map = new Map(PROFILE_HEADERS_33.map((h,i)=>[h,i]));
+  const set = (k,v)=> { const i=map.get(k); if(i!=null) vals[i]=v==null?'':String(v); };
+
+  set('name', name);
+  set('profileGroup', profileGroup);
+  set('notes', notes);
+  set('billingAddress.email', email);
+
+  const endCol = colNumberToA1(PROFILE_HEADERS_33.length);
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range,
+    range: `${TAB_PROFILES}!A2:${endCol}`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
-    requestBody: { values: rec }
+    requestBody: { values: [vals] }
   });
   return { ok: true };
 }
 
 async function updateProfilesAPI(sheets, spreadsheetId, rows) {
   if (!Array.isArray(rows)) return { ok:false, error:'Invalid payload' };
-  const nowISO = new Date().toISOString().slice(0,10);
-  const updates = [];
+  await ensureProfilesHeaderAPI(sheets, spreadsheetId);
 
-  for (const r of rows) {
+  const { header } = await readProfilesGridAPI(sheets, spreadsheetId);
+  const map = new Map(header.map((h,i)=>[h,i]));
+  const endCol = colNumberToA1(header.length);
+
+  const getRow = async (row) => {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId, range: `${TAB_PROFILES}!A${row}:${endCol}${row}` });
+    const current = res.data.values?.[0] || new Array(header.length).fill('');
+    while (current.length < header.length) current.push('');
+    return current;
+  };
+
+  const updates = [];
+  for (const r of rows){
     const row = Number(r.row);
-    if (!row || row < PRO.headerRow + 1) continue;
-    updates.push({
-      range: `${TAB_PROFILES}!A${row}:G${row}`,
-      values: [[
-        (r.username||'').trim(),
-        (r.email||'').trim(),
-        (r.discord||'').trim(),
-        (r.role||'').trim(),
-        (r.notes||'').trim(),
-        r.created||nowISO,
-        nowISO
-      ]]
-    });
+    if (!row || row < 2) continue;
+    const cur = await getRow(row);
+
+    const set = (k,v)=> { const i = map.get(k); if (i!=null) cur[i] = v==null?'':String(v); };
+
+    // Accept either new or legacy keys
+    set('name', r.name ?? r.username ?? '');
+    set('profileGroup', r.profileGroup ?? r.role ?? '');
+    set('notes', r.notes ?? '');
+    set('billingAddress.email', r.email ?? '');
+
+    updates.push({ range: `${TAB_PROFILES}!A${row}:${endCol}${row}`, values: [cur] });
   }
 
   if (!updates.length) return { ok:true };
   await sheets.spreadsheets.values.batchUpdate({
-    spreadsheetId,
-    requestBody: { data: updates, valueInputOption: 'USER_ENTERED' }
+    spreadsheetId, requestBody: { data: updates, valueInputOption:'USER_ENTERED' }
   });
   return { ok:true };
 }
 
 async function removeProfileAPI(sheets, spreadsheetId, row) {
-  if (!row || row < PRO.headerRow + 1) return { ok:false, error:'Bad row' };
+  if (!row || row < 2) return { ok:false, error:'Bad row' };
+  const endCol = colNumberToA1(PROFILE_HEADERS_33.length);
   await sheets.spreadsheets.values.clear({
     spreadsheetId,
-    range: `${TAB_PROFILES}!A${row}:G${row}`
+    range: `${TAB_PROFILES}!A${row}:${endCol}${row}`
   });
   return { ok:true };
 }
 
-// === Astral Import/Export (SAFE) ===
-
-// Import an array of Astral-style profiles safely.
+// === Astral Import/Export (full 33) ===
 async function importProfilesAstralAPI(sheets, spreadsheetId, arr) {
   if (!Array.isArray(arr)) return { ok:false, error:'Payload must be an array' };
-  const nowISO = new Date().toISOString().slice(0,10);
+  await ensureProfilesHeaderAPI(sheets, spreadsheetId);
 
-  const values = [];
-  for (const p of arr) {
-    const billing = p?.billingAddress || {};
-    const username = (billing.name || p?.paymentDetails?.nameOnCard || p?.name || '').toString().trim();
-    const email    = (billing.email || '').toString().trim();
-    const role     = (p?.profileGroup || '').toString().trim();
-    const notes    = (p?.notes || '').toString().trim();
-    // We intentionally do not store full card or CVV in Sheets
-    values.push([ username, email, /* discord */ '', role, notes, nowISO, nowISO ]);
+  const endCol = colNumberToA1(PROFILE_HEADERS_33.length);
+  const rows = [];
+
+  for (const p of arr){
+    const vals = new Array(PROFILE_HEADERS_33.length).fill('');
+    PROFILE_HEADERS_33.forEach((key, i) => {
+      // nested lookups like "billingAddress.city"
+      let v = key.split('.').reduce((o,k)=> (o && o[k] !== undefined ? o[k] : ''), p);
+      if (v === true) v = 'TRUE';
+      if (v === false) v = 'FALSE';
+      vals[i] = v == null ? '' : String(v);
+    });
+    rows.push(vals);
   }
-  if (!values.length) return { ok:true, imported: 0 };
 
-  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range,
+    range: `${TAB_PROFILES}!A2:${endCol}`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
-    requestBody: { values }
+    requestBody: { values: rows }
   });
-  return { ok:true, imported: values.length };
+  return { ok:true, imported: rows.length };
 }
 
-// Export current Profiles to Astral-style JSON (sensitive fields left blank by default).
 async function exportProfilesAstralAPI(sheets, spreadsheetId) {
-  const range = `${TAB_PROFILES}!A${PRO.headerRow+1}:G`;
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-  const rows = res.data.values || [];
+  await ensureProfilesHeaderAPI(sheets, spreadsheetId);
+  const { header, rows } = await readProfilesGridAPI(sheets, spreadsheetId);
   const out = [];
 
-  for (const v of rows) {
-    const get = (i) => (v[i] || '').toString().trim();
-    const username = get(PRO.colUsername - 1);
-    const email    = get(PRO.colEmail    - 1);
-    const role     = get(PRO.colRole     - 1);
-    const notes    = get(PRO.colNotes    - 1);
-    if (!username && !email && !role && !notes) continue;
-
-    out.push({
-      name: username || '',
-      size: "",
-      profileGroup: role || "",
-      notes: notes || "",
-      billingAddress: {
-        name: username || "",
-        email: email || "",
-        phone: "",
-        line1: "",
-        line2: "",
-        line3: "",
-        postCode: "",
-        city: "",
-        country: "",
-        state: ""
-      },
-      shippingAddress: {
-        name: username || "",
-        email: email || "",
-        phone: "",
-        line1: "",
-        line2: "",
-        line3: "",
-        postCode: "",
-        city: "",
-        country: "",
-        state: ""
-      },
-      paymentDetails: {
-        nameOnCard: username || "",
-        cardType: "",
-        cardNumber: "",      // left blank for safety
-        cardExpMonth: "",
-        cardExpYear: "",
-        cardCvv: ""          // left blank for safety
-      },
-      sameBillingAndShippingAddress: true,
-      onlyCheckoutOnce: false,
-      matchNameOnCardAndAddress: true
-    });
+  for (const r of rows){
+    if (r.every(v => (v==null || String(v).trim()===''))) continue;
+    const obj = {};
+    for (let i=0; i<header.length; i++){
+      const key = header[i];
+      let v = r[i];
+      if (v === 'TRUE') v = true;
+      if (v === 'FALSE') v = false;
+      if (v == null) v = '';
+      setPath(obj, key, v);
+    }
+    out.push(obj);
   }
   return out;
 }
-
-
-
 
 /** ==== READ HELPERS ==== */
 async function readRange(sheets, spreadsheetId, sheetName, a1) {
@@ -974,38 +989,37 @@ exports.handler = async (event) => {
           return ok(await fetchImageAsDataUrl(params.url));
         }
 
-      case 'getProfiles': {
-  const sheets = sheetsClient(false);
-  return ok(await getProfilesAPI(sheets, process.env.SPREADSHEET_ID));
-}
-case 'addProfile': {
-  const params = JSON.parse(qs.params || '{}') || body.params || {};
-  const sheets = sheetsClient(true);
-  return ok(await addProfileAPI(sheets, process.env.SPREADSHEET_ID, JSON.parse(params.payload || '{}')));
-}
-case 'updateProfiles': {
-  const params = JSON.parse(qs.params || '{}') || body.params || {};
-  const sheets = sheetsClient(true);
-  return ok(await updateProfilesAPI(sheets, process.env.SPREADSHEET_ID, JSON.parse(params.rows || '[]')));
-}
-case 'removeProfile': {
-  const params = JSON.parse(qs.params || '{}') || body.params || {};
-  const sheets = sheetsClient(true);
-  return ok(await removeProfileAPI(sheets, process.env.SPREADSHEET_ID, Number(params.row)));
-}
+        // PROFILES (33-col)
+        case 'getProfiles': {
+          const sheets = sheetsClient(false);
+          return ok(await getProfilesAPI(sheets, process.env.SPREADSHEET_ID));
+        }
+        case 'addProfile': {
+          const params = JSON.parse(qs.params || '{}') || body.params || {};
+          const sheets = sheetsClient(true);
+          return ok(await addProfileAPI(sheets, process.env.SPREADSHEET_ID, JSON.parse(params.payload || '{}')));
+        }
+        case 'updateProfiles': {
+          const params = JSON.parse(qs.params || '{}') || body.params || {};
+          const sheets = sheetsClient(true);
+          return ok(await updateProfilesAPI(sheets, process.env.SPREADSHEET_ID, JSON.parse(params.rows || '[]')));
+        }
+        case 'removeProfile': {
+          const params = JSON.parse(qs.params || '{}') || body.params || {};
+          const sheets = sheetsClient(true);
+          return ok(await removeProfileAPI(sheets, process.env.SPREADSHEET_ID, Number(params.row)));
+        }
+        case 'importProfilesAstral': {
+          const params = JSON.parse(qs.params || '{}') || body.params || {};
+          const payload = Array.isArray(params) ? params : JSON.parse(params.payload || '[]');
+          const sheets = sheetsClient(true);
+          return ok(await importProfilesAstralAPI(sheets, process.env.SPREADSHEET_ID, payload));
+        }
+        case 'exportProfilesAstral': {
+          const sheets = sheetsClient(false);
+          return ok(await exportProfilesAstralAPI(sheets, process.env.SPREADSHEET_ID));
+        }
 
-case 'importProfilesAstral': {
-  const params = JSON.parse(qs.params || '{}') || body.params || {};
-  const payload = Array.isArray(params) ? params : JSON.parse(params.payload || '[]');
-  const sheets = sheetsClient(true);
-  return ok(await importProfilesAstralAPI(sheets, process.env.SPREADSHEET_ID, payload));
-}
-case 'exportProfilesAstral': {
-  const sheets = sheetsClient(false);
-  return ok(await exportProfilesAstralAPI(sheets, process.env.SPREADSHEET_ID));
-}
-
-          
         default:
           return err(400, `Unknown action: ${action}`);
       }
@@ -1020,7 +1034,3 @@ case 'exportProfilesAstral': {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
-
-
-
-
