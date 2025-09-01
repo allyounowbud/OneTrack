@@ -994,6 +994,16 @@ case 'removeProfile': {
   return ok(await removeProfileAPI(sheets, process.env.SPREADSHEET_ID, Number(params.row)));
 }
 
+case 'importProfilesAstral': {
+  const params = JSON.parse(qs.params || '{}') || body.params || {};
+  const payload = Array.isArray(params) ? params : JSON.parse(params.payload || '[]');
+  const sheets = sheetsClient(true);
+  return ok(await importProfilesAstralAPI(sheets, process.env.SPREADSHEET_ID, payload));
+}
+case 'exportProfilesAstral': {
+  const sheets = sheetsClient(false);
+  return ok(await exportProfilesAstralAPI(sheets, process.env.SPREADSHEET_ID));
+}
 
           
         default:
@@ -1010,6 +1020,7 @@ case 'removeProfile': {
 
 function ok(data){ return { statusCode: 200, headers: cors, body: JSON.stringify(data) }; }
 function err(code,msg){ return { statusCode: code, headers: cors, body: JSON.stringify({ ok:false, error: msg }) }; }
+
 
 
 
