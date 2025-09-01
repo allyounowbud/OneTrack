@@ -2999,7 +2999,52 @@ async function apiRemoveProfile(row){
   return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
 }
 
-      
+      // Small helper to trigger a download of JSON
+function downloadJSON(filename, data){
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+
+// Import flow
+document.getElementById('profiles_import_btn')?.addEventListener('click', ()=>{
+  document.getElementById('profiles_file').click();
+});
+
+document.getElementById('profiles_file')?.addEventListener('change', (e)=>{
+  const f = e.target.files?.[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const json = JSON.parse(reader.result);
+      if (!Array.isArray(json)) { toast('JSON must be an array'); return; }
+
+      // Optional: light validation / trimming (we send raw; backend sanitizes)
+      google.script.run
+        .withSuccessHandler(()=>{ renderProfiles(); toast('Import complete'); e.target.value=''; })
+        .withFailureHandler(err => { toast((err && err.error) || 'Import failed'); e.target.value=''; })
+        .importProfilesAstral(json);
+    } catch (err) {
+      toast('Invalid JSON'); e.target.value='';
+    }
+  };
+  reader.readAsText(f);
+});
+
+// Export flow
+document.getElementById('profiles_export_btn')?.addEventListener('click', ()=>{
+  google.script.run
+    .withSuccessHandler((data)=>{
+      downloadJSON('profiles-astral.json', data || []);
+      toast('Export ready');
+    })
+    .withFailureHandler(err => toast((err && err.error) || 'Export failed'))
+    .exportProfilesAstral();
+});
 
 
 // === Profiles UI ===
@@ -3087,6 +3132,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
     if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
   });
 });
+
+
     </script>
   </body>
 </html>
