@@ -1033,7 +1033,9 @@ let FLEX = { chart: null, cache: null };
           addProfile:            (payload) => ({ action: 'addProfile',     params: { payload: JSON.stringify(payload) } }),
           updateProfiles:        (rows)    => ({ action: 'updateProfiles', params: { rows:    JSON.stringify(rows)    } }),
           removeProfile:         (row)     => ({ action: 'removeProfile',  params: { row } }),
-          fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}})
+          fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}}),
+          importProfilesAstral: (payload) => ({ action: 'importProfilesAstral', params: { payload: JSON.stringify(payload) } }),
+          exportProfilesAstral: ()        => ({ action: 'exportProfilesAstral' })
         };
 
         function Runner(){
