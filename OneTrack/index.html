@@ -1368,12 +1368,13 @@ if (msMarket){
         const msg = document.getElementById('qa_msg'); 
         msg.textContent='Saving…';
         qaBtn.disabled = true;
-        const msg = document.getElementById('qa_msg'); 
-        msg.textContent='Saved ✔ (stub)';
+        const qaMsg = document.getElementById('qa_msg'); 
+        qaMsg.textContent = 'Saved ✔ (stub)';
         toast('Saved (stub)');
         refreshOpen();
-        setTimeout(()=>{ msg.textContent=''; }, 1200);
-        qaBtn.disabled=false;
+        setTimeout(() => { qaMsg.textContent = ''; }, 1200);
+        qaBtn.disabled = false;
+
 
       });
 
@@ -1390,13 +1391,15 @@ if (msMarket){
         };
         if(!payload.row){ toast('Pick a purchase'); return; }
         msBtn.disabled=true; const msg=document.getElementById('ms_msg'); msg.textContent='Saving…';
-        if(!payload.row){ toast('Pick a purchase'); return; }
-        msBtn.disabled=true; const msg=document.getElementById('ms_msg'); 
-        msg.textContent='Updated ✔ (stub)';
+        if (!payload.row) { toast('Pick a purchase'); return; }
+        msBtn.disabled = true;
+        const msMsg = document.getElementById('ms_msg'); 
+        msMsg.textContent = 'Updated ✔ (stub)';
         toast('Marked as sold (stub)');
         refreshOpen();
-        setTimeout(()=>msg.textContent='',1200);
-        msBtn.disabled=false;
+        setTimeout(() => msMsg.textContent = '', 1200);
+        msBtn.disabled = false;
+
 
       });
 
