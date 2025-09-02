@@ -975,7 +975,6 @@ let FLEX = { chart: null, cache: null };
   if (params && Object.keys(params).length) {
     qs.set('params', JSON.stringify(params));
   }
-  const url = `${GAS_API_URL}?${qs.toString()}`;
 
   async function once() {
     const r = await fetch(url, {
