@@ -2405,28 +2405,39 @@ function downloadJSON(filename, data){
   setTimeout(()=>URL.revokeObjectURL(url), 2000);
 }
 
-// Import flow
-document.getElementById('profiles_import_btn')?.addEventListener('click', ()=>{
-  document.getElementById('profiles_file').click();
-});
+// Import flow (fixed: no GAS chaining, proper try/catch, clear resets)
+document.getElementById('profiles_import_input')?.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (!file) { e.target.value = ''; return; }
 
-document.getElementById('profiles_file')?.addEventListener('change', (e)=>{
-  const f = e.target.files?.[0];
-  if (!f) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async (ev) => {
     try {
-      const json = JSON.parse(reader.result);
-      if (!Array.isArray(json)) { toast('JSON must be an array'); return; }
+      const text = String(ev.target?.result || '').trim();
+      const json = JSON.parse(text);
+      if (!Array.isArray(json)) throw new Error('JSON must be an array of profiles');
 
       // Optional: light validation / trimming (we send raw; backend sanitizes)
-      (async()=>{ try{ for(const row of json){ await (window.apiAddProfile? apiAddProfile(row) : addProfile(row)); } renderProfiles(); toast('Import complete'); e.target.value=''; }catch(err){ toast((err && err.message)||'Import failed'); e.target.value=''; } })(); e.target.value=''; })
-        .importProfilesAstral(json);
+      try {
+        for (const row of json) {
+          await (window.apiAddProfile ? apiAddProfile(row) : addProfile(row));
+        }
+        renderProfiles();
+        toast('Import complete');
+        e.target.value = '';
+      } catch (err) {
+        toast((err && err.message) || 'Import failed');
+        e.target.value = '';
+      }
+
     } catch (err) {
-      toast('Invalid JSON'); e.target.value='';
+      toast('Invalid JSON');
+      e.target.value = '';
     }
   };
-  reader.readAsText(f);
+
+  reader.readAsText(file);
+});
 });
 
 // Export flow
