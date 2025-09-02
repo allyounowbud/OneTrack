@@ -1126,57 +1126,6 @@ function showApp(){
         alert(msg);
       }
 
-  <script type="module">
-  import { supabase } from './lib/supabaseClient.js';
-  import { getProfiles } from './lib/supabaseApi.js';
-
-  // Example test
-  getProfiles().then(console.log);
-
-  // If your Discord link has an href to Apps Script, change the element to:
-  // <a id="discordBtn" href="#" class="discord-btn">Sign in with Discord</a>
-
-  // 1) Click → start Discord OAuth through Supabase
-  const discordBtn = document.getElementById('discordBtn');
-  if (discordBtn) {
-    discordBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      supabase.auth.signInWithOAuth({
-        provider: 'discord',
-        options: { redirectTo: window.location.origin } // e.g. https://onetracking.netlify.app
-      });
-    });
-  }
-
-  // 2) Show gate/app based on Supabase session (no localStorage needed)
-  async function refreshGate() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      // You can update a “signed-in as …” label here if you have one
-      try { showApp(); } catch(_) {}
-    } else {
-      try { showGate(); } catch(_) {}
-    }
-  }
-
-  // 3) React to login/logout
-  supabase.auth.onAuthStateChange(() => {
-    refreshGate();
-  });
-
-  // Initial render on page load
-  await refreshGate();
-
-  // 4) Logout
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      // refresh UI after logout
-      await refreshGate();
-    });
-  }
-
       // ===== Tabs =====
       function openTab(id){
   // update active tab UI
@@ -1288,8 +1237,37 @@ function updateQAFeeHint(){
 }
 
 
-      // ==== Load model data ====
+            // ==== Load model data ====
       function reloadModel() {
+        // If Supabase client is available, use it (no more Apps Script)
+        if (window.supabase) {
+          (async () => {
+            try {
+              const sb = window.supabase;
+
+              const { data: itemsRows }      = await sb.from('Items').select('item_name');
+              const { data: retailersRows }  = await sb.from('Retailers').select('retailers');
+              const { data: marketsRows }    = await sb.from('Marketplaces').select('marketplaces, fee');
+
+              const items        = (itemsRows || []).map(r => r.item_name).filter(Boolean);
+              const retailers    = (retailersRows || []).map(r => r.retailers).filter(Boolean);
+              const marketplaces = (marketsRows || []).map(r => r.marketplaces).filter(Boolean);
+
+              const feeTable = {};
+              (marketsRows || []).forEach(r => {
+                if (r.marketplaces) feeTable[r.marketplaces] = { pct: Number(r.fee) || 0 };
+              });
+
+              initModel({ items, retailers, marketplaces, feeTable });
+            } catch (err) {
+              console.error('reloadModel (Supabase) failed:', err);
+              initModel({ items:[], retailers:[], marketplaces:[], feeTable:{} });
+            }
+          })();
+          return;
+        }
+
+        // Fallback (legacy Apps Script)
         google.script.run
           .withSuccessHandler(initModel)
           .withFailureHandler(err => {
@@ -1298,6 +1276,7 @@ function updateQAFeeHint(){
           })
           .getInitModel();
       }
+
 
       function initModel(model){
         try {
@@ -2932,53 +2911,6 @@ if (tr.closest('#db_sheet_tbl')) {
   return out;
 }
 
-  
-<script type="module">
-  import { supabase } from './lib/supabaseClient.js';
-  import { getProfiles, addProfile, updateProfiles, removeProfile } from './lib/supabaseApi.js';
-
-  // Wire Discord button
-  const btn = document.getElementById('discordBtn');
-  if (btn) {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      supabase.auth.signInWithOAuth({
-        provider: 'discord',
-        options: { redirectTo: window.location.origin }
-      });
-    });
-  }
-</script>
-<script>
-  // Keep your old global names so the rest of your UI keeps working
-  window.apiGetProfiles = async function apiGetProfiles() {
-    return await getProfiles();
-  };
-  window.apiAddProfile = async function apiAddProfile(payload) {
-    return await addProfile(payload);
-  };
-  window.apiUpdateProfiles = async function apiUpdateProfiles(rows) {
-    return await updateProfiles(rows);
-  };
-  window.apiRemoveProfile = async function apiRemoveProfile(row) {
-    return await removeProfile(row); // row is the primary key id now
-  };
-
-  // Optional: show who’s logged in / sign out button you already have
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      location.reload();
-    });
-  }
-
-  // Re-render app on login/logout (if you have gate logic)
-  supabase.auth.onAuthStateChange(() => {
-    // Your existing showGate/showApp logic can live here if needed
-    // e.g., after login: window.apiGetProfiles().then(renderProfiles)
-  });
-
 
 // === Profiles UI ===
 let PRO_CACHE = [];
@@ -3121,8 +3053,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
   // 🔧 REPLACE these two with your values (Supabase → Settings → API)
-  const SUPABASE_URL = 'https://<PROJECT-REF>.supabase.co';
-  const SUPABASE_ANON_KEY = '<YOUR-ANON-KEY>';
+  const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co/';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';
 
   // Create the client
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
