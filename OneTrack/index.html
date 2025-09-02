@@ -964,110 +964,26 @@ let DB_STATE = null;
 let FLEX = { chart: null, cache: null };
 
 
-      // ---- Apps Script RPC shim for Netlify (maps google.script.run → fetch) ----
-      (function(){
-        const hasGAS = (typeof google !== 'undefined' && google.script && google.script.run);
-        if (hasGAS) return;
-
-        function callApi(action, params = {}) {
-  // always send params as a single JSON value
-  const qs = new URLSearchParams({ route: 'api', action, ts: Date.now().toString() });
-  if (params && Object.keys(params).length) {
-    qs.set('params', JSON.stringify(params));
-  }
-
-  async function once() {
-    const r = await fetch(url, {
-      method: 'GET',
-      credentials: 'same-origin',
-      cache: 'no-store',
-      headers: { 'Accept': 'application/json' }
-    });
-    const ct = r.headers.get('content-type') || '';
-    const text = await r.text();
-    if (!r.ok) throw new Error(`${action} ${r.status}: ${text.slice(0,200)}`);
-    if (/application\/json/i.test(ct)) return JSON.parse(text);
-    try { return JSON.parse(text); }
-    catch { throw new Error(`Expected JSON from ${action}, got: ${text.slice(0,200)}`); }
-  }
-
-  return once().catch(async (err) => {
-    const msg = String(err || '');
-    if (/504|timeout|Failed to fetch/i.test(msg)) {
-      await new Promise(r => setTimeout(r, 450));
-      return once();
-    }
-    throw err;
-  });
+// ---- Disable Apps Script RPC in Netlify build ----
+(function(){
+// Create a no-op google.script.run so legacy calls don't crash if any slip through.
+const runner = {
+_ok: ()=>{},
+_err: (e)=>console.error(e),
+withSuccessHandler(fn){ this._ok = fn || (()=>{}); return this; },
+withFailureHandler(fn){ this._err = fn || (()=>{}); return this; },
+};
+const proxy = new Proxy(runner, {
+get(target, prop){
+if (prop in target) return target[prop];
+// Any terminal method (e.g., getOpenPurchases) just triggers failure handler.
+return (..._args)=>{ target._err('Apps Script backend disabled'); return target; };
 }
+});
+window.google = { script: { run: proxy } };
+window.gas = function(){ return Promise.reject('Apps Script backend disabled'); };
+})();
 
-
-        const map = {
-          getInitModel:              () => ({action:'getInitModel'}),
-          getOpenPurchases:          () => ({action:'getOpenPurchases'}),
-          getInventory:              () => ({action:'getInventory'}),
-          getDatabaseFull:           () => ({action:'getDatabaseFull'}),
-          getOrderBookEditable:      () => ({action:'getOrderBookEditable'}),
-          getStatsV2:       (range,item,from,to)=>({action:'getStatsV2', params:{rangeKey:range, item, from, to}}),
-          getLongestHoldDays:(item)  => ({action:'getLongestHoldDays', params:{item}}),
-          submitQuickAdd:    (payload)=>({action:'submitQuickAdd',    params:{payload: JSON.stringify(payload)}}),
-          submitMarkAsSold:  (payload)=>({action:'submitMarkAsSold',  params:{payload: JSON.stringify(payload)}}),
-          addOrderBookRow:   (payload)=>({action:'addOrderBookRow',   params:{payload: JSON.stringify(payload)}}),
-          updateOrderBookRows:(rows)  =>({action:'updateOrderBookRows',params:{rows: JSON.stringify(rows)}}),
-          addDatabaseItem:        (payload)=>({action:'addDatabaseItem',        params:{payload: JSON.stringify(payload)}}),
-          addDatabaseRetailer:    (name)  =>({action:'addDatabaseRetailer',     params:{name}}),
-          addDatabaseMarketplace: (payload)=>({action:'addDatabaseMarketplace', params:{payload: JSON.stringify(payload)}}),
-          updateDatabaseItems:    (rows)  =>({action:'updateDatabaseItems',     params:{rows: JSON.stringify(rows)}}),
-          updateDatabaseRetailers:(rows)  =>({action:'updateDatabaseRetailers', params:{rows: JSON.stringify(rows)}}),
-          updateDatabaseMarketplaces:(rows)=>({action:'updateDatabaseMarketplaces', params:{rows: JSON.stringify(rows)}}),
-          removeDatabaseItem:        (row)  => ({action:'removeDatabaseItem',        params:{row}}),
-          removeDatabaseRetailer:    (row)  => ({action:'removeDatabaseRetailer',    params:{row}}),
-          removeDatabaseMarketplace: (row)  => ({action:'removeDatabaseMarketplace', params:{row}}),
-          deleteOrderBookRows:       (rows) => ({action:'deleteOrderBookRows',       params:{rows: JSON.stringify(rows)}}),
-          getProfiles:           ()        => ({ action: 'getProfiles' }),
-          addProfile:            (payload) => ({ action: 'addProfile',     params: { payload: JSON.stringify(payload) } }),
-          updateProfiles:        (rows)    => ({ action: 'updateProfiles', params: { rows:    JSON.stringify(rows)    } }),
-          removeProfile:         (row)     => ({ action: 'removeProfile',  params: { row } }),
-          fetchImageAsDataUrl: (url)=>({action:'fetchImageAsDataUrl', params:{url}}),
-          importProfilesAstral: (payload) => ({ action: 'importProfilesAstral', params: { payload: JSON.stringify(payload) } }),
-          exportProfilesAstral: ()        => ({ action: 'exportProfilesAstral' })
-        };
-
-        function Runner(){
-          this._ok  = ()=>{};
-          this._err = (e)=>{ console.error(e); alert((e && e.error) || (e && e.message) || String(e)); };
-        }
-        Runner.prototype.withSuccessHandler = function(fn){ this._ok = fn || (()=>{}); return this; };
-        Runner.prototype.withFailureHandler = function(fn){ this._err = fn || (()=>{}); return this; };
-
-        Object.keys(map).forEach(name=>{
-          Runner.prototype[name] = function(...args){
-            const spec = map[name](...args) || {};
-            return callApi(spec.action, spec.params||{})
-              .then(res=>{
-                if (res && res.ok === false) throw new Error(res.error || 'Request failed');
-                if (name === 'fetchImageAsDataUrl') return this._ok(res && res.dataUrl ? res.dataUrl : '');
-                this._ok(res);
-              })
-              .catch(err => this._err((err && (err.message || err.error)) || String(err)));
-          };
-        });
-
-        window.google = { script: { run: new Runner() } };
-
-        function gas(name, payload) {
-          return new Promise((resolve, reject) => {
-            const r = window.google.script.run
-              .withSuccessHandler(res => {
-                if (res && res.ok === false) reject(res.error || 'Request failed');
-                else resolve(res);
-              })
-              .withFailureHandler(e => reject((e && (e.error || e.message)) || String(e)));
-            if (payload === undefined) r[name](); else r[name](payload);
-          });
-        }
-        window.gas = gas;
-      })();
 
       // ===== Theme toggle =====
       const themeBtn = document.getElementById('themeBtn');
@@ -1266,17 +1182,6 @@ function updateQAFeeHint(){
           })();
           return;
         }
-
-        // Fallback (legacy Apps Script)
-        google.script.run
-          .withSuccessHandler(initModel)
-          .withFailureHandler(err => {
-            console.error('getInitModel failed:', err);
-            toast('Could not load metadata.');
-          })
-          .getInitModel();
-      }
-
 
       function initModel(model){
         try {
@@ -1499,42 +1404,25 @@ if (msMarket){
       });
 
       function refreshOpen(){
-        google.script.run
-          .withSuccessHandler(list=>{
-            const sel=document.getElementById('ms_pick');
-            const arr = Array.isArray(list) ? list : [];
-            sel.innerHTML = arr.map(o=>`<option value="${o.row}">${escapeHtml(o.label)}</option>`).join('');
-            if (!arr.length) sel.innerHTML = '';
-          })
-          .withFailureHandler(err=>{
-            console.error('getOpenPurchases failed:', err);
-            document.getElementById('ms_pick').innerHTML = '';
-          })
-          .getOpenPurchases();
+      // TODO: wire to Supabase "Orders" (unsold rows). For now, clear the selector gracefully.
+      const sel = document.getElementById('ms_pick');
+      if (sel) sel.innerHTML = '';
       }
 
       // ==== Stats ====
       function refreshStats(){
-        const range=document.getElementById('st_range').value;
-        const item=document.getElementById('st_item').value||'';
-        const from=document.getElementById('st_from').value || '';
-        const to=document.getElementById('st_to').value || '';
-        const hint = document.getElementById('st_hint');
-
-        google.script.run
-          .withSuccessHandler(res=>{
-            STATS_CACHE = (window.normalizeStatsPayload ? window.normalizeStatsPayload(res) : res);
-            hint.textContent = '';
-            drawStats();
-          })
-          .withFailureHandler(err=>{
-            console.error('getStatsV2 failed:', err);
-            STATS_CACHE = window.normalizeStatsPayload ? window.normalizeStatsPayload(null) : null;
-            hint.textContent = 'Stats unavailable.';
-            drawStats();
-          })
-          .getStatsV2(range,item,from,to);
+      const hint  = document.getElementById('st_hint');
+      if (hint) hint.textContent = '';
+      // TODO: port to Supabase. For now, show an empty dataset to keep the UI responsive.
+      STATS_CACHE = window.normalizeStatsPayload ? window.normalizeStatsPayload(null) : {
+      summary: { orders:0, totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 },
+      monthly: [],
+      breakdownByItem: [],
+      charts: { topItems:[], purchasesByMonthByItem:{}, salesByMonthByItem:{}, purchasesByStoreByItem:{}, salesByPlatformByItem:{} }
+      };
+      drawStats();
       }
+
 
       function drawStats(){
   if (!STATS_CACHE){ return; }
@@ -3053,11 +2941,13 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
   // 🔧 REPLACE these two with your values (Supabase → Settings → API)
-  const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co/';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';
+  const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co'; // <-- no trailing slash
+  const SUPABASE_ANON_KEY = '...';  // keep your key
 
-  // Create the client
+  // Create the client and expose globally for legacy code that checks window.supabase
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.supabase = supabase;
+
 
   // --- Minimal API: Profiles (keeps your old function names) ---
   async function getProfiles() {
