@@ -1,6 +1,2 @@
 [build]
   publish = "OneTrack"
-
-[functions]
-  directory = "OneTrack/netlify/functions"
-  node_bundler = "esbuild"
