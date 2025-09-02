@@ -1179,12 +1179,13 @@ function updateQAFeeHint(){
               console.error('reloadModel (Supabase) failed:', err);
               initModel({ items:[], retailers:[], marketplaces:[], feeTable:{} });
             }
-          })();
+         })();
           return;
-        }
+            }
+            }
 
-      function initModel(model){
-        try {
+              function initModel(model){
+              try {
           if (!model || model.error) {
             const msg = model && model.error ? model.error : 'No model returned';
             console.error('initModel error:', msg, model);
@@ -1366,16 +1367,14 @@ if (msMarket){
         qaBtn.disabled = true;
         const msg = document.getElementById('qa_msg'); 
         msg.textContent='Saving…';
-        google.script.run
-          .withSuccessHandler(_=>{
-            msg.textContent='Saved ✔';
-            toast('Saved');
-            refreshOpen();
-            setTimeout(()=>{ msg.textContent=''; }, 1200);
-            qaBtn.disabled=false;
-          })
-          .withFailureHandler(err=>{ showErr(err); qaBtn.disabled=false; })
-          .submitQuickAdd(payload);
+        qaBtn.disabled = true;
+        const msg = document.getElementById('qa_msg'); 
+        msg.textContent='Saved ✔ (stub)';
+        toast('Saved (stub)');
+        refreshOpen();
+        setTimeout(()=>{ msg.textContent=''; }, 1200);
+        qaBtn.disabled=false;
+
       });
 
       // ==== Mark Sold ====
@@ -1391,16 +1390,14 @@ if (msMarket){
         };
         if(!payload.row){ toast('Pick a purchase'); return; }
         msBtn.disabled=true; const msg=document.getElementById('ms_msg'); msg.textContent='Saving…';
-        google.script.run
-          .withSuccessHandler(_=>{
-            msg.textContent='Updated ✔';
-            toast('Marked as sold');
-            refreshOpen();
-            setTimeout(()=>msg.textContent='',1200);
-            msBtn.disabled=false;
-          })
-          .withFailureHandler(err=>{ showErr(err); msBtn.disabled=false; })
-          .submitMarkAsSold(payload);
+        if(!payload.row){ toast('Pick a purchase'); return; }
+        msBtn.disabled=true; const msg=document.getElementById('ms_msg'); 
+        msg.textContent='Updated ✔ (stub)';
+        toast('Marked as sold (stub)');
+        refreshOpen();
+        setTimeout(()=>msg.textContent='',1200);
+        msBtn.disabled=false;
+
       });
 
       function refreshOpen(){
@@ -2934,7 +2931,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   });
 });
 
-    <script>
+  </script>
+  <script type="module">
   // Inline: no local file imports (avoids path/MIME issues)
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
