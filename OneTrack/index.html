@@ -1127,7 +1127,12 @@ function showApp(){
         alert(msg);
       }
 
-    import { supabase } from './lib/supabaseClient.js';
+  <script type="module">
+  import { supabase } from './lib/supabaseClient.js';
+  import { getProfiles } from './lib/supabaseApi.js';
+
+  // Example test
+  getProfiles().then(console.log);
 
   // If your Discord link has an href to Apps Script, change the element to:
   // <a id="discordBtn" href="#" class="discord-btn">Sign in with Discord</a>
