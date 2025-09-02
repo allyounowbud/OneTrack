@@ -1880,7 +1880,7 @@ function renderDBBody(section){
           const sel = tr.children[6].querySelector('select');
           if (sel) sel.value = rows[i]?.sale_location || '';
         });
-      })
+      });
       .withFailureHandler(err=>{
         tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
       })
