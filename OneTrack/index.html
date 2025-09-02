@@ -3136,5 +3136,51 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   // }
 </script>
 
+    <script type="module">
+  import { supabase } from './lib/supabaseClient.js';
+  import {
+    getProfiles,
+    addProfile,
+    updateProfiles,
+    removeProfile
+  } from './lib/supabaseApi.js';
+
+  // expose the same globals your app already uses
+  window.apiGetProfiles    = getProfiles;
+  window.apiAddProfile     = addProfile;
+  window.apiUpdateProfiles = updateProfiles;
+  window.apiRemoveProfile  = removeProfile;
+
+  // discord login
+  const discordBtn = document.getElementById('discordBtn');
+  if (discordBtn) {
+    discordBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: { redirectTo: window.location.origin }
+      });
+    });
+  }
+
+  // logout
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      location.reload();
+    });
+  }
+
+  // gate/app toggle based on session
+  async function refreshGate() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) { try { showApp(); } catch {} } else { try { showGate(); } catch {} }
+  }
+  supabase.auth.onAuthStateChange(() => refreshGate());
+  await refreshGate();
+</script>
+
+
   </body>
 </html>
