@@ -1,2492 +1,700 @@
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>OneTrack</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-      *,*::before,*::after{box-sizing:border-box}
-      :root{
-        --bg:#0c1116;--card-bg:#0f1620;--card-sub:#111b26;--text:#e5e7eb;--muted:#9ca3af;
-        --border:#1f2937;--accent:#6366f1;--pill-bg:#101826;--pill-border:#273347;--input-bg:#0d141c;
-        --input-border:#253041;--focus:#8b5cf6;--shadow:0 1px 2px rgba(0,0,0,.25),0 6px 20px rgba(0,0,0,.35);
-        --good:#10b981;--bad:#ef4444;--flex-green:#10b981;--flex-green-weak:#06251c;--flex-green-border:#0f3a2c;--flex-decor:#10b981;
-      }
-      body[data-theme="light"]{
-        --bg:#f5f7fb;
-        --card-bg:#fff;
-        --card-sub:#fff;
-        --text:#111827;
-        --muted:#6b7280;
-        --border:#e5e7eb;
-        --accent:#111827;
-        --pill-bg:#eef2ff;
-        --pill-border:#c7d2fe;
-        --input-bg:#fff;
-        --input-border:#d1d5db;
-        --focus:#4f46e5;
-        --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.06);
-        --good:#16a34a;
-        --bad:#dc2626;
-        --flex-green:#4f46e5;
-        --flex-green-weak:#ede9fe;
-        --flex-green-border:#a78bfa;
-        --flex-decor:#7c3aed;
-      }
-      body[data-theme="light"] .tab[data-tab="flex"] { color:#4f46e5; }
-      body[data-theme="light"] .tab[data-tab="flex"].active { color:#ffffff; }
-      html,body{height:100%}
-      body{font:14px system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;color:var(--text);background:var(--bg)}
-      .container{max-width:1100px;margin:24px auto;padding:0 16px}
-      h1{font-size:22px;margin:0}
-      h3{margin:0 0 8px}
-      .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-      .toggle-wrap{display:flex;align-items:center;gap:8px}
-      .theme-toggle{
-        display:inline-flex;align-items:center;gap:6px;cursor:pointer;
-        padding:6px 10px;border:1px solid var(--border);border-radius:999px;
-        background:var(--card-bg);font-size:12px;color:var(--text);
-        transition:background .15s,border-color .15s,box-shadow .15s,opacity .15s
-      }
-      .theme-toggle:hover{border-color:var(--focus)}
-      .theme-toggle:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,.35)}
-      .tabs{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-      .tab{padding:10px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--card-bg);color:var(--text);box-shadow:var(--shadow)}
-      .tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-      .tab[data-tab="flex"]{ background:var(--flex-green-weak); border-color:var(--flex-green-border); color:#a7f3d0; }
-      .tab[data-tab="flex"].active{ background:var(--flex-green); border-color:var(--flex-green); color:#fff; }
-      .card{border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;background:var(--card-bg);box-shadow:var(--shadow);overflow:hidden}
-      .subcard{background:var(--card-sub);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:var(--shadow);overflow:hidden}
-      .subcard+.subcard{margin-top:18px}
-      .subhead{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:12px}
-      label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-      input,select{width:100%;padding:12px 14px;border:1px solid var(--input-border);border-radius:12px;background:var(--input-bg);color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s;max-width:100%;min-width:0}
-      input:focus,select:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(139,92,246,.25)}
-      .row{display:grid;gap:18px;margin-bottom:16px}
-      .row-1{grid-template-columns:1fr}.row-2{grid-template-columns:repeat(2,minmax(0,1fr))}.row-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-      .row>*{min-width:0}
-      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;cursor:pointer;box-shadow:var(--shadow);white-space:nowrap;width:auto;transition:box-shadow .15s,transform .04s}
-      .btn:active{transform:translateY(1px)}
-      .btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(139,92,246,.35),var(--shadow)}
-      .btn:disabled{opacity:.6;cursor:not-allowed}
-      .btn-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px}
-      .muted{color:var(--muted)}
-      table{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
-      thead th{text-align:left;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)}
-      tbody tr{background:var(--card-sub);box-shadow:var(--shadow)}
-      td{padding:10px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-      th.sort{cursor:pointer}
-      .pill{display:inline-block;background:var(--pill-bg);border:1px solid var(--pill-border);padding:5px 9px;border-radius:999px;font-size:12px;margin-right:6px}
-      canvas{max-height:360px}
-      .filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
-      .filters .range-pair{display:flex;gap:10px;align-items:end}
-      @media (max-width:900px){.filters{grid-template-columns:1fr}.row{gap:14px}}
-      .toast{position:fixed;inset:auto 16px 16px auto;background:var(--card-bg);border:1px solid var(--border);box-shadow:var(--shadow);padding:10px 14px;border-radius:10px;z-index:2000}
-      input[type="number"]{-moz-appearance:textfield}
-      input[type="number"]::-webkit-outer-spin-button,input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-      .db-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
-      .db-title{display:flex;flex-direction:column}
-      .db-actions{display:flex;align-items:center;gap:10px}
-      .db-edit{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card-bg);cursor:pointer}
-      .db-save,.db-cancel,.db-add{padding:10px 14px;border-radius:10px;border:0;cursor:pointer}
-      .db-save,.db-add{background:var(--accent);color:#fff}
-      .db-cancel{background:transparent;color:var(--text);border:1px solid var(--border)}
-      .db-cancel:hover{border-color:var(--focus)}
-      .db-del{padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--bad);cursor:pointer}
-      .db-del:hover{border-color: var(--focus)}
-      /* Inline row save buttons (accent look, same sizing as .db-del) */
-      .db-row-save,.db-row-update{
-      padding:8px 12px; border-radius:10px; border:1px solid var(--pill-border);
-      background: var(--accent); color:#fff; cursor:pointer
-      }
-      .db-row-save:hover,.db-row-update:hover{ border-color: var(--focus); }
-      /* Inline row cancel button (compact, neutral look) */
-.db-row-cancel{
-  padding:8px 12px;
-  border-radius:10px;
-  border:1px solid var(--pill-border);
-  background:transparent;
-  color:var(--text);
-  cursor:pointer;
-}
-.db-row-cancel:hover{ border-color: var(--focus); }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OneTrack</title>
+  <style>
+    :root{
+      --bg:#0d0d0d; --card:#111; --muted:#777; --text:#e0e0e0; --accent:#66bb6a; --danger:#e57373; --warn:#ffb74d;
+      --border:#222; --shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    *{ box-sizing: border-box; }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    a{ color: var(--accent); text-decoration: none; }
+    .nav{ display:flex; gap:8px; padding:12px 16px; position:sticky; top:0; background:#0a0a0a; border-bottom:1px solid var(--border); z-index:10; align-items:center; }
+    .nav .title{ font-weight:700; margin-right:auto; letter-spacing:.3px; }
+    .nav .tab{ padding:8px 12px; border:1px solid var(--border); border-radius:10px; cursor:pointer; background:#141414; }
+    .nav .tab.active{ border-color:#2a2a2a; background:#171717; outline:1px solid #202020; }
+    .wrap{ max-width:1200px; margin:24px auto; padding:0 16px 80px; }
+    .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); margin:16px 0; }
+    .card .hd{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
+    .card .hd h3{ margin:0; font-size:16px; font-weight:700; letter-spacing:.3px; }
+    .card .hd .btns{ display:flex; gap:8px; }
+    .btn{ padding:8px 12px; background:#1a1a1a; border:1px solid var(--border); border-radius:8px; color:var(--text); cursor:pointer; }
+    .btn:hover{ background:#202020; }
+    .btn.accent{ border-color:#234; background:#17231a; color:#cfead3; }
+    .btn.warn{ border-color:#443; background:#231b17; color:#ffd7b3; }
+    .btn.ghost{ background:transparent; }
+    .btn.danger{ border-color:#442; background:#261616; color:#ffc7c7; }
+    .muted{ color:var(--muted); }
+    .body{ padding:14px; display:none; }
+    .body.show{ display:block; }
+    table{ width:100%; border-collapse:collapse; }
+    thead th{ text-align:left; font-size:12px; font-weight:600; color:#bdbdbd; padding:8px; border-bottom:1px solid var(--border); }
+    tbody td{ padding:8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tbody tr.__pending{ background:#121212; }
+    td.td-actions{ width:180px; }
+    input, select, textarea{
+      width:100%; padding:8px 10px; background:#0f0f0f; border:1px solid #222; border-radius:8px; color:#e0e0e0;
+    }
+    input[type="date"]{ color-scheme: dark; }
+    .saved{ outline: 1px solid #1b5e20; transition: outline 300ms ease-in; }
+    .pill{ padding:10px 12px; font-size:13px; color:#c7c7c7; }
+    .row{ display:flex; gap:14px; flex-wrap:wrap; }
+    .col{ flex:1 1 460px; min-width:320px; }
+    .hide{ display:none !important; }
+    #toast{ position:fixed; bottom:18px; left:50%; transform: translateX(-50%); background:#111; border:1px solid #222; color:#eee; padding:10px 14px; border-radius:10px; box-shadow: var(--shadow); display:none; z-index:1000; }
+    #gate{ display:none; max-width:520px; margin:80px auto; text-align:center; }
+    #gate .card{ padding:18px; }
+    .tag{ display:inline-block; padding:2px 8px; border:1px solid #2a2a2a; border-radius:999px; font-size:12px; color:#bbb; }
+    .flex{ display:flex; gap:10px; align-items:center; }
+    .right{ margin-left:auto; }
+  </style>
+</head>
+<body>
 
-      .collapsible-body{display:none;margin-top:10px}
-      [contenteditable="true"]{outline:none;border-bottom:2px dashed transparent}
-      [contenteditable="true"]:focus{border-bottom-color:var(--focus)}
-      .editing table td{padding:8px}
-      .cat-row{background:transparent;box-shadow:none}
-      .cat-cell{font-weight:700;letter-spacing:.04em;color:var(--muted);border-bottom:none;padding:8px 6px;text-transform:uppercase;cursor:pointer}
-      .cat-btn{background:none;border:0;color:inherit;font:inherit;display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;width:100%;text-align:left}
-      .chev{display:inline-block;transition:transform .15s}
-      .cat-row.collapsed .chev{transform:rotate(0)}.cat-row.expanded .chev{transform:rotate(90deg)}
-      .name-cell{display:flex;gap:8px;align-items:center}
-      .name-cell .cat-select{max-width:220px}.name-cell .name-input{flex:1}
-      .flex-card { position: relative; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 12px; background: var(--card-sub); }
-      .flex-hero{ position:relative; min-height:190px; overflow:hidden; isolation:isolate; }
-      .flex-controls { margin-bottom: 16px; }
-      #flexCard { margin-top: 4px; }
-      .flex-card.saving { border: none !important; box-shadow: none !important; }
-      .fx-ribbon{ position:absolute;left:18px;top:18px;z-index:2;background:linear-gradient(180deg,#2b3648,#1e2836);color:#d8e5ff;border:1px solid rgba(255,255,255,.08);padding:6px 10px;border-radius:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
-      .flex-bg{ position:absolute;inset:-20% -10% auto -10%;height:260px;background: radial-gradient(60% 60% at 70% 40%, rgba(16,185,129,.45) 0%, transparent 70%), radial-gradient(50% 50% at 20% -10%, rgba(16,185,129,.25) 0%, transparent 70%); opacity:.16;transform:rotate(-6deg);pointer-events:none}
-      .flex-bgimg{ position:absolute; inset:-3px; background-position:center; background-repeat:no-repeat; background-size:cover; transform:none !important; opacity:.20; filter:saturate(1.05) contrast(1.05); pointer-events:none; }
-      .flex-title{position:absolute;left:18px;bottom:18px;right:18px;z-index:2;font-weight:900;font-size:26px;letter-spacing:.3px;text-shadow:0 1px 0 rgba(0,0,0,.2)}
-      .flex-body{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;padding:16px}
-      @media (max-width:920px){.flex-body{grid-template-columns:1fr}}
-      .fx-left{display:grid;grid-template-rows:auto auto;gap:14px}
-      .fx-statlist{background:linear-gradient(180deg, rgba(255,255,255,.02), transparent);border:1px solid var(--border);border-radius:12px;padding:14px}
-      .fx-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
-      .fx-row .k{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
-      .fx-row .v{font-size:18px;font-weight:800}
-      .fx-divider{height:1px;background:var(--border);margin:8px 0}
-      .fx-headline{border:1px solid var(--border);border-radius:12px;padding:16px 14px;display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(180deg, rgba(16,185,129,.08), transparent 60%)}
-      .fx-profit{font-size:34px;font-weight:900;color:var(--good);line-height:1}
-      .fx-sub{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}
-      .fx-right{border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--card-bg);display:flex;flex-direction:column;gap:10px}
-      .fx-chart-title{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;margin-bottom:8px}
-      .fx-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-top:1px solid var(--border);color:var(--muted)}
-      .fx-user{display:flex;align-items:center;gap:10px}
-      .fx-avatar{width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.15);object-fit:cover}
-      .fx-username{font-weight:700}
-      .hide{display:none!important}
-      .gate-wrap{max-width:720px;margin:8vh auto;padding:0 16px}
-      .gate-card{border:1px solid var(--border);border-radius:16px;background:var(--card-bg);box-shadow:var(--shadow);padding:22px}
-      .gate-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-      .gate-title{font-weight:900;font-size:22px}
-      .discord-btn{display:inline-flex;align-items:center;gap:10px;padding:12px 16px;border-radius:12px;background:#5865F2;color:#fff;border:0;cursor:pointer;text-decoration:none;font-weight:700;transition:filter .15s,box-shadow .15s}
-      .discord-btn:hover{filter:brightness(1.05)}
-      .discord-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(88,101,242,.35)}
-      .discord-btn svg{width:20px;height:20px}
-      .gate-foot{display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--muted);font-size:12px}
-      .link{color:#93c5fd;cursor:pointer;text-decoration:underline}
-      body:not([data-theme="light"]) .muted{ color:#b3bcc7 }
-      body:not([data-theme="light"]) .subhead{ color:#b3bcc7 }
-      body:not([data-theme="light"]) thead th{ color:#c4ccd6 }
-      body:not([data-theme="light"]) label{ color:#aeb7c2 }
-      body:not([data-theme="light"]) .pill{ color:#e9edf2 }
-      body:not([data-theme="light"]) .gate-foot{ color:#9fb0c6 }
-      body:not([data-theme="light"]) #database .collapsible-body table td[contenteditable="true"]{ color: var(--text); background: rgba(255,255,255,.02); border-bottom-color: var(--input-border); }
-      body:not([data-theme="light"]) #db_sheet_tbl tbody td{ color: var(--text); }
-      body:not([data-theme="light"]) #db_sheet_tbl thead th{ color:#c4ccd6; }
-      #database .db-actions .db-edit{
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--pill-border);
-  cursor: pointer;
-}
+  <div class="nav">
+    <div class="title">Resale Dashboard</div>
+    <button class="tab active" data-tab="database">Database</button>
+    <button class="tab" data-tab="profiles">Profiles</button>
+    <span class="right flex">
+      <button id="discordBtn" class="btn accent">Sign in with Discord</button>
+      <button id="logoutBtn" class="btn ghost">Logout</button>
+    </span>
+  </div>
 
-      #database .db-actions .db-save, #database .db-actions .db-add{ background: var(--accent); color:#fff; }
-      #database .db-actions .db-cancel{ background: transparent; color: var(--text); border: 1px solid var(--pill-border); }
-      #database .db-actions button:hover{ border-color: var(--focus); }
-      #database .db-actions button:focus-visible{ outline: none; box-shadow: 0 0 0 3px rgba(139,92,246,.35); }
-      #database .db-section.editing .db-actions .db-cancel{ background: rgba(255,255,255,.04); border-color: var(--focus); }
-      #database .db-section.editing .db-actions .db-cancel:hover{ background: rgba(255,255,255,.06); }
-      body:not([data-theme="light"]) button, body:not([data-theme="light"]) .btn, body:not([data-theme="light"]) .discord-btn, body:not([data-theme="light"]) .theme-toggle, body:not([data-theme="light"]) .db-actions button { border: 1px solid var(--pill-border) !important; box-shadow: var(--shadow); }
-     
-      :root { --actions-col-w: 148px; }  /* try 144–156px to taste */
-      :root { --actions-gap: 8px; --actions-pr: 10px; }
-      #db_items_tbl .cat-row td { border: none !important; box-shadow: none !important; background: transparent !important; }
-      #db_items_tbl .cat-btn, #db_items_tbl .cat-btn:hover, #db_items_tbl .cat-btn:focus, #db_items_tbl .cat-btn:focus-visible { border: none !important; box-shadow: none !important; background: transparent !important; outline: none !important; padding: 6px 0; color: var(--muted); }
-      
-      /* Category header bar: label + fixed-width Actions column */
-      #db_items_tbl .cat-bar{
-      display:grid;
-      grid-template-columns: 1fr var(--actions-col-w);
-      align-items:center;
-      gap:8px;
-      }
-      /* Category "Add" fills the Actions column exactly */
-      #db_items_tbl .cat-add{
-      width:100%;
-      text-align:center;
-      }
-      /* Actions column: two equal tracks that fill the whole column */
-#db_items_tbl .td-actions{
-  width: var(--actions-col-w);
-  min-width: var(--actions-col-w);
-  max-width: var(--actions-col-w);
-  box-sizing: border-box;
-
-  /* keep the same vertical padding as other TDs, plus your right pad */
-  padding: 10px var(--actions-pr) 10px 10px;
-
-  display: grid;
-  grid-template-columns: 1fr 1fr;   /* Save | Delete */
-  gap: var(--actions-gap);
-  align-items: stretch;              /* buttons grow to full row height */
-}
-
-      /* Stretch the buttons to fill their grid tracks */
-#db_items_tbl .td-actions .db-row-save,
-#db_items_tbl .td-actions .db-row-update,
-#db_items_tbl .td-actions .db-del{
-  width: 100%;
-  margin: 0;
-  text-align: center;
-}
-
-      /* Optional: if the underline still looks off, hide it on the last cell */
-#db_items_tbl tbody td:last-child{
-  border-bottom-color: transparent;
-}
-
-      /* Hide the underline for ALL rows in the Items table */
-#db_items_tbl tbody td { border-bottom: 0 !important; }
-
-/* If you want the same for the other Settings tables too, add: */
-#db_retail_tbl tbody td,
-#db_mkt_tbl tbody td,
-#db_sheet_tbl tbody td { border-bottom: 0 !important; }
-
-      /* Retailers: same Actions column sizing and stretch Save/Delete to fill */
-#db_retail_tbl thead th:last-child{
-  width: calc(var(--actions-col-w, 148px) + var(--actions-pr, 10px));
-}
-
-/* Spreadsheet: same Actions column sizing and stretch Save/Delete to fill */
-#db_sheet_tbl thead th:last-child{
-  width: calc(var(--actions-col-w, 148px) + var(--actions-pr, 10px));
-}
-
-#db_sheet_tbl .td-actions{
-  width: var(--actions-col-w, 148px);
-  min-width: var(--actions-col-w, 148px);
-  max-width: var(--actions-col-w, 148px);
-  box-sizing: border-box;
-  padding: 10px var(--actions-pr, 10px) 10px 10px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;   /* Save | Delete */
-  gap: var(--actions-gap, 8px);
-  align-items: stretch;
-}
-
-#db_sheet_tbl .td-actions .db-row-save,
-#db_sheet_tbl .td-actions .db-row-update,
-#db_sheet_tbl .td-actions .db-del{
-  width: 100%;
-  margin: 0;
-  text-align: center;
-}
-
-      /* Pending row 'Cancel' (neutral look) */
-#db_sheet_tbl .td-actions .db-row-cancel{
-  padding:8px 12px;
-  border-radius:10px;
-  border:1px solid var(--pill-border);
-  background:transparent;
-  color:var(--text);
-  cursor:pointer;
-}
-#db_sheet_tbl .td-actions .db-row-cancel:hover{
-  border-color: var(--focus);
-}
-
-  #db_retail_tbl .td-actions{
-  width: var(--actions-col-w, 148px);
-  min-width: var(--actions-col-w, 148px);
-  max-width: var(--actions-col-w, 148px);
-  box-sizing: border-box;
-  padding: 10px var(--actions-pr, 10px) 10px 10px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;   /* Save | Delete */
-  gap: var(--actions-gap, 8px);
-  align-items: stretch;
-}
-
-      #db_retail_tbl .td-actions .db-row-save,
-#db_retail_tbl .td-actions .db-row-update,
-#db_retail_tbl .td-actions .db-del{
-  width: 100%;
-  margin: 0;
-  text-align: center;
-}
-
-      /* Retailers pending-row Cancel (neutral look) */
-#db_retail_tbl .td-actions .db-row-cancel{
-  padding:8px 12px;
-  border-radius:10px;
-  border:1px solid var(--pill-border);
-  background:transparent;
-  color:var(--text);
-  cursor:pointer;
-}
-#db_retail_tbl .td-actions .db-row-cancel:hover{
-  border-color: var(--focus);
-}
-
-      
-      /* Match the header cell width so the column aligns perfectly */
-      #db_items_tbl thead th:last-child{
-      width: calc(var(--actions-col-w) + var(--actions-pr));
-      }
-      /* Remove any stray margins that could push the Delete button out */
-      #db_items_tbl .td-actions .db-del,
-      #db_items_tbl .td-actions .db-row-update,
-      #db_items_tbl .td-actions .db-row-save{
-      margin: 0;
-      }
-
-      /* Enable by adding `compact-delete` on <body> if you want the X icon instead of text */
-      body.compact-delete #db_items_tbl .db-del{
-      font-size:0;
-      padding:8px 12px;
-      }
-      body.compact-delete #db_items_tbl .db-del::before{
-      content:'✕';
-      font-size:14px;
-      font-weight:700;
-      color:var(--bad);
-      }
-
-      /* Marketplaces: same Actions column sizing and stretch Save/Delete to fill */
-#db_mkt_tbl thead th:last-child{
-  width: calc(var(--actions-col-w, 148px) + var(--actions-pr, 10px));
-}
-
-#db_mkt_tbl .td-actions{
-  width: var(--actions-col-w, 148px);
-  min-width: var(--actions-col-w, 148px);
-  max-width: var(--actions-col-w, 148px);
-  box-sizing: border-box;
-  padding: 10px var(--actions-pr, 10px) 10px 10px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;   /* Save | Delete */
-  gap: var(--actions-gap, 8px);
-  align-items: stretch;
-}
-
-#db_mkt_tbl .td-actions .db-row-save,
-#db_mkt_tbl .td-actions .db-row-update,
-#db_mkt_tbl .td-actions .db-del{
-  width: 100%;
-  margin: 0;
-  text-align: center;
-}
-
-      
-      body:not([data-theme="light"]) .btn:hover, body:not([data-theme="light"]) .btn:focus-visible { border-color: #6366f1 !important; outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.35), var(--shadow); }
-      #stats .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:18px; }
-      #stats .filters .range-pair{ grid-column: span 2; display:flex; gap:10px; align-items:end; }
-      @media (max-width: 700px){ #stats .filters{ grid-template-columns: 1fr; } #stats .filters .range-pair{ grid-column: auto; flex-direction:column; align-items:stretch; } }
-      #flex .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap:18px; }
-      #flex .filters .range-pair{ grid-column: span 2; display:flex; gap:10px; align-items:end; }
-      #flex .filters .range-pair > div{ min-width:0; }
-      @media (max-width: 700px){ #flex .filters{ grid-template-columns: 1fr; } #flex .filters .range-pair{ grid-column: auto; flex-direction: column; align-items: stretch; } }
-      .flex-title{ display:none !important; }
-      .flex-card .flex-bgimg{ transform: none !important; }
-      #fx_bgimg{ transform:none !important; }
-      :root{ --info:#60a5fa; }
-      body[data-theme="light"]{ --info:#2563eb; }
-      .fx-right-metrics { border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--card-bg); }
-      .fx-right-metrics .k { font-size:12px; color: var(--muted); letter-spacing:.06em; text-transform:uppercase; }
-      .fx-right-metrics .v { font-size:18px; font-weight:800; }
-      .cat-add{ padding:8px 12px; border-radius:10px; border:0; background:var(--accent); color:#fff; cursor:pointer }
-      .cat-bar{ display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; }
-      .cat-cell{ font-weight:700; letter-spacing:.04em; color:var(--muted); border-bottom:none; padding:8px 6px; text-transform:uppercase; }
-      .cat-add{ padding:8px 12px; border-radius:10px; background:var(--accent); color:#fff; border:0; cursor:pointer; }
-      .qa-actions { margin-top: 16px; margin-bottom: 0; }
-      /* Action column stays compact and right-aligned */
-      .td-actions{ width:1%; white-space:nowrap; text-align:right; }
-
-/* =========================
-   Mobile-only responsive tweaks
-   (safe to paste at end of your <style>)
-   ========================= */
-
-/* Slightly tighten page chrome on tablets/phones */
-@media (max-width: 900px){
-  .container{ padding: 0 10px; }
-  .card{ padding: 14px; }
-  .subcard{ padding: 12px; }
-}
-
-/* Make the tab strip scrollable (no wrapping issues) */
-@media (max-width: 800px){
-  .tabs{
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    gap: 8px;
-    padding-bottom: 4px;
-  }
-  .tab{
-    flex: 0 0 auto;              /* allow horizontal scroll */
-    padding: 9px 12px;
-  }
-}
-
-/* Compact form layout on phones: single-column everywhere */
-@media (max-width: 700px){
-  .row-2, .row-3{ grid-template-columns: 1fr !important; }
-  .filters{ grid-template-columns: 1fr !important; }
-  .filters .range-pair{ grid-column: auto !important; flex-direction: column; align-items: stretch; }
-  .btn-row{ width: 100%; }
-  .btn-row .btn{ flex: 1; }      /* big tap targets */
-}
-
-/* Make big numbers/headers fit better on phones */
-@media (max-width: 700px){
-  h1{ font-size: 20px; }
-  .fx-profit{ font-size: 28px; }
-  .flex-hero{ min-height: 150px; }
-}
-
-/* Tables: make them horizontally scrollable instead of squishing */
-@media (max-width: 800px){
-  table{
-    display: block;              /* enables overflow on small screens */
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;         /* keep cells from wrapping into mess */
-    border-spacing: 0;           /* cleaner look when scrolled */
-  }
-  thead th, td{ padding: 8px 10px; }
-}
-
-/* Keep key tables extra readable on very small screens */
-@media (max-width: 540px){
-  thead th{ font-size: 12px; }
-  td{ font-size: 12px; }
-}
-
-/* Database “Actions” column: shrink on phones so buttons don’t wrap weirdly */
-@media (max-width: 600px){
-  :root{
-    --actions-col-w: 116px;      /* was ~148px on desktop */
-    --actions-gap: 6px;
-    --actions-pr: 8px;
-  }
-  #db_items_tbl .td-actions,
-  #db_retail_tbl .td-actions,
-  #db_mkt_tbl .td-actions,
-  #db_sheet_tbl .td-actions{
-    grid-template-columns: 1fr 1fr;  /* keep two buttons side-by-side */
-  }
-  /* Optionally show shorter button labels on very tight screens */
-  #database .db-row-save::after{ content: 'Save'; }
-  #database .db-row-update::after{ content: 'Save'; }
-  #database .db-del::after{ content: 'Del'; }
-}
-
-/* Inventory / Stats charts: ensure they fit within viewport */
-@media (max-width: 700px){
-  canvas{ max-height: 260px; }
-}
-
-/* Gate buttons: full-width, comfy taps on phones */
-@media (max-width: 480px){
-  .discord-btn{ width: 100%; justify-content: center; }
-  .theme-toggle{ padding: 8px 10px; }
-}
-
-/* Flex card already collapses, but tighten spacing a bit more on phones */
-@media (max-width: 700px){
-  .flex-body{ grid-template-columns: 1fr !important; gap: 12px; }
-  .fx-right{ padding: 10px; }
-  .fx-headline{ padding: 12px; }
-  .fx-right-metrics{ padding: 10px; }
-}
-
-/* Ensure nothing is hidden when both views toggle oddly */
-@media (max-width: 700px){
-  #appRoot[style*="display:"] { display: block !important; } /* safety */
-}
-
-/* --- Mobile input normalization (iOS Safari date width fix) --- */
-@media (max-width: 900px){
-  /* Make sure grid children can actually shrink */
-  .row > * { min-width: 0; }
-
-  /* Keep all form controls exactly within the container */
-  input, select {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    box-sizing: border-box;
-  }
-
-  /* Date/time inputs: remove WebKit’s extra intrinsic width */
-  input[type="date"],
-  input[type="datetime-local"],
-  input[type="month"],
-  input[type="time"]{
-    -webkit-appearance: none; /* prevent over-wide native box */
-    appearance: none;
-    padding-right: 14px;      /* space for the calendar icon */
-    border-radius: 12px;      /* keep visual match */
-  }
-
-  /* Don’t let the calendar icon add mysterious extra width */
-  input[type="date"]::-webkit-calendar-picker-indicator,
-  input[type="datetime-local"]::-webkit-calendar-picker-indicator,
-  input[type="month"]::-webkit-calendar-picker-indicator,
-  input[type="time"]::-webkit-calendar-picker-indicator{
-    margin: 0;
-  }
-}
-      
-    </style>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  </head>
-  <body>
-    <!-- ========= AUTH GATE ========= -->
-    <div id="authGate" class="gate-wrap">
-      <div class="gate-card">
-        <div class="gate-head">
-          <div class="gate-title">OneTrack</div>
-          <button id="gateThemeBtn" class="theme-toggle" title="Toggle theme"><span id="gateThemeLabel">Dark</span> 🌗</button>
-        </div>
-        <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
-        <div class="btn-row">
-          <a id="discordBtn" class="discord-btn" href="#" rel="noopener">Sign in with Discord</a>
-        </div>
-        <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
+  <div id="gate" class="wrap">
+    <div class="card">
+      <div class="hd"><h3>Sign in</h3></div>
+      <div class="body show">
+        <p class="muted">Please sign in to continue.</p>
+        <button id="discordBtn_clone" class="btn accent">Sign in with Discord</button>
       </div>
     </div>
+  </div>
 
-    <!-- ========= APP ========= -->
-    <div id="appRoot" class="container" style="display:none">
-      <div class="header">
-        <h1 id="appTitle">OneTrack</h1>
-        <div class="toggle-wrap">
-          <button id="themeBtn" class="theme-toggle" title="Toggle theme"><span id="themeLabel">Dark</span> 🌗</button>
-          <button id="logoutBtn" class="theme-toggle" title="Sign out">Sign out</button>
+  <div id="app" class="wrap">
+
+    <!-- Database -->
+    <section id="tab_database" class="tabpane">
+      <div class="card">
+        <div class="hd">
+          <h3>Items <span id="db_items_count" class="tag"></span></h3>
+          <div class="btns">
+            <button class="btn" data-action="edit">Edit</button>
+            <button class="btn" data-action="add">Add</button>
+            <button class="btn" data-action="save" style="display:none;">Save</button>
+            <button class="btn ghost" data-action="cancel">Close</button>
+          </div>
+        </div>
+        <div class="body" id="db_items_body">
+          <table id="db_items_tbl">
+            <thead><tr><th>Item</th><th>Market</th><th class="td-actions">Actions</th></tr></thead>
+            <tbody><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
+          </table>
         </div>
       </div>
 
-      <div class="tabs">
-        <div class="tab active" data-tab="quick">Quick Add</div>
-        <div class="tab" data-tab="sold">Mark as Sold</div>
-        <div class="tab" data-tab="stats">Stats</div>
-        <div class="tab" data-tab="inventory">Inventory</div>
-        <div class="tab" data-tab="flex">Flex</div>
-        <div class="tab" data-tab="profiles">Profiles</div>  <!-- NEW -->
-        <div class="tab" data-tab="database">Settings</div>
-</div>
-
-
-      <!-- Quick Add -->
-      <section id="quick" class="card">
-        <div class="subcard">
-          <div class="subhead">Order details</div>
-          <div class="row row-1">
-            <div><label>Order Date</label><input type="date" id="qa_date"></div>
-          </div>
-          <div class="row row-2">
-            <div><label>Item</label><input list="items" id="qa_item" placeholder="Start typing…"></div>
-            <div><label>Retailer (Bought From)</label><input list="retailers" id="qa_retailer" placeholder="Walmart, Target…"></div>
-          </div>
-          <div class="row row-2">
-            <div><label>Quantity</label><input type="number" id="qa_qty" min="1" step="1" value="1"></div>
-            <div><label>Buy Price (total)</label><input type="number" id="qa_buy" step="0.01" placeholder="e.g. 329.95"></div>
+      <div class="card">
+        <div class="hd">
+          <h3>Retailers <span id="db_retail_count" class="tag"></span></h3>
+          <div class="btns">
+            <button class="btn" data-action="edit">Edit</button>
+            <button class="btn" data-action="add">Add</button>
+            <button class="btn" data-action="save" style="display:none;">Save</button>
+            <button class="btn ghost" data-action="cancel">Close</button>
           </div>
         </div>
-
-        <div class="subcard">
-          <div class="subhead">Sale details (optional — for already-sold items)</div>
-          <div class="row row-2">
-            <div><label>Sale Date</label><input type="date" id="qa_sale_date"></div>
-            <div><label>Sale Location</label><select id="qa_market"></select></div>
-          </div>
-          <div class="row row-2">
-            <div><label>Sell Price</label><input type="number" id="qa_sell" step="0.01" placeholder="0 = unsold"></div>
-            <div><label>Shipping</label><input type="number" id="qa_ship" step="0.01" value="0"></div>
-          </div>
-          <div class="muted" id="qa_fee_hint"></div>
-        </div>
-
-        <div class="btn-row qa-actions">
-          <button class="btn" id="qa_btn">Save</button>
-          <span id="qa_msg" class="muted"></span>
-        </div>
-      </section>
-
-      <!-- Mark Sold -->
-      <section id="sold" class="card" style="display:none">
-        <div class="row row-3">
-          <div><label>Select Open Purchase</label><select id="ms_pick"></select></div>
-          <div><label>Sell Price</label><input type="number" id="ms_sell" step="0.01"></div>
-          <div><label>Sale Date</label><input type="date" id="ms_date"></div>
-        </div>
-        <div class="row row-3">
-          <div><label>Sale Location</label><select id="ms_market"></select></div>
-          <div><label>Fee % (blank = auto)</label><input type="number" id="ms_fee" step="0.0001" placeholder="e.g. 0.109 or 10.9"></div>
-          <div><label>Shipping</label><input type="number" id="ms_ship" step="0.01" value="0"></div>
-        </div>
-        <div class="btn-row" style="margin-top:6px">
-          <button class="btn" id="ms_btn">Mark Sold</button>
-          <span id="ms_msg" class="muted"></span>
-        </div>
-      </section>
-
-      <!-- Stats -->
-      <section id="stats" class="card" style="display:none">
-        <div class="filters">
-          <div>
-            <label>Date Range</label>
-            <select id="st_range">
-              <option value="all">All time</option>
-              <option value="mtd">Month-to-date</option>
-              <option value="last30">Last 30 days</option>
-              <option value="last7">Last 7 days</option>
-              <option value="custom">Custom…</option>
-            </select>
-          </div>
-
-          <div class="range-pair">
-            <div style="flex:1"><label>From</label><input type="date" id="st_from" disabled></div>
-            <div style="flex:1"><label>To</label><input type="date" id="st_to" disabled></div>
-          </div>
-
-          <div>
-            <label>Item filter</label>
-            <select id="st_item"></select>
-          </div>
-          <div></div>
-        </div>
-
-        <div class="btn-row" style="margin:6px 0 12px 0">
-          <button class="btn" id="st_apply">Apply</button>
-          <span class="muted" id="st_hint"></span>
-        </div>
-
-        <div id="st_summary" style="margin:16px 0 10px 0"></div>
-
-        <div class="subcard">
-          <div class="row row-2">
-            <div>
-              <label>Chart:</label>
-              <select id="st_chartType">
-                <option value="purchMonth">Purchases</option>
-                <option value="salesMonth">Sales</option>
-                <option value="purchStore">Purchases by Retailer</option>
-                <option value="salesPlatform">Sales by Marketplace</option>
-                <option value="revCogs">Costs & Revenues</option>
-              </select>
-            </div>
-          </div>
-          <canvas id="st_chart"></canvas>
-        </div>
-
-        <div class="subcard" style="margin-top:16px">
-          <h3>Breakdown by item</h3>
-          <table id="st_items_tbl">
-            <thead>
-              <tr>
-                <th class="sort" data-sort="item">Item Name</th>
-                <th class="sort" data-sort="boughtQty">Bought</th>
-                <th class="sort" data-sort="soldQty">Sold</th>
-                <th class="sort" data-sort="onHandQty">On Hand</th>
-                <th class="sort" data-sort="totalCost">Total Cost</th>
-                <th class="sort" data-sort="totalRevenue">Total Revenue</th>
-                <th class="sort" data-sort="profit">P&L</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
+        <div class="body" id="db_retail_body">
+          <table id="db_retail_tbl">
+            <thead><tr><th>Retailer</th><th class="td-actions">Actions</th></tr></thead>
+            <tbody><tr><td colspan="2" class="muted">Loading…</td></tr></tbody>
           </table>
         </div>
-      </section>
+      </div>
 
-      <!-- Inventory -->
-      <section id="inventory" class="card" style="display:none">
-        <div style="margin-bottom:10px"><span class="pill" id="inv_totals">Loading…</span></div>
-        <div class="subcard">
-          <table id="inv_tbl">
-            <thead>
-              <tr>
-                <th class="sort" data-key="item">Item Name</th>
-                <th class="sort" data-key="onHandQty">On Hand</th>
-                <th class="sort" data-key="avgCost">Avg Cost</th>
-                <th class="sort" data-key="onHandCost">Total Cost</th>
-                <th class="sort" data-key="estPrice">Market Value</th>
-                <th class="sort" data-key="estValue">Est. Value</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
+      <div class="card">
+        <div class="hd">
+          <h3>Marketplaces <span id="db_mkt_count" class="tag"></span></h3>
+          <div class="btns">
+            <button class="btn" data-action="edit">Edit</button>
+            <button class="btn" data-action="add">Add</button>
+            <button class="btn" data-action="save" style="display:none;">Save</button>
+            <button class="btn ghost" data-action="cancel">Close</button>
+          </div>
+        </div>
+        <div class="body" id="db_mkt_body">
+          <table id="db_mkt_tbl">
+            <thead><tr><th>Marketplace</th><th>Fee (decimal, e.g. 0.13)</th><th class="td-actions">Actions</th></tr></thead>
+            <tbody><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
           </table>
         </div>
-      </section>
+      </div>
 
-      <!--  -->
-<section id="profiles" class="card" style="display:none">
-  <div class="card-header">
-    <h2>Profiles</h2>
-  </div>
-
-  <div class="grid-2">
-    <div class="field">
-      <label>Username</label>
-      <input id="pro_username" type="text" placeholder="e.g., james.roland" />
-    </div>
-    <div class="field">
-      <label>Email</label>
-      <input id="pro_email" type="email" placeholder="e.g., you@example.com" />
-    </div>
-    <div class="field">
-      <label>Discord ID</label>
-      <input id="pro_discord" type="text" placeholder="e.g., 123456789012345678" />
-    </div>
-    <div class="field">
-      <label>Role</label>
-      <input id="pro_role" type="text" placeholder="e.g., admin, member" />
-    </div>
-    <div class="field" style="grid-column:1/-1">
-      <label>Notes</label>
-      <input id="pro_notes" type="text" placeholder="optional notes" />
-    </div>
-  </div>
-
-  <div class="actions mt-2">
-    <button id="pro_add_btn" class="btn primary">Add Profile</button>
-    <span id="pro_msg" class="muted"></span>
-  </div>
-
-  <div class="table-wrap mt-3">
-    <table id="pro_tbl" class="table">
-      <thead>
-        <tr>
-          <th>Row</th>
-          <th>Username</th>
-          <th>Email</th>
-          <th>Discord</th>
-          <th>Role</th>
-          <th>Notes</th>
-          <th>Created</th>
-          <th>Updated</th>
-          <th style="width:120px">Actions</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <div class="actions mt-2">
-    <button id="pro_save_btn" class="btn">Save Changes</button>
-    <input id="profiles_file" type="file" accept="application/json" hidden>
-    <button id="profiles_import_btn" class="btn">Import JSON</button>
-    <button id="profiles_export_btn" class="btn">Export JSON</button>
-  </div>
-</section>
-
-      <!-- Database -->
-      <section id="database" class="card" style="display:none">
-        <!-- Items -->
-        <div class="subcard db-section" data-section="items">
-          <div class="db-head">
-            <div class="db-title">
-              <h3 style="margin:0">Items</h3>
-              <div class="muted" id="db_items_count">Total items: 0</div>
-            </div>
-            <div class="db-actions">
-              <button type="button" class="db-edit" data-action="edit">Expand</button>
-              <button type="button" class="db-save" data-action="save" style="display:none">Save</button>
-              <button type="button" class="db-cancel" data-action="cancel" style="display:none">Close</button>
-              <button type="button" class="db-add" data-action="add" style="display:none">Add</button>
-            </div>
-          </div>
-          <div class="collapsible-body">
-  <table id="db_items_tbl" style="margin-top:10px">
-    <thead><tr><th>Name</th><th>Market Value</th><th>Actions</th></tr></thead>
-    <tbody></tbody>
-  </table>
-</div>
-
-          </div>
-
-        <!-- Retailers -->
-        <div class="subcard db-section" data-section="retailers">
-          <div class="db-head">
-            <div class="db-title">
-              <h3 style="margin:0">Retailers</h3>
-              <div class="muted" id="db_retailers_count">Total retailers: 0</div>
-            </div>
-            <div class="db-actions">
-              <button class="db-edit" data-action="edit">Expand</button>
-              <button class="db-save" data-action="save" style="display:none">Save</button>
-              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
-              <button class="db-add" data-action="add" style="display:none">Add</button>
-            </div>
-          </div>
-          <div class="collapsible-body">
-            <table id="db_retail_tbl" style="margin-top:10px">
-              <thead><tr><th>Name</th><th>Actions</th></tr></thead>
-              <tbody></tbody>
-            </table>
+      <div class="card">
+        <div class="hd">
+          <h3>Order Book <span id="db_sheet_count" class="tag"></span></h3>
+          <div class="btns">
+            <button class="btn" data-action="edit">Edit</button>
+            <button class="btn" data-action="add">Add</button>
+            <button class="btn" data-action="save" style="display:none;">Save</button>
+            <button class="btn ghost" data-action="cancel">Close</button>
           </div>
         </div>
+        <div class="body" id="db_sheet_body">
+          <div class="pill muted">Newest first. Use inline Save per row.</div>
+          <table id="db_sheet_tbl">
+            <thead>
+              <tr>
+                <th>Order Date</th><th>Item</th><th>Buy Price</th><th>Bought From</th>
+                <th>Sell Price</th><th>Sale Date</th><th>Sale Location</th><th>Shipping</th><th class="td-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="9" class="muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-        <!-- Sale Platforms -->
-        <div class="subcard db-section" data-section="marketplaces">
-          <div class="db-head">
-            <div class="db-title">
-              <h3 style="margin:0">Sale Platforms</h3>
-              <div class="muted" id="db_mkt_count">Total platforms: 0</div>
-            </div>
-            <div class="db-actions">
-              <button class="db-edit" data-action="edit">Expand</button>
-              <button class="db-save" data-action="save" style="display:none">Save</button>
-              <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
-              <button class="db-add" data-action="add" style="display:none">Add</button>
-            </div>
-          </div>
-          <div class="collapsible-body">
-            <table id="db_mkt_tbl" style="margin-top:10px">
-              <thead><tr><th>Platform</th><th>Fee %</th><th>Actions</th></tr></thead>
-              <tbody></tbody>
-            </table>
+    <!-- Profiles -->
+    <section id="tab_profiles" class="tabpane hide">
+      <div class="card">
+        <div class="hd">
+          <h3>Profiles</h3>
+          <div class="btns">
+            <label class="btn">
+              Import <input id="profiles_import_input" type="file" accept="application/json" style="display:none;">
+            </label>
+            <button id="profiles_export_btn" class="btn">Export</button>
           </div>
         </div>
-
-        <!-- Spreadsheet (Order Book) -->
-        <div class="subcard db-section" data-section="sheet">
-          <div class="db-head">
-            <div class="db-title">
-              <h3 style="margin:0">Spreadsheet</h3>
-              <div class="muted" id="db_sheet_count">Rows: 0</div>
-            </div>
-            <div class="db-actions">
-  <button class="db-edit" data-action="edit">Expand</button>
-  <button class="db-cancel" data-action="cancel" style="display:none">Close</button>
-  <button class="db-add" data-action="add" style="display:none">Add Order</button>
-</div>
-
-          </div>
-          <div class="collapsible-body">
-            <table id="db_sheet_tbl" style="margin-top:10px">
-              <thead>
-                <tr>
-                  <th>Order Date</th><th>Item</th><th>Buy Price</th><th>Bought From</th>
-                  <th>Sell Price</th><th>Sale Date</th><th>Sale Location</th><th>Shipping</th><th>Actions</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- FLEX -->
-      <section id="flex" class="card" style="display:none">
-        <div class="subcard flex-controls">
-          <div class="subhead">Create a shareable “Flex” graphic</div>
-          <div class="filters">
-            <div>
-              <label>Date Range</label>
-              <select id="fx_range">
-                <option value="all">All time</option>
-                <option value="last30">Last 30 days</option>
-                <option value="mtd">Month-to-date</option>
-                <option value="last7">Last 7 days</option>
-                <option value="custom">Custom…</option>
-              </select>
-            </div>
-            <div class="range-pair">
-              <div style="flex:1"><label>From</label><input type="date" id="fx_from" disabled></div>
-              <div style="flex:1"><label>To</label><input type="date" id="fx_to" disabled></div>
-            </div>
-            <div><label>Item</label><select id="fx_item"></select></div>
-            <div><label>Header Image URL (optional)</label><input type="url" id="fx_img" placeholder="https://example.com/image.jpg"></div>
-          </div>
-          <div class="btn-row">
-            <button class="btn" id="fx_gen">Generate</button>
-            <button class="btn" id="fx_clear" type="button">Clear</button>
-            <button class="btn" id="fx_save">Save Image</button>
-            <span class="muted" id="fx_msg"></span>
-          </div>
-        </div>
-
-        <div id="flexCard" class="flex-card">
-          <div class="flex-hero">
-            <div class="fx-ribbon" id="fx_ribbon">ITEM</div>
-            <div class="flex-bg"></div>
-            <div id="fx_bgimg" class="flex-bgimg" aria-hidden="true"></div>
-          </div>
-
-          <div class="flex-body">
-            <!-- LEFT -->
-            <div class="fx-left">
-              <div class="fx-statlist">
-                <div class="fx-chart-title" id="fx_left_title">Stats</div>
-                <div id="fx_stats"></div>
-              </div>
-              <div class="fx-headline">
-                <div class="fx-profit" id="fx_bigprofit">$0.00</div>
-                <div class="fx-sub" id="fx_subline"></div>
+        <div class="body show">
+          <div class="row">
+            <div class="col">
+              <div class="card">
+                <div class="hd"><h3>Add Profile</h3></div>
+                <div class="body show">
+                  <div class="row">
+                    <div class="col"><label>Username<input id="pro_username" placeholder="jdoe"/></label></div>
+                    <div class="col"><label>Email<input id="pro_email" placeholder="jdoe@email.com"/></label></div>
+                  </div>
+                  <div class="row">
+                    <div class="col"><label>Discord<input id="pro_discord" placeholder="discord#1234"/></label></div>
+                    <div class="col"><label>Role<input id="pro_role" placeholder="admin"/></label></div>
+                  </div>
+                  <div class="row">
+                    <div class="col"><label>Notes<textarea id="pro_notes" rows="2" placeholder="notes…"></textarea></label></div>
+                  </div>
+                  <div class="row">
+                    <div class="col"><button id="pro_add_btn" class="btn accent">Add Profile</button></div>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <!-- RIGHT -->
-            <div class="fx-right">
-              <div class="fx-chart-title">Cumulative Net Profit</div>
-              <canvas id="fx_chart"></canvas>
-              <div class="fx-right-metrics">
-                <div class="fx-row"><div class="k">Inventory</div><div class="v" id="fx_onhand">0</div></div>
-                <div class="fx-row"><div class="k">Longest Hold</div><div class="v" id="fx_longest">0 days</div></div>
-                <div class="fx-row"><div class="k">Unrealized Value</div><div class="v" id="fx_unrealized" style="color:var(--info)">$0.00</div></div>
+            <div class="col">
+              <div class="card">
+                <div class="hd"><h3>Profiles Table</h3>
+                  <div class="btns">
+                    <button id="pro_save_btn" class="btn">Save Edits</button>
+                  </div>
+                </div>
+                <div class="body show">
+                  <table id="pro_tbl">
+                    <thead><tr>
+                      <th>Username</th><th>Email</th><th>Discord</th><th>Role</th><th>Notes</th><th class="td-actions">Actions</th>
+                    </tr></thead>
+                    <tbody><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-
-          <div class="fx-foot">
-            <div class="fx-user">
-              <img id="fx_avatar" class="fx-avatar" alt="avatar" />
-              <span id="fx_username" class="fx-username">@username</span>
-            </div>
-            <span id="fx_right_note" class="muted"></span>
-          </div>
         </div>
-      </section>
+      </div>
+    </section>
+  </div>
 
-      <datalist id="items"></datalist>
-      <datalist id="retailers"></datalist>
-      <datalist id="marketplaces"></datalist>
+  <div id="toast"></div>
 
-    </div>
-
-    <div id="toast" class="toast" style="display:none"></div>
-
-    
 <script>
-      
-// ===== Base URL =====
-const BASE_URL = location.origin;
-// No more GAS/Netlify proxy — using Supabase directly
+// ------------------ Shared UI utils ------------------
+function $(sel, root=document){ return root.querySelector(sel); }
+function $all(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+function escapeHtml(s=''){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = String(msg||'');
+  el.style.display='block';
+  clearTimeout(window.__toastTO);
+  window.__toastTO = setTimeout(()=>{ el.style.display='none'; }, 2500);
+}
+function showApp(){ document.getElementById('app').style.display='block'; document.getElementById('gate').style.display='none'; }
+function showGate(){ document.getElementById('app').style.display='none'; document.getElementById('gate').style.display='block'; }
 
+// Tabs
+$all('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    $all('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.getAttribute('data-tab');
+    $all('.tabpane').forEach(p=>p.classList.add('hide'));
+    document.getElementById('tab_'+tab).classList.remove('hide');
+    if (tab==='profiles') renderProfiles();
+    if (tab==='database') loadDatabase();
+  });
+});
 
-      // ---- Global app state (must exist before any function can run) ----
-let META = null;
-let CHART = null;
-let STATS_CACHE = null;
-let DB_STATE = null;
-let FLEX = { chart: null, cache: null };
+// Wire "Edit/Add/Save/Close" for each database card
+function wireDBButtons(){
+  const sections = [
+    { body:'#db_items_body', tbl:'#db_items_tbl', section:'items' },
+    { body:'#db_retail_body', tbl:'#db_retail_tbl', section:'retailers' },
+    { body:'#db_mkt_body',    tbl:'#db_mkt_tbl',    section:'marketplaces' },
+    { body:'#db_sheet_body',  tbl:'#db_sheet_tbl',  section:'sheet' },
+  ];
+  sections.forEach(({body, tbl, section})=>{
+    const card = document.querySelector(body)?.closest('.card');
+    if (!card) return;
+    const edit = card.querySelector('[data-action="edit"]');
+    const add  = card.querySelector('[data-action="add"]');
+    const save = card.querySelector('[data-action="save"]');
+    const cancel = card.querySelector('[data-action="cancel"]');
 
+    // Only wire once
+    if (card.__wired) return; card.__wired = true;
 
-// ---- Disable Apps Script RPC in Netlify build ----
-(function(){
-// Create a no-op google.script.run so legacy calls don't crash if any slip through.
-const runner = {
-_ok: ()=>{},
-_err: (e)=>console.error(e),
-withSuccessHandler(fn){ this._ok = fn || (()=>{}); return this; },
-withFailureHandler(fn){ this._err = fn || (()=>{}); return this; },
+    edit?.addEventListener('click', ()=>{
+      card.querySelector('.body')?.classList.add('show');
+      edit.style.display='none';
+      // Hide top Save for inline-save sections
+      if (save) save.style.display = (['items','retailers','marketplaces','sheet'].includes(section) ? 'none' : '');
+    });
+    cancel?.addEventListener('click', ()=>{
+      card.querySelector('.body')?.classList.remove('show');
+      if (edit) edit.style.display='';
+    });
+    add?.addEventListener('click', ()=> insertPendingRow(section));
+  });
+}
+
+// cell value getter
+function cellVal(td){
+  const el = td.querySelector('input, select, textarea');
+  if (!el) return '';
+  if (el.tagName==='SELECT') return el.value || '';
+  if (el.type==='number') return (el.value!=='' ? Number(el.value) : 0);
+  return el.value || '';
+}
+
+</script>
+
+<script type="module">
+// ------------------ Supabase Client ------------------
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// 🔧 Replace with your values
+const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabase = supabase; // expose for legacy helpers
+
+// ------------------ DB Helpers ------------------
+const DB = {
+  async list(table, columns='*', { orderBy, ascending=true, limit }={}){
+    let q = supabase.from(table).select(columns);
+    if (orderBy) q = q.order(orderBy, { ascending });
+    if (limit) q = q.limit(limit);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  },
+  async insert(table, payload){
+    const { data, error } = await supabase.from(table).insert(payload).select();
+    if (error) throw error;
+    return (data && data[0]) || null;
+  },
+  async update(table, id, payload, idCol='id'){
+    const { data, error } = await supabase.from(table).update(payload).eq(idCol, id).select();
+    if (error) throw error;
+    return (data && data[0]) || null;
+  },
+  async remove(table, id, idCol='id'){
+    const { error } = await supabase.from(table).delete().eq(idCol, id);
+    if (error) throw error;
+    return true;
+  }
 };
-const proxy = new Proxy(runner, {
-get(target, prop){
-if (prop in target) return target[prop];
-// Any terminal method (e.g., getOpenPurchases) just triggers failure handler.
-return (..._args)=>{ target._err('Apps Script backend disabled'); return target; };
+
+// ------------------ Auth / Gate ------------------
+async function refreshGate(){
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user){ try{ showApp(); }catch(_){} } else { try{ showGate(); }catch(_){} }
 }
-});
-window.google = { script: { run: proxy } };
-window.gas = function(){ return Promise.reject('Apps Script backend disabled'); };
-})();
+supabase.auth.onAuthStateChange(()=> refreshGate());
 
-
-      // ===== Theme toggle =====
-      const themeBtn = document.getElementById('themeBtn');
-      const gateThemeBtn = document.getElementById('gateThemeBtn');
-      const themeLabel = document.getElementById('themeLabel');
-      const gateThemeLabel = document.getElementById('gateThemeLabel');
-
-      const savedTheme = localStorage.getItem('orders_theme') || 'dark';
-      setTheme(savedTheme);
-
-      (themeBtn && themeBtn.addEventListener)('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
-      (gateThemeBtn && gateThemeBtn.addEventListener)('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
-
-      function setTheme(mode){
-        document.body.dataset.theme = mode;
-        const labelText = (mode==='dark'?'Dark':'Light');
-        if (themeLabel) themeLabel.textContent = labelText;
-        if (gateThemeLabel) gateThemeLabel.textContent = labelText;
-        localStorage.setItem('orders_theme', mode);
-        setChartDefaultsToTheme();
-        if (window.__redrawChart) window.__redrawChart();
-        if (window.__drawFlexChart) window.__drawFlexChart();
-      }
-      function cssVar(n){return getComputedStyle(document.body).getPropertyValue(n).trim();}
-      function setChartDefaultsToTheme(){ if (window.Chart){ Chart.defaults.color=cssVar('--text')||'#222'; Chart.defaults.borderColor=cssVar('--border')||'#e5e7eb'; } }
-
-      // ===== Gate helpers =====
-      const authGate = document.getElementById('authGate');
-      const appRoot  = document.getElementById('appRoot');
-      const gateStatus = document.getElementById('gateStatus');
-      const logoutBtn = document.getElementById('logoutBtn');
-
-      function getSession(){
-        try{ const raw = localStorage.getItem('orders_user'); return raw ? JSON.parse(raw) : null; }catch(_){ return null; }
-      }
-      function showGate(){
-  appRoot.style.display='none';
-  authGate.style.display='';
-}
-
-function showApp(){
-  authGate.style.display='none';
-  appRoot.style.display='';
-  // load model data for dropdowns, stats, etc
-  reloadModel();
-  // open last tab or default to quick
-  const last = (()=>{
-    try{ return localStorage.getItem('orders_lastTab') || 'quick'; }catch(_){ return 'quick'; }
-  })();
-  openTab(last);
-  // ensure Flex card user/branding bits are ready if user visits Flex first
-  try { initFlexUserBits(); } catch(_){}
-}
-      function showErr(err, fallback){
-        const msg = (err && (err.error || err.message)) || (typeof err==='string' ? err : '') || (fallback || 'Something went wrong');
-        alert(msg);
-      }
-
-      // ===== Tabs =====
-      function openTab(id){
-  // update active tab UI
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.classList.toggle('active', t.dataset.tab === id);
+const discordBtn = document.getElementById('discordBtn');
+const discordBtn2 = document.getElementById('discordBtn_clone');
+[discordBtn, discordBtn2].forEach(btn=>{
+  btn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    supabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: window.location.href } });
   });
-  // show section
-  document.querySelectorAll('section').forEach(s=>s.style.display='none');
-  const sec = document.getElementById(id);
-  if (sec) sec.style.display = 'block';
-
-  // remember
-  try{ localStorage.setItem('orders_lastTab', id); }catch(_){}
-
-  // per-tab hooks
-  if (id==='stats') refreshStats();
-  if (id==='inventory') refreshInventory();
-  if (id==='flex') initFlexDefaults();
-  if (id==='sold') {
-    refreshOpen();
-    // default Sell Date today if blank
-    const d = document.getElementById('ms_date');
-    if (d && !d.value) d.value = todayISO();
-  }
-  if (id==='database') loadDatabase();
-  if ((id==='quick' || id==='sold' || id==='flex') && (!META || !META.items || META.items.length===0)) {
-    reloadModel();
-  }
-  // default Quick Add date & refresh QA fee hint
-  if (id==='quick'){
-    const qd = document.getElementById('qa_date');
-    if (qd && !qd.value) qd.value = todayISO();
-    updateQAFeeHint();
-  }
-}
-
-document.querySelectorAll('.tab').forEach(el=>{
-  el.addEventListener('click', ()=> openTab(el.dataset.tab));
+});
+document.getElementById('logoutBtn')?.addEventListener('click', async ()=>{
+  await supabase.auth.signOut();
+  location.reload();
 });
 
-
-      // ==== Helpers ====
-      function money(n){return Number(n||0).toLocaleString(undefined,{style:'currency',currency:'USD'});}
-      function pct(n){
-  if (n == null || isNaN(n)) return '0%';
-  return (n * 100).toFixed(2).replace(/\.00$/,'') + '%';
-}
-
-      function escapeHtml(s){return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-      function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t.__to);t.__to=setTimeout(()=>t.style.display='none',1500);}
-      setChartDefaultsToTheme();
-      function isCategoryName(name){ const s=(name||'').trim(); if(!s) return false; return s === s.toUpperCase() && /[A-Z]{2}/.test(s.replace(/[^A-Z]/g,'')); }
-      async function toDataUrl(url){
-        if(!url) return '';
-        try{
-          const resp = await fetch(url,{mode:'cors',cache:'no-store'});
-          const blob = await resp.blob();
-          return await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); });
-        }catch(_){
-          return url;}
-      }
-
-      function fmtPct(x) {
-  const v = Number(x || 0);
-  // one decimal, e.g. 12.3%
-  return (v * 100).toFixed(1) + '%';
-}
-
-      function todayISO(){
-  const d = new Date();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${d.getFullYear()}-${m}-${day}`;
-}
-function moneyCompact(n){
+// ------------------ Database Renderers ------------------
+async function renderDBBody(section){
   try{
-    return new Intl.NumberFormat(undefined, { style:'currency', currency:'USD', notation:'compact', maximumFractionDigits:1 }).format(Number(n||0));
-  }catch(_){ return money(n); }
-}
-
-      function cellVal(td){
-        const el = td && td.querySelector ? td.querySelector('input,select') : null;
-        return (el ? el.value : ((td && td.textContent) || '')).trim();
-      }
-
-      function getFeePctFor(market){
-  try{
-    const pct = (META && META.feeTable)?.[market]?.pct;
-    return (typeof pct === 'number' && isFinite(pct) && pct>=0) ? pct : 0;
-  }catch(_){ return 0; }
-}
-
-// Quick Add fee hint under Sell Price
-function updateQAFeeHint(){
-  const mkt = document.getElementById('qa_market')?.value || '';
-  const sell = Number(document.getElementById('qa_sell')?.value || 0);
-  const hint = document.getElementById('qa_fee_hint');
-  if (!hint) return;
-  const pct = getFeePctFor(mkt);
-  if (mkt && sell>0 && pct>0){
-    const feeAmt = Math.round(sell * pct * 100)/100;
-    const pctTxt = (pct>0 && pct<1) ? (pct*100).toFixed(2) : String(pct);
-    hint.textContent = `Estimated platform fee: ${pctTxt}% (≈ ${money(feeAmt)})`;
-  }else{
-    hint.textContent = '';
-  }
-}
-
-
-            // ==== Load model data ====
-      function reloadModel() {
-        // If Supabase client is available, use it (no more Apps Script)
-        if (window.supabase) {
-          (async () => {
-            try {
-              const sb = window.supabase;
-
-              const { data: itemsRows }      = await sb.from('Items').select('item_name');
-              const { data: retailersRows }  = await sb.from('Retailers').select('retailers');
-              const { data: marketsRows }    = await sb.from('Marketplaces').select('marketplaces, fee');
-
-              const items        = (itemsRows || []).map(r => r.item_name).filter(Boolean);
-              const retailers    = (retailersRows || []).map(r => r.retailers).filter(Boolean);
-              const marketplaces = (marketsRows || []).map(r => r.marketplaces).filter(Boolean);
-
-              const feeTable = {};
-              (marketsRows || []).forEach(r => {
-                if (r.marketplaces) feeTable[r.marketplaces] = { pct: Number(r.fee) || 0 };
-              });
-
-              initModel({ items, retailers, marketplaces, feeTable });
-            } catch (err) {
-              console.error('reloadModel (Supabase) failed:', err);
-              initModel({ items:[], retailers:[], marketplaces:[], feeTable:{} });
-            }
-         })();
-          return;
-            }
-            }
-
-              function initModel(model){
-              try {
-          if (!model || model.error) {
-            const msg = model && model.error ? model.error : 'No model returned';
-            console.error('initModel error:', msg, model);
-            toast('Metadata unavailable.');
-            META = { items:[], retailers:[], marketplaces:[] };
-          } else {
-            META = model;
-          }
-          const items      = Array.isArray(META.items) ? META.items : [];
-          const retailers  = Array.isArray(META.retailers) ? META.retailers : [];
-          const markets    = Array.isArray(META.marketplaces) ? META.marketplaces : [];
-
-          const itemsDL = document.getElementById('items');
-          const retailDL = document.getElementById('retailers');
-          if (itemsDL)  itemsDL.innerHTML  = items.map(x => `<option value="${escapeHtml(x)}">`).join('');
-          if (retailDL) retailDL.innerHTML = retailers.map(x => `<option value="${escapeHtml(x)}">`).join('');
-
-          const mktOptions = markets.map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-          const qaMarket = document.getElementById('qa_market');
-const msMarket = document.getElementById('ms_market');
-if (qaMarket) qaMarket.innerHTML = mktOptions;
-if (msMarket) msMarket.innerHTML = mktOptions;
-
-          // kick a first-time fee hint update (if user is on Quick Add)
-if (document.querySelector('.tab.active')?.dataset.tab === 'quick'){
-  updateQAFeeHint();
-}
-
-
-// ---- Fee hint (Quick Add) ----
-const qaSell = document.getElementById('qa_sell');
-if (qaMarket){
-  qaMarket.onchange = updateQAFeeHint;
-}
-if (qaSell){
-  qaSell.oninput = updateQAFeeHint;
-}
-
-// ---- Auto-fill fee on Mark Sold when marketplace changes ----
-if (msMarket){
-  msMarket.onchange = ()=>{
-    const pct = getFeePctFor(msMarket.value);   // decimal (e.g. 0.109)
-    const feeInput = document.getElementById('ms_fee');
-    if (feeInput) feeInput.value = (pct || 0);
-  };
-}
-
-          const mktsDL = document.getElementById('marketplaces');
-          if (mktsDL) mktsDL.innerHTML = markets.map(x => `<option value="${escapeHtml(x)}">`).join('');
-
-          const stItem = document.getElementById('st_item');
-          if (stItem) {
-            stItem.innerHTML = `<option value="">All items</option>` + items.map(i => `<option>${escapeHtml(i)}</option>`).join('');
-          }
-
-          const rangeSel = document.getElementById('st_range');
-          const fromInp  = document.getElementById('st_from');
-          const toInp    = document.getElementById('st_to');
-          const applyBtn = document.getElementById('st_apply');
-          const hint     = document.getElementById('st_hint');
-
-          function updateCustomUI(){
-            const isCustom = ((rangeSel && rangeSel.value) === 'custom');
-            if (fromInp && toInp) { fromInp.disabled = toInp.disabled = !isCustom; }
-            if (hint) hint.textContent = isCustom ? 'Pick a From/To date and click Apply' : '';
-          }
-
-          if (rangeSel) {
-            const rClone = rangeSel.cloneNode(true);
-            rangeSel.parentNode.replaceChild(rClone, rangeSel);
-            rClone.addEventListener('change', () => { updateCustomUI(); if (rClone.value !== 'custom') refreshStats(); });
-          }
-          if (document.getElementById('st_item')) {
-            const sel = document.getElementById('st_item');
-            const sClone = sel.cloneNode(true);
-            sel.parentNode.replaceChild(sClone, sel);
-            sClone.addEventListener('change', refreshStats);
-          }
-          if (document.getElementById('st_chartType')) {
-            const ct = document.getElementById('st_chartType');
-            const ctClone = ct.cloneNode(true);
-            ct.parentNode.replaceChild(ctClone, ct);
-            ctClone.addEventListener('change', drawStats);
-          }
-          if (applyBtn) {
-            const aClone = applyBtn.cloneNode(true);
-            applyBtn.parentNode.replaceChild(aClone, applyBtn);
-            aClone.addEventListener('click', () => {
-              const r = (document.getElementById('st_range')?.value || 'all');
-              const f = document.getElementById('st_from')?.value || '';
-              const t = document.getElementById('st_to')?.value   || '';
-              if (r === 'custom' && (!f || !t)) { toast('Select both From and To dates'); return; }
-              refreshStats();
-            });
-          }
-          updateCustomUI();
-
-          function defaultSummary(){
-            return { totalQty:0, soldQty:0, revenue:0, costSold:0, fees:0, shipping:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 };
-          }
-          function normalizeStatsPayload(res){
-  if (!res || typeof res !== 'object') {
-    return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
-  }
-  if (res.ok === false && res.error){
-    console.warn('getStatsV2 error:', res.error);
-    return { summary: defaultSummary(), breakdownByItem: [], charts:{}, monthly:[] };
-  }
-
-  const s = res.summary || {};
-  const summary = {
-    totalQty : +s.totalQty  || 0,
-    soldQty  : +s.soldQty   || 0,
-    revenue  : +s.revenue   || 0,
-    costSold : +s.costSold  || 0,   // negative (COGS)
-    fees     : +s.fees      || 0,
-    shipping : +s.shipping  || 0,
-    avgDaysToSell: +s.avgDaysToSell || 0,
-
-    // We will compute/patch these below if the backend didn't send them
-    netProfit: (typeof s.netProfit === 'number') ? +s.netProfit : NaN,
-    roiPct   : (typeof s.roiPct    === 'number') ? +s.roiPct    : NaN,
-    marginPct: (typeof s.marginPct === 'number') ? +s.marginPct : NaN,
-    asp      : (typeof s.asp       === 'number') ? +s.asp       : NaN
-  };
-
-  // ===== Derive missing numbers on the client =====
-  // P&L (your definition): revenue + costSold  (costSold is negative)
-  if (!isFinite(summary.netProfit)) {
-    summary.netProfit = summary.revenue + summary.costSold;
-  }
-
-  // ASP = revenue / soldQty
-  if (!isFinite(summary.asp)) {
-    summary.asp = summary.soldQty ? (summary.revenue / summary.soldQty) : 0;
-  }
-
-  // ROI% = (revenue + costSold) / |costSold|
-  if (!isFinite(summary.roiPct)) {
-    summary.roiPct = summary.costSold ? ((summary.revenue + summary.costSold) / Math.abs(summary.costSold)) : 0;
-  }
-
-  // Margin% = (revenue + costSold) / revenue
-  if (!isFinite(summary.marginPct)) {
-    summary.marginPct = summary.revenue ? ((summary.revenue + summary.costSold) / summary.revenue) : 0;
-  }
-
-  return {
-    summary,
-    breakdownByItem: Array.isArray(res.breakdownByItem) ? res.breakdownByItem : [],
-    charts: res.charts || {},
-    monthly: Array.isArray(res.monthly) ? res.monthly : []
-  };
-}
-
-          window.defaultSummary = defaultSummary;
-          window.normalizeStatsPayload = normalizeStatsPayload;
-
-        } catch (e) {
-          console.error('initModel crashed:', e);
-        }
-      }
-
-      // ==== Quick Add ====
-      const qaBtn = document.getElementById('qa_btn');
-      qaBtn.addEventListener('click', ()=>{
-        const payload = {
-          order_date:   document.getElementById('qa_date').value,
-          item:         document.getElementById('qa_item').value.trim(),
-          bought_from:  document.getElementById('qa_retailer').value.trim(),
-          quantity:     document.getElementById('qa_qty').value,
-          buy_price:    document.getElementById('qa_buy').value,
-          sell_price:   document.getElementById('qa_sell').value,
-          sale_date:    document.getElementById('qa_sale_date').value,
-          sale_location:document.getElementById('qa_market').value,
-          shipping:     document.getElementById('qa_ship').value
-        };
-        if(!payload.item){ toast('Item is required'); return; }
-        qaBtn.disabled = true;
-        const msg = document.getElementById('qa_msg'); 
-        msg.textContent='Saving…';
-        qaBtn.disabled = true;
-        const qaMsg = document.getElementById('qa_msg'); 
-        qaMsg.textContent = 'Saved ✔ (stub)';
-        toast('Saved (stub)');
-        refreshOpen();
-        setTimeout(() => { qaMsg.textContent = ''; }, 1200);
-        qaBtn.disabled = false;
-
-
-      });
-
-      // ==== Mark Sold ====
-      const msBtn=document.getElementById('ms_btn');
-      msBtn.addEventListener('click', ()=>{
-        const payload={
-          row:           document.getElementById('ms_pick').value,
-          sell_price:    document.getElementById('ms_sell').value,
-          sale_date:     document.getElementById('ms_date').value,
-          sale_location: document.getElementById('ms_market').value,
-          fees:          document.getElementById('ms_fee').value,
-          shipping:      document.getElementById('ms_ship').value||0
-        };
-        if(!payload.row){ toast('Pick a purchase'); return; }
-        msBtn.disabled=true; const msg=document.getElementById('ms_msg'); msg.textContent='Saving…';
-        if (!payload.row) { toast('Pick a purchase'); return; }
-        msBtn.disabled = true;
-        const msMsg = document.getElementById('ms_msg'); 
-        msMsg.textContent = 'Updated ✔ (stub)';
-        toast('Marked as sold (stub)');
-        refreshOpen();
-        setTimeout(() => msMsg.textContent = '', 1200);
-        msBtn.disabled = false;
-
-
-      });
-
-      function refreshOpen(){
-      // TODO: wire to Supabase "Orders" (unsold rows). For now, clear the selector gracefully.
-      const sel = document.getElementById('ms_pick');
-      if (sel) sel.innerHTML = '';
-      }
-
-      // ==== Stats ====
-      function refreshStats(){
-      const hint  = document.getElementById('st_hint');
-      if (hint) hint.textContent = '';
-      // TODO: port to Supabase. For now, show an empty dataset to keep the UI responsive.
-      STATS_CACHE = window.normalizeStatsPayload ? window.normalizeStatsPayload(null) : {
-      summary: { orders:0, totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 },
-      monthly: [],
-      breakdownByItem: [],
-      charts: { topItems:[], purchasesByMonthByItem:{}, salesByMonthByItem:{}, purchasesByStoreByItem:{}, salesByPlatformByItem:{} }
-      };
-      drawStats();
-      }
-
-
-      function drawStats(){
-  if (!STATS_CACHE){ return; }
-  const s = STATS_CACHE.summary || (window.defaultSummary ? window.defaultSummary() : {});
-  const _hint = document.getElementById('st_hint'); if (_hint) _hint.textContent = '';
-
-  // --- Pills ---
-  document.getElementById('st_summary').innerHTML =
-  `<span class="pill">Bought: ${s.totalQty}</span>`+
-  `<span class="pill">Sold: ${s.soldQty}</span>`+
-  `<span class="pill">Revenue: ${money(s.revenue)}</span>`+
-  `<span class="pill">COGS: ${money(s.costSold)}</span>`+   // stays negative as a cost
-  `<span class="pill">Fees: ${money(s.fees)}</span>`+
-  `<span class="pill">Shipping: ${money(s.shipping)}</span>`+
-  `<span class="pill">P&L: ${money(s.netProfit)}</span>`+   // ← renamed & no <b>
-  `<span class="pill">ROI: ${pct(s.roiPct)}</span>`+
-  `<span class="pill">Margin: ${pct(s.marginPct)}</span>`+
-  `<span class="pill">Avg Sale Price: ${money(s.asp)}</span>`+
-  `<span class="pill">Avg Days Held: ${s.avgDaysToSell}</span>`;
-
-
-  // --- Breakdown table ---
-  const tb = document.querySelector('#st_items_tbl tbody');
-  let rows = (STATS_CACHE.breakdownByItem||[]);
-
-  // saved sort preference
-  let pref = null;
-  try { pref = JSON.parse(localStorage.getItem('st_sort')||'null'); } catch(_){ pref=null; }
-  if (pref && pref.key){
-    const { key, asc } = pref;
-    rows = [...rows].sort((a,b)=>{
-      const va=a[key], vb=b[key];
-      if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
-      return asc?(va-vb):(vb-va);
-    });
-  }
-
-  const renderRows = (arr)=> tb.innerHTML = arr.map(r=>(
-    `<tr><td>${escapeHtml(r.item)}</td><td>${r.boughtQty}</td><td>${r.soldQty}</td><td>${r.onHandQty}</td>`+
-    `<td>${money(r.totalCost||0)}</td>`+             // keep negative cost
-    `<td>${money(r.totalRevenue||0)}</td>`+
-    `<td><b>${money(r.profit||0)}</b></td></tr>`
-  )).join('');
-  renderRows(rows);
-
-  // sortable headers
-  document.querySelectorAll('#st_items_tbl thead th.sort').forEach(th=>{
-    th.onclick=()=>{
-      const key = th.dataset.sort;
-      let asc = true;
-      if (pref && pref.key===key) asc = !pref.asc;
-      else {
-        const sample = rows[0]?.[key];
-        asc = (typeof sample==='string');
-      }
-      const sorted = [...rows].sort((a,b)=>{
-        const va=a[key], vb=b[key];
-        if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
-        return asc?(va-vb):(vb-va);
-      });
-      rows = sorted;
-      renderRows(rows);
-      try { localStorage.setItem('st_sort', JSON.stringify({key, asc})); } catch(_){}
-    };
-  });
-
-    // --- Chart ---
-  if (CHART) CHART.destroy();
-  const ctx=document.getElementById('st_chart');
-  const mode=document.getElementById('st_chartType').value;
-
-  if (mode==='revCogs'){
-    const monthly=(STATS_CACHE.monthly||[]).slice().sort((a,b)=>a.ym.localeCompare(b.ym));
-    const labels=monthly.map(x=>x.ym);
-    const rev=monthly.map(x=>x.revenue);
-    const cogs=monthly.map(x=>-(Math.abs(x.cost||0)));   // plot COGS below zero
-    CHART=new Chart(ctx,{type:'line',data:{labels,datasets:[
-      {label:'Revenue',data:rev,tension:.25,fill:false,borderColor:'#22c55e'},
-      {label:'COGS',data:cogs,tension:.25,fill:false,borderColor:'#ef4444'}
-    ]},options:{plugins:{legend:{display:true}},scales:{
-      y:{ticks:{callback:v=>'$'+Number(v).toLocaleString()}}
-    }}});
-  }else{
-    const C = STATS_CACHE.charts || {};
-    let labels=[], series={};
-    if (mode==='purchMonth'){ series=C.purchasesByMonthByItem || {}; }
-    if (mode==='salesMonth'){ series=C.salesByMonthByItem || {}; }
-    if (mode==='purchStore'){ series=C.purchasesByStoreByItem || {}; }
-    if (mode==='salesPlatform'){ series=C.salesByPlatformByItem || {}; }
-    labels = Object.keys(series).sort((a,b)=>a.localeCompare(b));  // ascending Jan → Dec
-    const items = C.topItems || [];
-    const datasets = items.map(name=>({
-      label:name,
-      data:labels.map(k=>(series[k] && series[k][name]) ? series[k][name] : 0),
-      type:'bar'
-    }));
-    CHART=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{
-      plugins:{legend:{display:true}},
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}
-    }});
-  }
-  window.__redrawChart = drawStats;
-}
-
-      // ==== Inventory ====
-      
-function refreshInventory(){
-  const pill = document.getElementById('inv_totals');
-  const tb   = document.querySelector('#inv_tbl tbody');
-  pill.textContent = 'Loading…'; tb.innerHTML = '';
-  (async ()=>{
-    try{
-      const { data: orders, error: oerr } = await window.supabase.from('Orders').select('item, buy_price, sell_price');
-      if (oerr) throw oerr;
-      const { data: meta } = await window.supabase.from('Items').select('item_name, market');
-      const mv = new Map((meta||[]).map(r=>[r.item_name, Number(r.market||0)]));
-      const onHand = {};
-      for(const r of (orders||[])){
-        const sold = (r.sell_price != null && Number(r.sell_price) > 0);
-        if (!sold){
-          const k = r.item || '';
-          if (!onHand[k]) onHand[k] = { qty:0, cost:0 };
-          onHand[k].qty += 1;
-          onHand[k].cost += Number(r.buy_price || 0);
-        }
-      }
-      let totalQty=0,totalCost=0,totalEst=0;
-      const rows = Object.entries(onHand).map(([item,v])=>{
-        const est = (mv.get(item)||0) * v.qty;
-        totalQty += v.qty; totalCost += v.cost; totalEst += est;
-        return { item, onHandQty:v.qty, onHandCost: v.cost, estPrice: (mv.get(item)||0), estValue: est };
-      }).sort((a,b)=> b.onHandQty - a.onHandQty || b.estValue - a.estValue);
-      if (tb){
-        tb.innerHTML = rows.map(x => `
-          <tr>
-            <td>${escapeHtml(x.item)}</td>
-            <td>${x.onHandQty}</td>
-            <td>${moneyCompact(Math.abs(x.onHandCost))}</td>
-            <td>${moneyCompact(x.estPrice)}</td>
-            <td>${moneyCompact(x.estValue)}</td>
-          </tr>
-        `).join('');
-      }
-      const _n = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
-const qty = _n(totalQty);
-const cost = Math.abs(_n(totalCost));
-const est  = _n(totalEst);
-const unreal = est + _n(totalCost);
-
-if (pill) {
-  pill.innerHTML =
-    'On hand: <b>' + qty + '</b>' +
-    ' • Cost: <b>' + moneyCompact(cost) + '</b>' +
-    ' • Est. Value: <b>' + moneyCompact(est) + '</b>' +
-    ' • Unrealized: <b>' + moneyCompact(unreal) + '</b>';
-}
-
-    }catch(err){
-      console.error('refreshInventory (Supabase) failed:', err);
-      if (pill) pill.textContent = 'Error loading inventory';
-    }
-  })();
-}
-
-
-
-
-
-      async function ensureDBLoaded(){
-  if (DB_STATE && Array.isArray(DB_STATE.items)) return DB_STATE;
-  
-    try{
-      const sb = window.supabase;
-      const { data: itemsRows } = await sb.from('Items').select('id, item_name, market');
-      const { data: retailersRows } = await sb.from('Retailers').select('id, retailers');
-      const { data: marketsRows } = await sb.from('Marketplaces').select('id, marketplaces, fee');
-      const raw = {
-        items: (itemsRows||[]).map(r => ({ row: r.id, name: r.item_name, market: r.market })),
-        retailers: (retailersRows||[]).map(r => ({ row: r.id, name: r.retailers })),
-        marketplaces: (marketsRows||[]).map(r => ({ row: r.id, name: r.marketplaces, fee: r.fee }))
-      };
-      DB_STATE = normDBShape(raw);
-      return DB_STATE;
-    }catch(e){
-      console.error('load DB (Supabase) failed:', e);
-      DB_STATE = { items:[], retailers:[], marketplaces:[] };
-      return DB_STATE;
-    }
-    
-}
-
-      function renderDBCollapsed(){
-  try{
-    const has = k => (DB_STATE && Array.isArray(DB_STATE[k]));
-    const it = has('items') ? DB_STATE.items : null;
-    const r  = has('retailers') ? DB_STATE.retailers : null;
-    const m  = has('marketplaces') ? DB_STATE.marketplaces : null;
-
-    const elItemsCount     = document.getElementById('db_items_count');
-    const elRetailersCount = document.getElementById('db_retailers_count');
-    const elMktCount       = document.getElementById('db_mkt_count');
-
-    if (elItemsCount)     elItemsCount.textContent     = it ? ('Total items: ' + it.length)    : 'Loading…';
-    if (elRetailersCount) elRetailersCount.textContent = r  ? ('Total retailers: ' + r.length) : 'Loading…';
-    if (elMktCount)       elMktCount.textContent       = m  ? ('Total platforms: ' + m.length) : 'Loading…';
-
-    // Collapse all sections and reset header buttons
-    document.querySelectorAll('#database .db-section').forEach(sec=>{
-      sec.classList.remove('editing');
-
-      const body   = sec.querySelector('.collapsible-body');
-      const edit   = sec.querySelector('[data-action="edit"]');
-      const save   = sec.querySelector('[data-action="save"]');
-      const cancel = sec.querySelector('[data-action="cancel"]');
-      const addBtn = sec.querySelector('[data-action="add"]');
-
-      if (body)   body.style.display   = 'none';
-      if (edit)   edit.style.display   = '';
-      if (save)   save.style.display   = 'none';
-      if (cancel) cancel.style.display = 'none';
-      if (addBtn) addBtn.style.display = 'none';
-    });
-
-    // Spreadsheet card: show Loading… immediately, then fetch row count in background
-    const scEl = document.getElementById('db_sheet_count');
-    if (scEl) scEl.textContent = 'Loading…';
-
-    
-(async () => {
-  try {
-    const { count, error } = await window.supabase
-      .from('Orders')
-      .select('id', { count: 'exact', head: true });
-    if (error) throw error;
-    const target = document.getElementById('db_sheet_count');
-    if (target) target.textContent = 'Rows: ' + (count || 0);
-  } catch (_err) {
-    const target = document.getElementById('db_sheet_count');
-    if (target) target.textContent = 'Rows: —';
-  }
-})();wireDBButtons();
-  }catch(err){
-    alert('Database render error: ' + (err && err.message ? err.message : err));
-    console.error(err);
-  }
-}
-
-      
-function renderDBBody(section){
-  if (section === 'items') {
-    const it  = (DB_STATE && Array.isArray(DB_STATE.items)) ? DB_STATE.items : [];
-    const tb  = document.querySelector('#db_items_tbl tbody');
-
-    const storeKey = 'db_cat_collapsed';
-    let collapsed = {}; try { collapsed = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch(_){ collapsed = {}; }
-
-    const catMap = new Map(); // cat => items[]
-    const catOrder = [];
-    const headerCats = new Set();
-    const ensureCat = (cat) => { if (!catMap.has(cat)) { catMap.set(cat, []); catOrder.push(cat); } };
-
-    // explicit uppercase header rows
-    it.forEach(x => {
-      const nm = ((x && x.name) || '').trim();
-      if (!nm) return;
-      const isCat = (nm === nm.toUpperCase()) && /[A-Z]{2}/.test(nm.replace(/[^A-Z]/g,''));
-      if (isCat) { headerCats.add(nm); ensureCat(nm); }
-    });
-
-    // assign to categories
-    let currentCat = null;
-    it.forEach(x => {
-      const nm = ((x && x.name) || '').trim();
-      if (!nm) return;
-
-      const isCat = (nm === nm.toUpperCase()) && /[A-Z]{2}/.test(nm.replace(/[^A-Z]/g,''));
-      if (isCat) { currentCat = nm; return; }
-
-      let cat = null;
-      const m = nm.match(/^([^:]+):\s*/);
-      if (m) {
-        cat = m[1].trim().toUpperCase(); ensureCat(cat);
-      } else if (currentCat) {
-        cat = currentCat; ensureCat(cat);
-      } else {
-        cat = 'Other'; ensureCat(cat);
-      }
-
-      catMap.get(cat).push({
-        row: x.row ?? null,
-        name: x.name,
-        market: x.market ?? ''
-      });
-    });
-
-    if (!catMap.size) ensureCat('Other');
-
-    // build rows
-    let html = '';
-    for (const cat of catOrder) {
-      const isCol = !!collapsed[cat];
-      html += `<tr class="cat-row ${isCol?'collapsed':'expanded'}" data-role="category" data-cat="${escapeHtml(cat)}">
-        <td class="cat-cell" colspan="100">
-          <div class="cat-bar">
-            <button class="cat-btn" type="button" aria-expanded="${!isCol}" aria-controls="cat-${escapeHtml(cat)}">
-              <span class="chev">▸</span><span>${escapeHtml(cat)}</span>
-            </button>
-            <button class="db-add cat-add" type="button" data-cat="${escapeHtml(cat)}" title="Add item to ${escapeHtml(cat)}">Add</button>
-          </div>
-        </td>
-      </tr>`;
-
-      const rows = catMap.get(cat) || [];
-      for (const x of rows) {
-        const marketRaw = x.market ?? '';
-        const marketVal = String(marketRaw).replace(/[^0-9.\-]/g,'');
-        html += `<tr data-row="${x.row ?? ''}" data-cat="${escapeHtml(cat)}" style="${isCol?'display:none;':''}">
-          <td><input type="text"  value="${escapeHtml(x.name)}"></td>
-          <td><input type="number" step="0.01" value="${escapeHtml(marketVal)}"></td>
+    if (section==='items'){
+      const tb = document.querySelector('#db_items_tbl tbody');
+      tb.innerHTML = '<tr><td colspan="3" class="muted">Loading…</td></tr>';
+      const rows = (await DB.list('Items','id, item_name, market', { orderBy:'item_name', ascending:true }))
+        .map(r=>({ row:r.id, name:r.item_name||'', market:Number(r.market||0) }));
+      document.getElementById('db_items_count').textContent = 'Rows: '+rows.length;
+      tb.innerHTML = rows.map(x=>`
+        <tr data-row="${x.row}">
+          <td><input type="text" value="${escapeHtml(x.name)}"></td>
+          <td><input type="number" step="0.01" value="${x.market}"></td>
           <td class="td-actions">
-            <button class="db-row-update" data-row="${x.row ?? ''}" type="button">Save</button>
-            <button class="db-del" data-kind="items" data-row="${x.row ?? ''}">Delete</button>
+            <button class="btn db-row-update" type="button">Save</button>
+            <button class="btn danger db-del" type="button">Delete</button>
           </td>
-        </tr>`;
-      }
-    }
+        </tr>
+      `).join('') || '<tr><td colspan="3" class="muted">No rows</td></tr>';
 
-    tb.innerHTML = html;
-    tb.dataset.cats = JSON.stringify(catOrder);
-    alignCatAddWidthExact();  // keep this
-    window.addEventListener('resize', alignCatAddWidthExact);
-
-
-    function alignCatAddWidthExact(){
-  try{
-    // Use the actual Actions header cell width = the column width
-    const th = document.querySelector('#db_items_tbl thead th:last-child');
-    if (!th) return;
-    const w = Math.ceil(th.getBoundingClientRect().width);
-    document.documentElement.style.setProperty('--actions-col-w', w + 'px');
-  }catch(_){}
-}
-
-
-    // toggle & add handlers
-    tb.onclick = (ev)=>{
-      const addBtn = ev.target.closest('button.cat-add');
-      if (addBtn) { insertPendingRowForCategory(addBtn.dataset.cat); return; }
-
-      const catRow = ev.target.closest('tr.cat-row');
-      if (!catRow) return;
-      const cat = catRow.dataset.cat;
-      const nowCollapsed = !catRow.classList.contains('collapsed');
-      catRow.classList.toggle('collapsed', nowCollapsed);
-      catRow.classList.toggle('expanded', !nowCollapsed);
-      const rows = tb.querySelectorAll(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
-      rows.forEach(r => { r.style.display = nowCollapsed ? 'none' : ''; });
-
-      try {
-        const obj = JSON.parse(localStorage.getItem(storeKey) || '{}');
-        obj[cat] = nowCollapsed ? 1 : 0;
-        localStorage.setItem(storeKey, JSON.stringify(obj));
-      } catch(_) {}
-    };
-
-  } else if (section === 'retailers') {
-  let r = (DB_STATE && Array.isArray(DB_STATE.retailers)) ? DB_STATE.retailers : [];
-  const tb = document.querySelector('#db_retail_tbl tbody');
-  r = r.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
-  tb.innerHTML = r.map(x => `
-    <tr data-row="${x.row}">
-      <td><input type="text" value="${escapeHtml(x.name)}"></td>
-      <td class="td-actions">
-        <button class="db-row-update" data-row="${x.row}" type="button">Save</button>
-        <button class="db-del" data-kind="retailers" data-row="${x.row}">Delete</button>
-      </td>
-    </tr>`).join('');
-
-
-  } else if (section === 'marketplaces') {
-    let m = (DB_STATE && Array.isArray(DB_STATE.marketplaces)) ? DB_STATE.marketplaces : [];
-    const tb = document.querySelector('#db_mkt_tbl tbody');
-    m = m.slice().sort((a,b)=> (a.name||'').toLowerCase().localeCompare((b.name||'').toLowerCase()));
-    tb.innerHTML = m.map(x => {
-  const fee = Number((x.fee ?? x.feePct ?? x.fee_percent ?? x.feePercent ?? 0));
-  return `<tr data-row="${x.row}">
-    <td><input type="text" value="${escapeHtml(x.name)}"></td>
-    <td><input type="number" step="0.0001" value="${fee}"></td>
-    <td class="td-actions">
-      <button class="db-row-update" data-row="${x.row}" type="button">Save</button>
-      <button class="db-del" data-kind="marketplaces" data-row="${x.row}">Delete</button>
-    </td>
-  </tr>`;
-}).join('');
-
-
-    } else if (section === 'sheet') {
-    const tb = document.querySelector('#db_sheet_tbl tbody');
-    tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
-
-    
-    (async ()=>{
-  try {
-    const { data: dataRows, error } = await window.supabase
-      .from('Orders')
-      .select('id, order_date, item, buy_price, bought_from, sell_price, sale_date, sale_location, shipping')
-      .order('order_date', { ascending: false })
-      .limit(500);
-
-    if (error) throw error;
-
-    const rows = (dataRows || []).map(r => ({
-      row: r.id,
-      order_date: r.order_date,
-      item: r.item,
-      buy_price: r.buy_price,
-      bought_from: r.bought_from,
-      sell_price: r.sell_price,
-      sale_date: r.sale_date,
-      sale_location: r.sale_location,
-      shipping: r.shipping
-    }));
-
-    // sort, update counts, render rows...
-    rows.sort((a, b) => {
-      const da = a.order_date || '';
-      const db = b.order_date || '';
-      if (da && db) {
-        const cmp = db.localeCompare(da);
-        if (cmp !== 0) return cmp;
-      } else if (da || db) {
-        return db ? 1 : -1;
-      }
-      return (b.row || 0) - (a.row || 0);
-    });
-
-    const elCnt = document.getElementById('db_sheet_count');
-    if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
-
-    const mktOptions = (Array.isArray((META && META.marketplaces)) ? META.marketplaces : [])
-      .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-
-    tb.innerHTML = rows.map(r => `
-      <tr data-row="${r.row}">
-        <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
-        <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
-        <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
-        <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
-        <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
-        <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-        <td><select>${mktOptions}</select></td>
-        <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
-        <td class="td-actions">
-          <button class="db-row-update" data-row="${r.row}" type="button">Save</button>
-          <button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button>
-        </td>
-      </tr>
-    `).join('');
-
-    // restore sale_location values
-    Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
-      const sel = tr.children[6].querySelector('select');
-      if (sel) sel.value = rows[i]?.sale_location || '';
-    });
-
-  } catch (err) {
-    tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
-    console.error('Supabase fetch failed:', err);
-  }
-})();
-
-      function wireDBButtons(){
-  document.querySelectorAll('#database .db-section').forEach(sec=>{
-    const body   = sec.querySelector('.collapsible-body');
-    const edit   = sec.querySelector('[data-action="edit"]');
-    const save   = sec.querySelector('[data-action="save"]');
-    const cancel = sec.querySelector('[data-action="cancel"]');
-    const addBtn = sec.querySelector('[data-action="add"]');
-
-    edit.onclick = async ()=>{
-      sec.classList.add('editing');
-      if (body) body.style.display = 'block';
-      edit.style.display = 'none';
-      // Hide top Save for inline-save sections (items, retailers, marketplaces, sheet)
-if (save) {
-  const s = sec.dataset.section;
-  save.style.display = (s === 'items' || s === 'retailers' || s === 'marketplaces' || s === 'sheet') ? 'none' : '';
-}
-
-
-
-
-
-
-
-      if (cancel) cancel.style.display = '';
-      if (addBtn) addBtn.style.display = '';
-
-      if (['items','retailers','marketplaces'].includes(sec.dataset.section)) {
-        await ensureDBLoaded();
-      }
-      renderDBBody(sec.dataset.section);
-    };
-
-    if (cancel) cancel.onclick = ()=> renderDBCollapsed();
-    if (save)   save.onclick   = ()=> saveDBSection(sec.dataset.section);
-    if (addBtn) {
-  addBtn.textContent =
-    sec.dataset.section === 'items'         ? 'Add Category'   :
-    sec.dataset.section === 'retailers'     ? 'Add Retailer'   :
-    sec.dataset.section === 'marketplaces'  ? 'Add Marketplace' :
-    sec.dataset.section === 'sheet'         ? 'Add Order'      :
-                                              'Add';
-  addBtn.onclick = ()=> {
-    if (sec.dataset.section === 'items') addPendingCategoryRow();
-    else addPendingRow(sec.dataset.section);
-  };
-}
-
-  });
-
-        function addPendingCategoryRow(){
-  const tb = document.querySelector('#db_items_tbl tbody');
-  if (!tb) return;
-
-  const tr = document.createElement('tr');
-  tr.className = '__pending __catadd';
-  tr.innerHTML = `
-    <td colspan="2"><input type="text" placeholder="Category name (ALL CAPS)" value=""></td>
-    <td class="td-actions">
-      <button class="db-row-save" data-role="save-cat" type="button">Save</button>
-      <button class="db-row-cancel" type="button">Cancel</button>
-    </td>
-  `;
-  tb.insertBefore(tr, tb.firstChild);
-  const first = tr.querySelector('input');
-  if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); }, 0); }
-}
-
-
-  // Single delegated click handler for all row-level actions (save/update/delete)
-const dbRoot = document.getElementById('database');
-if (!dbRoot.__wiredClicks) {
-  dbRoot.addEventListener('click', (ev)=>{
-  // ========== CANCEL (pending rows) ==========
-  const cancelBtn = ev.target.closest('button.db-row-cancel');
-  if (cancelBtn) {
-    const tr = cancelBtn.closest('tr');
-    if (tr && tr.classList.contains('__pending')) tr.remove();
-    return;
-  }
-
-  // Helpers
-  const get = (td) => (td ? cellVal(td) : '');
-  const inTbl = (sel) => !!ev.target.closest(sel);
-
-  // ========== SAVE (pending rows) ==========
-  const saveBtn = ev.target.closest('button.db-row-save');
-  if (saveBtn) {
-    const tr = saveBtn.closest('tr');
-    if (!tr) return;
-
-    // Items: “Add” pending row
-    if (inTbl('#db_items_tbl')) {
-      const name   = get(tr.children[0]);
-      const market = get(tr.children[1]);
-      if (!name) { toast('Item is required'); return; }
-      
-     (async ()=>{
-       try{
-         const { data, error } = await window.supabase.from('Items').insert([{ item_name: name, market }]).select('id');
-         if (error) throw error;
-         toast('Item added ✔'); loadDatabase(); reopenDBTabAfterLoad('items');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
-
-    // Retailers: “Add” pending row
-    if (inTbl('#db_retail_tbl')) {
-      const name = get(tr.children[0]);
-      if (!name) { toast('Retailer name required'); return; }
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Retailers').insert([{ retailers: name }]);
-         if (error) throw error;
-         toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
-
-    // Marketplaces: “Add” pending row
-    if (inTbl('#db_mkt_tbl')) {
-      const name = get(tr.children[0]);
-      const fee  = get(tr.children[1]);
-      if (!name) { toast('Platform name required'); return; }
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Marketplaces').insert([{ marketplaces: name, fee }]);
-         if (error) throw error;
-         toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
-
-    // Sheet: “Add Order” pending row
-    if (inTbl('#db_sheet_tbl')) {
-      const payload = {
-        order_date:    get(tr.children[0]),
-        item:          get(tr.children[1]),
-        buy_price:     get(tr.children[2]),
-        bought_from:   get(tr.children[3]),
-        sell_price:    get(tr.children[4]),
-        sale_date:     get(tr.children[5]),
-        sale_location: get(tr.children[6]),
-        shipping:      get(tr.children[7])
+      tb.onclick = async (ev)=>{
+        const tr = ev.target.closest('tr[data-row], tr.__pending');
+        if (!tr) return;
+        if (ev.target.matches('.db-row-update')){
+          // pending -> insert, else update
+          if (tr.classList.contains('__pending')){
+            const name = cellVal(tr.children[0]).trim();
+            const market = Number(cellVal(tr.children[1])||0);
+            if (!name){ toast('Item name required'); return; }
+            const rec = await DB.insert('Items',[{ item_name:name, market }]);
+            toast('Item added'); renderDBBody('items');
+          } else {
+            const id = Number(tr.getAttribute('data-row'));
+            const name = cellVal(tr.children[0]).trim();
+            const market = Number(cellVal(tr.children[1])||0);
+            await DB.update('Items', id, { item_name:name, market });
+            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
+            toast('Item saved');
+          }
+        }
+        if (ev.target.matches('.db-del')){
+          const id = Number(tr.getAttribute('data-row'));
+          if (!id || !confirm('Delete this item?')) return;
+          await DB.remove('Items', id);
+          tr.remove(); toast('Deleted');
+          document.getElementById('db_items_count').textContent = 'Rows: '+document.querySelectorAll('#db_items_tbl tbody tr').length;
+        }
+        if (ev.target.matches('.db-row-cancel')){
+          tr.remove();
+        }
       };
-      if (!payload.item) { toast('Item is required'); return; }
-      
-     (async ()=>{
-       try{
-         const rec = {
-           order_date: payload.order_date || null,
-           item: payload.item || null,
-           buy_price: payload.buy_price ?? null,
-           bought_from: payload.bought_from || null,
-           sell_price: payload.sell_price ?? null,
-           sale_date: payload.sale_date || null,
-           sale_location: payload.sale_location || null,
-           shipping: payload.shipping ?? null
-         };
-         const { error } = await window.supabase.from('Orders').insert([rec]);
-         if (error) throw error;
-         toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
-  } // END pending SAVE
 
-  // ========== UPDATE (existing rows) ==========
-  const updBtn = ev.target.closest('button.db-row-update');
-  if (updBtn) {
-    const tr   = updBtn.closest('tr');
-    const rowId = Number((tr && tr.dataset)?.row || 0);
-    if (!rowId) return;
-
-    if (inTbl('#db_items_tbl')) {
-      const name   = get(tr.children[0]);
-      const market = get(tr.children[1]);
-      if (!name) { toast('Item name required'); return; }
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Items').update({ item_name: name, market }).eq('id', rowId);
-         if (error) throw error;
-         toast('Item updated ✔'); loadDatabase(); reopenDBTabAfterLoad('items');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
       return;
     }
 
-    if (inTbl('#db_retail_tbl')) {
-      const name = get(tr.children[0]);
-      if (!name) { toast('Retailer name required'); return; }
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Retailers').update({ retailers: name }).eq('id', rowId);
-         if (error) throw error;
-         toast('Retailer updated ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
+    if (section==='retailers'){
+      const tb = document.querySelector('#db_retail_tbl tbody');
+      tb.innerHTML = '<tr><td colspan="2" class="muted">Loading…</td></tr>';
+      const rows = (await DB.list('Retailers','id, name', { orderBy:'name', ascending:true }))
+        .map(r=>({ row:r.id, name:r.name||'' }));
+      document.getElementById('db_retail_count').textContent = 'Rows: '+rows.length;
+      tb.innerHTML = rows.map(x=>`
+        <tr data-row="${x.row}">
+          <td><input type="text" value="${escapeHtml(x.name)}"></td>
+          <td class="td-actions">
+            <button class="btn db-row-update" type="button">Save</button>
+            <button class="btn danger db-del" type="button">Delete</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="2" class="muted">No rows</td></tr>';
 
-    if (inTbl('#db_mkt_tbl')) {
-      const name = get(tr.children[0]);
-      const fee  = get(tr.children[1]);
-      if (!name) { toast('Platform name required'); return; }
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Marketplaces').update({ marketplaces: name, fee }).eq('id', rowId);
-         if (error) throw error;
-         toast('Platform updated ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
-
-    if (inTbl('#db_sheet_tbl')) {
-      const row = {
-        row:           rowId,
-        order_date:    get(tr.children[0]),
-        item:          get(tr.children[1]),
-        buy_price:     get(tr.children[2]),
-        bought_from:   get(tr.children[3]),
-        sell_price:    get(tr.children[4]),
-        sale_date:     get(tr.children[5]),
-        sale_location: get(tr.children[6]),
-        shipping:      get(tr.children[7])
+      tb.onclick = async (ev)=>{
+        const tr = ev.target.closest('tr[data-row], tr.__pending');
+        if (!tr) return;
+        if (ev.target.matches('.db-row-update')){
+          if (tr.classList.contains('__pending')){
+            const name = cellVal(tr.children[0]).trim();
+            if (!name){ toast('Name required'); return; }
+            await DB.insert('Retailers',[{ name }]);
+            toast('Retailer added'); renderDBBody('retailers');
+          } else {
+            const id = Number(tr.getAttribute('data-row'));
+            const name = cellVal(tr.children[0]).trim();
+            await DB.update('Retailers', id, { name });
+            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
+            toast('Retailer saved');
+          }
+        }
+        if (ev.target.matches('.db-del')){
+          const id = Number(tr.getAttribute('data-row'));
+          if (!id || !confirm('Delete this retailer?')) return;
+          await DB.remove('Retailers', id);
+          tr.remove(); toast('Deleted');
+          document.getElementById('db_retail_count').textContent = 'Rows: '+document.querySelectorAll('#db_retail_tbl tbody tr').length;
+        }
+        if (ev.target.matches('.db-row-cancel')) tr.remove();
       };
-      
-     (async ()=>{
-       try{
-         const rec = {
-           order_date: row.order_date || null,
-           item: row.item || null,
-           buy_price: row.buy_price ?? null,
-           bought_from: row.bought_from || null,
-           sell_price: row.sell_price ?? null,
-           sale_date: row.sale_date || null,
-           sale_location: row.sale_location || null,
-           shipping: row.shipping ?? null
-         };
-         const { error } = await window.supabase.from('Orders').update(rec).eq('id', row.row);
-         if (error) throw error;
-         toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
       return;
     }
-  } // END UPDATE
 
-  // ========== DELETE (existing rows) ==========
-  const delBtn = ev.target.closest('button.db-del');
-  if (delBtn) {
-    const kind = delBtn.dataset.kind;
-    const row  = Number(delBtn.dataset.row || 0);
-    if (!row) return;
-    if (!confirm('Delete this row?')) return;
+    if (section==='marketplaces'){
+      const tb = document.querySelector('#db_mkt_tbl tbody');
+      tb.innerHTML = '<tr><td colspan="3" class="muted">Loading…</td></tr>';
+      const rows = (await DB.list('Marketplaces','id, name, fee', { orderBy:'name', ascending:true }))
+        .map(r=>({ row:r.id, name:r.name||'', fee:Number(r.fee||0) }));
+      document.getElementById('db_mkt_count').textContent = 'Rows: '+rows.length;
+      tb.innerHTML = rows.map(x=>`
+        <tr data-row="${x.row}">
+          <td><input type="text" value="${escapeHtml(x.name)}"></td>
+          <td><input type="number" step="0.0001" value="${x.fee}"></td>
+          <td class="td-actions">
+            <button class="btn db-row-update" type="button">Save</button>
+            <button class="btn danger db-del" type="button">Delete</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="3" class="muted">No rows</td></tr>';
 
-    if (kind === 'items') {
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Items').delete().eq('id', row);
-         if (error) throw error;
-         toast('Item deleted'); loadDatabase(); reopenDBTabAfterLoad('items');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
+      tb.onclick = async (ev)=>{
+        const tr = ev.target.closest('tr[data-row], tr.__pending');
+        if (!tr) return;
+        if (ev.target.matches('.db-row-update')){
+          if (tr.classList.contains('__pending')){
+            const name = cellVal(tr.children[0]).trim();
+            const fee  = Number(cellVal(tr.children[1])||0);
+            if (!name){ toast('Name required'); return; }
+            await DB.insert('Marketplaces',[{ name, fee }]);
+            toast('Marketplace added'); renderDBBody('marketplaces');
+          } else {
+            const id = Number(tr.getAttribute('data-row'));
+            const name = cellVal(tr.children[0]).trim();
+            const fee  = Number(cellVal(tr.children[1])||0);
+            await DB.update('Marketplaces', id, { name, fee });
+            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
+            toast('Marketplace saved');
+          }
+        }
+        if (ev.target.matches('.db-del')){
+          const id = Number(tr.getAttribute('data-row'));
+          if (!id || !confirm('Delete this marketplace?')) return;
+          await DB.remove('Marketplaces', id);
+          tr.remove(); toast('Deleted');
+          document.getElementById('db_mkt_count').textContent = 'Rows: '+document.querySelectorAll('#db_mkt_tbl tbody tr').length;
+        }
+        if (ev.target.matches('.db-row-cancel')) tr.remove();
+      };
       return;
     }
-    if (kind === 'retailers') {
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Retailers').delete().eq('id', row);
-         if (error) throw error;
-         toast('Retailer deleted'); loadDatabase(); reopenDBTabAfterLoad('retailers');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
-    if (kind === 'marketplaces') {
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Marketplaces').delete().eq('id', row);
-         if (error) throw error;
-         toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-      return;
-    }
-    if (kind === 'sheet') {
-      
-     (async ()=>{
-       try{
-         const { error } = await window.supabase.from('Orders').delete().eq('id', row);
-         if (error) throw error;
-         toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert((err && err.message)||err); }
-     })()
-     ;
-      return;
-    }
-  } // END DELETE
-});
 
+    if (section==='sheet'){
+      const tb = document.querySelector('#db_sheet_tbl tbody');
+      tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
+      const { data: dataRows, error } = await supabase
+        .from('Orders')
+        .select('id, order_date, item, buy_price, bought_from, sell_price, sale_date, sale_location, shipping')
+        .order('order_date', { ascending: false })
+        .limit(500);
+      if (error) throw error;
 
-  dbRoot.__wiredClicks = true; // <-- set the guard after the handler closes
-} // <-- close: if (!dbRoot.__wiredClicks)
+      const rows = (dataRows || []).map(r => ({
+        row: r.id,
+        order_date: r.order_date, item: r.item, buy_price: r.buy_price, bought_from: r.bought_from,
+        sell_price: r.sell_price, sale_date: r.sale_date, sale_location: r.sale_location, shipping: r.shipping
+      }));
+
+      // Sort newest by order_date, then id desc
+      rows.sort((a,b)=>{
+        const da = a.order_date || ''; const db = b.order_date || '';
+        if (da && db){ const cmp = db.localeCompare(da); if (cmp!==0) return cmp; }
+        else if (da || db){ return db ? 1 : -1; }
+        return (b.row||0)-(a.row||0);
+      });
+
+      document.getElementById('db_sheet_count').textContent = 'Rows: '+rows.length;
+
+      // sale locations select options
+      const mktNames = (await DB.list('Marketplaces','name', { orderBy:'name', ascending:true })).map(x=>x.name).filter(Boolean);
+      const mktOptions = mktNames.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+
+      tb.innerHTML = rows.map(r=>`
+        <tr data-row="${r.row}">
+          <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
+          <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
+          <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
+          <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
+          <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
+          <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
+          <td><select>${mktOptions}</select></td>
+          <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+          <td class="td-actions">
+            <button class="btn db-row-update" type="button">Save</button>
+            <button class="btn danger db-del" type="button">Delete</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="9" class="muted">No rows</td></tr>';
+
+      // restore selected value post render
+      Array.from(tb.querySelectorAll('tr')).forEach((tr, i)=>{
+        const sel = tr.children[6]?.querySelector('select'); if (sel) sel.value = rows[i]?.sale_location || '';
+      });
+
+      tb.onclick = async (ev)=>{
+        const tr = ev.target.closest('tr[data-row], tr.__pending');
+        if (!tr) return;
+        if (ev.target.matches('.db-row-update')){
+          if (tr.classList.contains('__pending')){
+            // insert
+            const rec = {
+              order_date: cellVal(tr.children[0]) || null,
+              item: cellVal(tr.children[1]) || null,
+              buy_price: cellVal(tr.children[2]) ?? null,
+              bought_from: cellVal(tr.children[3]) || null,
+              sell_price: cellVal(tr.children[4]) ?? null,
+              sale_date: cellVal(tr.children[5]) || null,
+              sale_location: cellVal(tr.children[6]) || null,
+              shipping: cellVal(tr.children[7]) ?? null
+            };
+            await DB.insert('Orders',[rec]);
+            toast('Order added'); renderDBBody('sheet');
+          } else {
+            // update existing
+            const id = Number(tr.getAttribute('data-row'));
+            const rec = {
+              order_date: cellVal(tr.children[0]) || null,
+              item: cellVal(tr.children[1]) || null,
+              buy_price: cellVal(tr.children[2]) ?? null,
+              bought_from: cellVal(tr.children[3]) || null,
+              sell_price: cellVal(tr.children[4]) ?? null,
+              sale_date: cellVal(tr.children[5]) || null,
+              sale_location: cellVal(tr.children[6]) || null,
+              shipping: cellVal(tr.children[7]) ?? null
+            };
+            await DB.update('Orders', id, rec);
+            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
+            toast('Order saved');
+          }
+        }
+        if (ev.target.matches('.db-del')){
+          const id = Number(tr.getAttribute('data-row'));
+          if (!id || !confirm('Delete this order row?')) return;
+          await DB.remove('Orders', id);
+          tr.remove(); toast('Deleted');
+          document.getElementById('db_sheet_count').textContent = 'Rows: '+document.querySelectorAll('#db_sheet_tbl tbody tr').length;
+        }
+        if (ev.target.matches('.db-row-cancel')) tr.remove();
+      };
+
+      return;
+    }
+  }catch(err){
+    console.error(err);
+    toast((err && err.message) || 'Load failed');
+  }
 }
 
-  function addPendingRow(section){
-    
-  // ITEMS
-  if (section === 'items') {
+// Insert a pending row at top for inline add
+async function insertPendingRow(section){
+  if (section==='items'){
     const tb = document.querySelector('#db_items_tbl tbody');
     const tr = document.createElement('tr');
     tr.className='__pending';
     tr.innerHTML = `
-  <td><input type="text"  value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions">
-    <button class="db-row-save" type="button">Save</button>
-    <button class="db-row-cancel" type="button">Cancel</button>
-  </td>
-`;
-    tb.insertBefore(tr, tb.firstChild);
-    const first = tr.querySelector('input'); if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
+      <td><input type="text" value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td class="td-actions">
+        <button class="btn db-row-update" type="button">Save</button>
+        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
+      </td>`;
+    tb.prepend(tr);
+    tr.querySelector('input')?.focus();
+    return;
   }
-
-  // RETAILERS
-if (section === 'retailers') {
-  const tb = document.querySelector('#db_retail_tbl tbody');
-  const tr = document.createElement('tr');
-  tr.className='__pending';
-  tr.innerHTML = `
-    <td><input type="text" value=""></td>
-    <td class="td-actions">
-      <button class="db-row-save" type="button">Save</button>
-      <button class="db-row-cancel" type="button">Cancel</button>
-    </td>`;
-  tb.insertBefore(tr, tb.firstChild);
-
-  const first = tr.querySelector('input');
-  if (first){
-    setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0);
+  if (section==='retailers'){
+    const tb = document.querySelector('#db_retail_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
+    tr.innerHTML = `
+      <td><input type="text" value=""></td>
+      <td class="td-actions">
+        <button class="btn db-row-update" type="button">Save</button>
+        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
+      </td>`;
+    tb.prepend(tr);
+    tr.querySelector('input')?.focus();
+    return;
   }
-}
-
-
-
-  // MARKETPLACES (keeps inline Save)
-  if (section === 'marketplaces') {
-  const tb = document.querySelector('#db_mkt_tbl tbody');
-  const tr = document.createElement('tr');
-  tr.className='__pending';
-  tr.innerHTML = `
-    <td><input type="text"  value=""></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td class="td-actions">
-      <button class="db-row-save" type="button">Save</button>
-      <button class="db-row-cancel" type="button">Cancel</button>
-    </td>
-  `;
-  tb.insertBefore(tr, tb.firstChild);
-  const first = tr.querySelector('input');
-  if (first){ setTimeout(()=>{ first.focus(); tr.scrollIntoView({block:'nearest'}); },0); }
-}
-
-    // SHEET (update existing order)
-if (tr.closest('#db_sheet_tbl')) {
-  const row = {
-    row:           Number(tr.dataset.row || 0),
-    order_date:    cellVal(tr.children[0]),
-    item:          cellVal(tr.children[1]),
-    buy_price:     cellVal(tr.children[2]),
-    bought_from:   cellVal(tr.children[3]),
-    sell_price:    cellVal(tr.children[4]),
-    sale_date:     cellVal(tr.children[5]),
-    sale_location: cellVal(tr.children[6]),
-    shipping:      cellVal(tr.children[7])
-  };
-  if (!row.row) return;
-  
-     (async ()=>{
-       try{
-         const rec = {
-           order_date: row.order_date || null,
-           item: row.item || null,
-           buy_price: row.buy_price ?? null,
-           bought_from: row.bought_from || null,
-           sell_price: row.sell_price ?? null,
-           sale_date: row.sale_date || null,
-           sale_location: row.sale_location || null,
-           shipping: row.shipping ?? null
-         };
-         const { error } = await window.supabase.from('Orders').update(rec).eq('id', row.row);
-         if (error) throw error;
-         toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert((err && err.message)||err); }
-     })();
-     
-  return;
-}
-
-
-
-  // SPREADSHEET (ORDER BOOK)
-  if (section === 'sheet') {
-  const tb = document.querySelector('#db_sheet_tbl tbody');
-  const tr = document.createElement('tr');
-  tr.className='__pending';
-
-  const mktOptions = (Array.isArray((META && META.marketplaces)) ? META.marketplaces : [])
-    .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-
-  tr.innerHTML = `
-  <td><input type="date" value=""></td>
-  <td><input list="items" value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td><input list="retailers" value=""></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td><input type="date" value=""></td>
-  <td><select>${mktOptions}</select></td>
-  <td><input type="number" step="0.01" value="0"></td>
-  <td class="td-actions">
-    <button class="db-row-save" type="button">Save</button>
-    <button class="db-row-cancel" type="button">Cancel</button>
-  </td>
-`;
-
-  tb.insertBefore(tr, tb.firstChild);
-
-  const firstInput = tr.querySelector('input,select');
-  if (firstInput) {
-    setTimeout(() => { firstInput.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
+  if (section==='marketplaces'){
+    const tb = document.querySelector('#db_mkt_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
+    tr.innerHTML = `
+      <td><input type="text" value=""></td>
+      <td><input type="number" step="0.0001" value="0"></td>
+      <td class="td-actions">
+        <button class="btn db-row-update" type="button">Save</button>
+        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
+      </td>`;
+    tb.prepend(tr);
+    tr.querySelector('input')?.focus();
+    return;
+  }
+  if (section==='sheet'){
+    const tb = document.querySelector('#db_sheet_tbl tbody');
+    const tr = document.createElement('tr');
+    tr.className='__pending';
+    // get marketplaces to build options
+    const mktNames = (await DB.list('Marketplaces','name', { orderBy:'name', ascending:true })).map(x=>x.name).filter(Boolean);
+    const mktOptions = mktNames.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    tr.innerHTML = `
+      <td><input type="date" value=""></td>
+      <td><input list="items" value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td><input list="retailers" value=""></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td><input type="date" value=""></td>
+      <td><select>${mktOptions}</select></td>
+      <td><input type="number" step="0.01" value="0"></td>
+      <td class="td-actions">
+        <button class="btn db-row-update" type="button">Save</button>
+        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
+      </td>`;
+    tb.prepend(tr);
+    tr.querySelector('input,select')?.focus();
+    return;
   }
 }
 
+// Load all db bodies initially when landing on database tab
+async function loadDatabase(){
+  await renderDBBody('items');
+  await renderDBBody('retailers');
+  await renderDBBody('marketplaces');
+  await renderDBBody('sheet');
 }
+window.loadDatabase = loadDatabase;
 
-
-      function saveDBSection(section){
-  if (section === 'items') {
-    const rows = Array.from(document.querySelectorAll('#db_items_tbl tbody tr'))
-      .map(tr => {
-        if (tr.classList.contains('__pending')){
-          const name = cellVal(tr.children[0]);
-          if (!name) return null;
-          const payload = {
-  name,
-  market: cellVal(tr.children[1])
-};
-
-(async()=>{
-  try {
-    await (window.apiAddProfile ? apiAddProfile(payload) : addProfile(payload));
-    document.getElementById('pro_username').value='';
-    document.getElementById('pro_email').value='';
-    document.getElementById('pro_discord').value='';
-    document.getElementById('pro_role').value='';
-    document.getElementById('pro_notes').value='';
-    renderProfiles();
-    toast('Profile added');
-  } catch(err) {
-    toast((err && err.message) || 'Add failed');
-  }
-})();   // <-- end of IIFE
-
-
-document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{
-  const rows = collectProfileEdits();
-  (async()=>{ try{ await (window.apiUpdateProfiles?apiUpdateProfiles(rows):updateProfiles(rows)); renderProfiles(); toast('Saved'); }catch(err){ toast((err && err.message)||'Save failed'); } })();
-});
-
-document.querySelector('#pro_tbl tbody')?.addEventListener('click', (e)=>{
-  const btn = e.target.closest('button[data-act="del"]');
-  if (!btn) return;
-  const row = Number(btn.getAttribute('data-row'));
-  if (!row || !confirm('Delete this profile row?')) return;
-
-  (async()=>{ try{ await (window.apiRemoveProfile?apiRemoveProfile(row):removeProfile(row)); renderProfiles(); toast('Deleted'); }catch(err){ toast((err && err.message)||'Delete failed'); } })();
-});
-
-      // Small helper to trigger a download of JSON
-function downloadJSON(filename, data){
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 2000);
-}
-
-// Import flow (fixed: no GAS chaining, proper try/catch, clear resets)
-document.getElementById('profiles_import_input')?.addEventListener('change', (e) => {
-  const file = e.target.files?.[0];
-  if (!file) { e.target.value = ''; return; }
-
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    try {
-      const text = String(ev.target?.result || '').trim();
-      const json = JSON.parse(text);
-      if (!Array.isArray(json)) throw new Error('JSON must be an array of profiles');
-
-      // Optional: light validation / trimming (we send raw; backend sanitizes)
-      try {
-        for (const row of json) {
-          await (window.apiAddProfile ? apiAddProfile(row) : addProfile(row));
-        }
-        renderProfiles();
-        toast('Import complete');
-        e.target.value = '';
-      } catch (err) {
-        toast((err && err.message) || 'Import failed');
-        e.target.value = '';
-      }
-
-    } catch (err) {
-      toast('Invalid JSON');
-      e.target.value = '';
-    }
-  };
-
-  reader.readAsText(file);
-});
-
-// Export flow
-document.getElementById('profiles_export_btn')?.addEventListener('click', async ()=>{
-  try {
-    const data = await (window.apiGetProfiles ? apiGetProfiles() : getProfiles());
-    downloadJSON('profiles.json', data || []);
-    toast('Export ready');
-  } catch (err) {
-    toast((err && err.message) || 'Export failed');
-  }
-});
-
-// When switching to Profiles tab, load data
-document.querySelectorAll('.tab[data-tab]').forEach(tab => {
-  tab.addEventListener('click', () => {
-      if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
-  });
-});
-</script>
-
-<script type="module">
-// Inline: no local file imports (avoids path/MIME issues)
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-// ... keep ALL your Supabase code here ...
-// const SUPABASE_URL = '...'
-// const supabase = createClient(...)
-// window.apiGetProfiles = ...
-// (async () => { await refreshGate(); })();
-
-
-// 🔧 REPLACE these two with your values (Supabase → Settings → API)
-const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co'; // <-- no trailing slash
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';
-
-// Create the client and expose globally for legacy code that checks window.supabase
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-window.supabase = supabase;
-
-// --- Minimal API: Profiles (keeps your old function names) ---
-async function getProfiles() {
+// ------------------ Profiles ------------------
+async function getProfiles(){
   const { data, error } = await supabase
     .from('Profiles')
     .select('id, "profileName", username, email, discord, role, notes, created, updated, created_at, updated_at')
-    .order('profileName', { ascending: true });
+    .order('profileName', { ascending:true });
   if (error) throw error;
-  return (data || []).map(row => ({
-    id: row.id,
-    row: row.id, // alias for old code that expected .row
+  return (data||[]).map(row=>({
+    id: row.id, row: row.id,
     username: row.username ?? row.profileName ?? '',
     email: row.email ?? '',
     discord: row.discord ?? '',
@@ -2496,22 +704,20 @@ async function getProfiles() {
     updated: row.updated ?? row.updated_at ?? null
   }));
 }
-
-async function addProfile(payload) {
+async function addProfile(payload){
   const rec = {
-    username: (payload && payload.username) ?? '',
-    email:    (payload && payload.email) ?? '',
-    discord:  (payload && payload.discord) ?? '',
-    role:     (payload && payload.role) ?? '',
-    notes:    (payload && payload.notes) ?? ''
+    username: payload?.username ?? '',
+    email:    payload?.email    ?? '',
+    discord:  payload?.discord  ?? '',
+    role:     payload?.role     ?? '',
+    notes:    payload?.notes    ?? ''
   };
   const { data, error } = await supabase.from('Profiles').insert([rec]).select('id');
   if (error) throw error;
-  return { ok: true, id: data?.[0]?.id };
+  return { ok:true, id: data?.[0]?.id };
 }
-
-async function updateProfiles(rows) {
-  const updates = (rows || []).map(r => ({
+async function updateProfiles(rows){
+  const updates = (rows||[]).map(r=>({
     id: r.row,
     username: r.username ?? null,
     email:    r.email ?? null,
@@ -2519,196 +725,183 @@ async function updateProfiles(rows) {
     role:     r.role ?? null,
     notes:    r.notes ?? null
   }));
-  const { error } = await supabase.from('Profiles').upsert(updates, { onConflict: 'id' });
+  const { error } = await supabase.from('Profiles').upsert(updates, { onConflict:'id' });
   if (error) throw error;
-  return { ok: true };
+  return { ok:true };
 }
-
-async function removeProfile(row) {
+async function removeProfile(row){
   const id = Number(row);
   const { error } = await supabase.from('Profiles').delete().eq('id', id);
   if (error) throw error;
-  return { ok: true };
+  return { ok:true };
 }
-
-// Expose globals with the same names your UI already calls
-window.apiGetProfiles    = getProfiles;
-window.apiAddProfile     = addProfile;
+window.apiGetProfiles = getProfiles;
+window.apiAddProfile = addProfile;
 window.apiUpdateProfiles = updateProfiles;
-window.apiRemoveProfile  = removeProfile;
+window.apiRemoveProfile = removeProfile;
 
-// --- Discord auth (Supabase OAuth) ---
-const discordBtn = document.getElementById('discordBtn');
-if (discordBtn) {
-  discordBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    supabase.auth.signInWithOAuth({
-      provider: 'discord',
-      options: { redirectTo: window.location.origin } // e.g., https://onetracking.netlify.app
-    });
-  });
-}
-
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    location.reload();
-  });
-}
-
-// Gate/app toggle based on Supabase session (no localStorage)
-async function refreshGate() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) { try { showApp(); } catch {} } else { try { showGate(); } catch {} }
-}
-supabase.auth.onAuthStateChange(() => refreshGate());
-
-// ---- Helpers from Supabase ----
-window.computeInventoryFromSupabase = async function(){
-  const { data: orders, error } = await supabase
-    .from('Orders')
-    .select('id, item, buy_price, sell_price');
-  if (error) throw error;
-  const map = new Map();
-  for (const r of (orders||[])){
-    const item = String(r.item||'').trim();
-    if (!item) continue;
-    const buy = Number(r.buy_price||0);
-    const sold = Number(r.sell_price||0) > 0;
-    const m = map.get(item) || { item, boughtQty:0, soldQty:0, costAll:0, costSold:0 };
-    m.boughtQty += 1;
-    m.costAll += buy;
-    if (sold){ m.soldQty += 1; m.costSold += buy; }
-    map.set(item, m);
-  }
-  const { data: items, error: e2 } = await supabase.from('Items').select('item_name, market');
-  if (e2) throw e2;
-  const mv = Object.fromEntries((items||[]).map(x => [x.item_name, Number(x.market||0)]));
+function collectProfileEdits(){
   const out = [];
-  for (const [k,v] of map.entries()){
-    const onHand = Math.max(0, (v.boughtQty||0) - (v.soldQty||0));
-    if (onHand <= 0) continue;
-    const onHandCost = (v.costAll||0) - (v.costSold||0);
-    const estPrice = mv[k] || 0;
+  document.querySelectorAll('#pro_tbl tbody tr[data-row]').forEach(tr=>{
+    const row = Number(tr.getAttribute('data-row'));
     out.push({
-      item: k,
-      onHandQty: onHand,
-      onHandCost: onHandCost,
-      estPrice: estPrice,
-      estValue: estPrice * onHand
+      row,
+      username: cellVal(tr.children[0]).trim(),
+      email: cellVal(tr.children[1]).trim(),
+      discord: cellVal(tr.children[2]).trim(),
+      role: cellVal(tr.children[3]).trim(),
+      notes: cellVal(tr.children[4]).trim()
     });
+  });
+  return out;
+}
+
+async function renderProfiles(){
+  const tb = document.querySelector('#pro_tbl tbody');
+  tb.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
+  try{
+    const rows = await getProfiles();
+    tb.innerHTML = rows.map(r=>`
+      <tr data-row="${r.row}">
+        <td><input type="text" value="${escapeHtml(r.username||'')}"></td>
+        <td><input type="text" value="${escapeHtml(r.email||'')}"></td>
+        <td><input type="text" value="${escapeHtml(r.discord||'')}"></td>
+        <td><input type="text" value="${escapeHtml(r.role||'')}"></td>
+        <td><input type="text" value="${escapeHtml(r.notes||'')}"></td>
+        <td class="td-actions">
+          <button class="btn" data-act="del" data-row="${r.row}" type="button">Delete</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" class="muted">No profiles</td></tr>';
+  }catch(err){
+    console.error(err);
+    tb.innerHTML = '<tr><td colspan="6">Error loading profiles</td></tr>';
   }
-  return { items: out };
-};
+}
+window.renderProfiles = renderProfiles;
 
-window.supabaseGetLongestHoldDays = async function(itemName){
-  const nm = String(itemName||'').trim();
-  if (!nm) return 0;
-  const { data: rows, error } = await supabase
-    .from('Orders')
-    .select('order_date, item, sell_price')
-    .is('order_date', null);  // this filter may not behave as expected with nulls
-
-  // Fallback: if null filter didn't work, fetch all and filter client-side
-  const arr = (error || !rows) ? (await supabase.from('Orders').select('order_date, item, sell_price')).data || [] : rows;
-  let oldest = null;
-  for (const r of arr){
-    if (Number(r.sell_price||0) > 0) continue; // only on-hand
-    if (!r.order_date) continue;
-    if (!oldest || new Date(r.order_date) < new Date(oldest)) oldest = r.order_date;
-  }
-  if (!oldest) return 0;
-  const d0 = new Date(new Date().toDateString());
-  const d1 = new Date(new Date(oldest).toDateString());
-  return Math.max(0, Math.round((d0 - d1)/(24*3600*1000)));
-};
-
-window.supabaseGetStatsV2 = async function(rangeKey, itemFilter, fromISO, toISO){
-  // Very lightweight stats (can be expanded later)
-  const { data: rows, error } = await supabase
-    .from('Orders')
-    .select('order_date, item, buy_price, sell_price, sale_date, sale_location, shipping, fees_pct, bought_from');
-  if (error) throw error;
-
-  // Window
-  const today = new Date();
-  let start=null, end=null;
-  function dFloor(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-  function minusDays(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
-  if (rangeKey === 'mtd'){ start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; }
-  else if (rangeKey === 'last30'){ start=minusDays(30); end=today; }
-  else if (rangeKey === 'last7'){ start=minusDays(7); end=today; }
-  else if (rangeKey === 'custom'){ if (fromISO) start=new Date(fromISO); if (toISO) end=new Date(toISO); }
-
-  function inWindow(d){
-    if (!d) return false;
-    const t = dFloor(new Date(d)).getTime();
-    if (start && t < dFloor(start).getTime()) return false;
-    if (end && t > dFloor(end).getTime()) return false;
-    return true;
-  }
-
-  function moneyCompact(n) {
-    const x = Number.isFinite(Number(n)) ? Number(n) : 0;
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        notation: 'compact',
-        maximumFractionDigits: 2
-      }).format(x);
-    } catch (_) {
-      // very old browsers: fallback
-      return '$' + x.toFixed(2);
+// add profile
+document.getElementById('pro_add_btn')?.addEventListener('click', ()=>{
+  const payload = {
+    username: document.getElementById('pro_username').value.trim(),
+    email:    document.getElementById('pro_email').value.trim(),
+    discord:  document.getElementById('pro_discord').value.trim(),
+    role:     document.getElementById('pro_role').value.trim(),
+    notes:    document.getElementById('pro_notes').value.trim()
+  };
+  (async()=>{
+    try{
+      await (window.apiAddProfile? apiAddProfile(payload) : addProfile(payload));
+      ['pro_username','pro_email','pro_discord','pro_role','pro_notes'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
+      renderProfiles(); toast('Profile added');
+    }catch(err){
+      toast((err && err.message) || 'Add failed');
     }
-  }
+  })();
+});
 
-  const filt = String(itemFilter||'').trim().toLowerCase();
-  const outRows = (rows||[]).filter(r => !filt || String(r.item||'').trim().toLowerCase()===filt);
+// save edited profiles
+document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{
+  const rows = collectProfileEdits();
+  (async()=>{
+    try{
+      await (window.apiUpdateProfiles? apiUpdateProfiles(rows) : updateProfiles(rows));
+      renderProfiles(); toast('Saved');
+    }catch(err){
+      toast((err && err.message) || 'Save failed');
+    }
+  })();
+});
 
-  const summary = { totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 };
-  let dSellSum=0, dSellCount=0;
+// delete profile (row button)
+document.querySelector('#pro_tbl tbody')?.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-act="del"]');
+  if (!btn) return;
+  const row = Number(btn.getAttribute('data-row'));
+  if (!row || !confirm('Delete this profile row?')) return;
+  (async()=>{
+    try{
+      await (window.apiRemoveProfile? apiRemoveProfile(row) : removeProfile(row));
+      renderProfiles(); toast('Deleted');
+    }catch(err){
+      toast((err && err.message) || 'Delete failed');
+    }
+  })();
+});
 
-  for (const r of outRows){
-    const orderDate = r.order_date ? new Date(r.order_date) : null;
-    const sell = Number(r.sell_price||0);
-    const saleDate = r.sale_date ? new Date(r.sale_date) : null;
+// Small helper to trigger a download of JSON
+function downloadJSON(filename, data){
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
 
-    const purchaseInRange = (start || end) ? inWindow(orderDate) : true;
-    const sold = sell > 0 && saleDate;
-    const saleInRange = sold ? ((start || end) ? inWindow(saleDate) : true) : false;
-
-    if (purchaseInRange){ summary.totalQty+=1; }
-    if (saleInRange){
-      const feePct = Number(r.fees_pct||0);
-      const feeAmt = sell * (isFinite(feePct) ? feePct : 0);
-      summary.soldQty += 1;
-      summary.revenue += sell;
-      summary.fees += feeAmt;
-      summary.shipping += Number(r.shipping||0);
-      summary.costSold += Number(r.buy_price||0);
-
-      if (orderDate && saleDate){
-        const diff = Math.max(0, Math.round((dFloor(saleDate)-dFloor(orderDate))/(24*3600*1000)));
-        dSellSum += diff; dSellCount += 1;
+// Import profiles
+document.getElementById('profiles_import_input')?.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (!file) { e.target.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    try{
+      const text = String(ev.target?.result || '').trim();
+      const json = JSON.parse(text);
+      if (!Array.isArray(json)) throw new Error('JSON must be an array of profiles');
+      try{
+        for (const row of json){
+          await (window.apiAddProfile ? apiAddProfile(row) : addProfile(row));
+        }
+        renderProfiles(); toast('Import complete'); e.target.value='';
+      }catch(err){
+        toast((err && err.message) || 'Import failed'); e.target.value='';
       }
+    }catch(_){
+      toast('Invalid JSON'); e.target.value='';
     }
+  };
+  reader.readAsText(file);
+});
+
+// Export profiles
+document.getElementById('profiles_export_btn')?.addEventListener('click', async ()=>{
+  try{
+    const data = await (window.apiGetProfiles ? apiGetProfiles() : getProfiles());
+    downloadJSON('profiles.json', data||[]);
+    toast('Export ready');
+  }catch(err){
+    toast((err && err.message) || 'Export failed');
   }
+});
 
-  summary.netProfit = summary.revenue + summary.costSold - summary.fees - summary.shipping;
-  summary.asp = summary.soldQty ? (summary.revenue / summary.soldQty) : 0;
-  const cogsAbs = Math.abs(summary.costSold || 0);
-  summary.roiPct = cogsAbs ? ((summary.netProfit / cogsAbs) * 100) : 0;
-  summary.marginPct = summary.revenue ? ((summary.netProfit / summary.revenue) * 100) : 0;
-  summary.avgDaysToSell = dSellCount ? (dSellSum / dSellCount) : 0;
+// Initial wires
+wireDBButtons();
 
-  return { summary, breakdownByItem: [], charts: {}, monthly: [] };
-};
-
-// Call refreshGate safely (wrap TLA for broad compatibility)
-(async () => { await refreshGate(); })();
+// Load initial view
+(async ()=>{
+  await refreshGate();
+  loadDatabase();
+})();
 </script>
+
+<!-- Datalists for items & retailers (used in Order Book inputs) -->
+<datalist id="items"></datalist>
+<datalist id="retailers"></datalist>
+
+<script type="module">
+// Populate datalists for convenience
+import { createClient as _createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const supabase2 = _createClient('https://dbxrlauvarqzvejvizew.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM');
+async function refreshDatalists(){
+  const { data: items } = await supabase2.from('Items').select('item_name').order('item_name', { ascending:true });
+  const { data: retailers } = await supabase2.from('Retailers').select('name').order('name', { ascending:true });
+  const itemsEl = document.getElementById('items'); const retailersEl = document.getElementById('retailers');
+  if (itemsEl) itemsEl.innerHTML = (items||[]).map(x=>`<option value="${escapeHtml(x.item_name||'')}">`).join('');
+  if (retailersEl) retailersEl.innerHTML = (retailers||[]).map(x=>`<option value="${escapeHtml(x.name||'')}">`).join('');
+}
+refreshDatalists();
+</script>
+
 </body>
 </html>
-
