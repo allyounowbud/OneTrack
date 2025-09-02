@@ -2453,11 +2453,15 @@ document.getElementById('profiles_export_btn')?.addEventListener('click', async 
 // When switching to Profiles tab, load data
 document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   tab.addEventListener('click', () => {
-    if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
+      if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
   });
 });
+</script>
+
+<script type="module">
 // Inline: no local file imports (avoids path/MIME issues)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 
 // 🔧 REPLACE these two with your values (Supabase → Settings → API)
 const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co'; // <-- no trailing slash
