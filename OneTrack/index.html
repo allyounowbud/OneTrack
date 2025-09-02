@@ -2456,8 +2456,6 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
     if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
   });
 });
-
-<script type="module">
 // Inline: no local file imports (avoids path/MIME issues)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -2701,7 +2699,6 @@ window.supabaseGetStatsV2 = async function(rangeKey, itemFilter, fromISO, toISO)
 // Call refreshGate safely (wrap TLA for broad compatibility)
 (async () => { await refreshGate(); })();
 </script>
-
 </body>
 </html>
 
