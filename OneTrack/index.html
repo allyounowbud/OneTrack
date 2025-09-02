@@ -2980,7 +2980,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
 
   // 🔧 REPLACE these two with your values (Supabase → Settings → API)
   const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co'; // <-- no trailing slash
-  const SUPABASE_ANON_KEY = '...';  // keep your key
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';  // keep your key
 
   // Create the client and expose globally for legacy code that checks window.supabase
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
