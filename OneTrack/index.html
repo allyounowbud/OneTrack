@@ -2365,7 +2365,20 @@ if (tr.closest('#db_sheet_tbl')) {
   market: cellVal(tr.children[1])
 };
 
-          (async()=>{ try{ await (window.apiAddProfile?apiAddProfile(payload):addProfile(payload)); document.getElementById('pro_username').value=''; document.getElementById('pro_email').value=''; document.getElementById('pro_discord').value=''; document.getElementById('pro_role').value=''; document.getElementById('pro_notes').value=''; renderProfiles(); toast('Profile added'); }catch(err){ toast((err && err.message)||'Add failed'); } })();
+(async()=>{
+  try {
+    await (window.apiAddProfile ? apiAddProfile(payload) : addProfile(payload));
+    document.getElementById('pro_username').value='';
+    document.getElementById('pro_email').value='';
+    document.getElementById('pro_discord').value='';
+    document.getElementById('pro_role').value='';
+    document.getElementById('pro_notes').value='';
+    renderProfiles();
+    toast('Profile added');
+  } catch(err) {
+    toast((err && err.message) || 'Add failed');
+  }
+})();   // <-- end of IIFE
 
 
 document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{
