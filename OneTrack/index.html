@@ -2982,9 +2982,6 @@ if (tr.closest('#db_sheet_tbl')) {
   });
   return out;
 }      
-  async function apiGetProfiles(){
-  return fetch(`${GAS_API_URL}?route=api&action=getProfiles`).then(r=>r.json());
-}
 async function apiAddProfile(payload){
   const qs = new URLSearchParams({ route:'api', action:'addProfile', payload: JSON.stringify(payload) });
   return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
@@ -3132,7 +3129,26 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   });
 });
 
-
     </script>
+    
+    <script type="module">
+  import { getProfiles } from './lib/supabaseApi.js';
+
+  // Keep the same global name your app already calls:
+  window.apiGetProfiles = async function apiGetProfiles() {
+    return await getProfiles();
+  };
+
+  // OPTIONAL quick test: fetch and log profiles on load
+  // (you can remove this after you see it working)
+  // try {
+  //   const rows = await window.apiGetProfiles();
+  //   console.log('profiles from supabase:', rows);
+  // } catch (err) {
+  //   console.error('getProfiles failed', err);
+  //   alert('Profiles load failed: ' + (err?.message || err));
+  // }
+</script>
+
   </body>
 </html>
