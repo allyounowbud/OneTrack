@@ -3115,54 +3115,90 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
 });
 
     </script>
-    
-    <script type="module">
-  import { getProfiles } from './lib/supabaseApi.js';
-
-  // Keep the same global name your app already calls:
-  window.apiGetProfiles = async function apiGetProfiles() {
-    return await getProfiles();
-  };
-
-  // OPTIONAL quick test: fetch and log profiles on load
-  // (you can remove this after you see it working)
-  // try {
-  //   const rows = await window.apiGetProfiles();
-  //   console.log('profiles from supabase:', rows);
-  // } catch (err) {
-  //   console.error('getProfiles failed', err);
-  //   alert('Profiles load failed: ' + (err?.message || err));
-  // }
-</script>
 
     <script type="module">
-  import { supabase } from './lib/supabaseClient.js';
-  import {
-    getProfiles,
-    addProfile,
-    updateProfiles,
-    removeProfile
-  } from './lib/supabaseApi.js';
+  // Inline: no local file imports (avoids path/MIME issues)
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-  // expose the same globals your app already uses
+  // 🔧 REPLACE these two with your values (Supabase → Settings → API)
+  const SUPABASE_URL = 'https://<PROJECT-REF>.supabase.co';
+  const SUPABASE_ANON_KEY = '<YOUR-ANON-KEY>';
+
+  // Create the client
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // --- Minimal API: Profiles (keeps your old function names) ---
+  async function getProfiles() {
+    const { data, error } = await supabase
+      .from('Profiles')
+      .select('id, "profileName", username, email, discord, role, notes, created, updated, created_at, updated_at')
+      .order('profileName', { ascending: true });
+    if (error) throw error;
+    return (data || []).map(row => ({
+      id: row.id,
+      row: row.id, // alias for old code that expected .row
+      username: row.username ?? row.profileName ?? '',
+      email: row.email ?? '',
+      discord: row.discord ?? '',
+      role: row.role ?? '',
+      notes: row.notes ?? '',
+      created: row.created ?? row.created_at ?? null,
+      updated: row.updated ?? row.updated_at ?? null
+    }));
+  }
+
+  async function addProfile(payload) {
+    const rec = {
+      username: payload?.username ?? '',
+      email:    payload?.email ?? '',
+      discord:  payload?.discord ?? '',
+      role:     payload?.role ?? '',
+      notes:    payload?.notes ?? ''
+    };
+    const { data, error } = await supabase.from('Profiles').insert([rec]).select('id');
+    if (error) throw error;
+    return { ok: true, id: data?.[0]?.id };
+  }
+
+  async function updateProfiles(rows) {
+    const updates = (rows || []).map(r => ({
+      id: r.row,
+      username: r.username ?? null,
+      email:    r.email ?? null,
+      discord:  r.discord ?? null,
+      role:     r.role ?? null,
+      notes:    r.notes ?? null
+    }));
+    const { error } = await supabase.from('Profiles').upsert(updates, { onConflict: 'id' });
+    if (error) throw error;
+    return { ok: true };
+  }
+
+  async function removeProfile(row) {
+    const id = Number(row);
+    const { error } = await supabase.from('Profiles').delete().eq('id', id);
+    if (error) throw error;
+    return { ok: true };
+  }
+
+  // Expose globals with the same names your UI already calls
   window.apiGetProfiles    = getProfiles;
   window.apiAddProfile     = addProfile;
   window.apiUpdateProfiles = updateProfiles;
   window.apiRemoveProfile  = removeProfile;
 
-  // discord login
+  // --- Discord auth (Supabase OAuth) ---
   const discordBtn = document.getElementById('discordBtn');
   if (discordBtn) {
     discordBtn.addEventListener('click', (e) => {
       e.preventDefault();
       supabase.auth.signInWithOAuth({
         provider: 'discord',
-        options: { redirectTo: window.location.origin }
+        options: { redirectTo: window.location.origin } // e.g., https://onetracking.netlify.app
       });
     });
   }
 
-  // logout
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -3171,7 +3207,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
     });
   }
 
-  // gate/app toggle based on session
+  // Gate/app toggle based on Supabase session (no localStorage)
   async function refreshGate() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) { try { showApp(); } catch {} } else { try { showGate(); } catch {} }
@@ -3179,6 +3215,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   supabase.auth.onAuthStateChange(() => refreshGate());
   await refreshGate();
 </script>
+
 
 
   </body>
