@@ -1101,9 +1101,7 @@ document.querySelectorAll('.tab').forEach(el=>{
           const blob = await resp.blob();
           return await new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.readAsDataURL(blob); });
         }catch(_){
-          try{ return await new Promise(resolve=>{ google.script.run.withSuccessHandler(resolve).fetchImageAsDataUrl(url); }); }
-          catch(_e){ return url; }
-        }
+          return url;}
       }
 
       function fmtPct(x) {
@@ -1528,141 +1526,77 @@ if (msMarket){
 }
 
       // ==== Inventory ====
-      function refreshInventory(){
-        const pill = document.getElementById('inv_totals');
-        const tb   = document.querySelector('#inv_tbl tbody');
-        pill.textContent = 'Loading…'; tb.innerHTML = '';
-        google.script.run
-          .withSuccessHandler(res=>{
-            if (!res || res.error){ pill.textContent = 'Error loading inventory'; if (res && res.error) console.error(res.error); return; }
-            const t = res.totals || {qty:0, cost:0, estValue:0, unrealized:0};
-pill.innerHTML = `On hand: <b>${t.qty}</b> • Cost: <b>${moneyCompact(t.cost)}</b> • Est. Value: <b>${moneyCompact(t.estValue)}</b> • Unrealized: <b>${moneyCompact(t.unrealized)}</b>`;
-const rows = (res.items || []).slice().sort((a,b)=>{
-  // default: On Hand desc, then Est. Value desc
-  const d = (b.onHandQty||0) - (a.onHandQty||0);
-  if (d) return d;
-  return (b.estValue||0) - (a.estValue||0);
-});
-tb.innerHTML = rows.map(r => `
-  <tr>
-    <td>${escapeHtml(r.item)}</td>
-    <td>${r.onHandQty}</td>
-    <td>${money(r.avgCost)}</td>
-    <td>${money(r.onHandCost)}</td>
-    <td>${money(r.estPrice)}</td>
-    <td>${money(r.estValue)}</td>
-  </tr>
-`).join('');
-
-            document.querySelectorAll('#inv_tbl thead th.sort').forEach(th=>{
-              th.onclick = ()=>{
-                const key = th.dataset.key;
-                const asc = !(th.dataset.asc==='1'); th.dataset.asc = asc ? '1' : '0';
-                const sorted = [...rows].sort((a,b)=>{
-                  const va=a[key], vb=b[key];
-                  if(typeof va==='string') return asc?va.localeCompare(vb):vb.localeCompare(va);
-                  return asc?(va-vb):(vb-va);
-                });
-                tb.innerHTML = sorted.map(r => `
-                  <tr>
-                    <td>${escapeHtml(r.item)}</td>
-                    <td>${r.onHandQty}</td>
-                    <td>${money(r.avgCost)}</td>
-                    <td>${money(r.onHandCost)}</td>
-                    <td>${money(r.estPrice)}</td>
-                    <td>${money(r.estValue)}</td>
-                  </tr>
-                `).join('');
-              };
-            });
-          })
-          .withFailureHandler(err=>{ pill.textContent='Error loading inventory'; showErr(err); })
-          .getInventory();
+      
+function refreshInventory(){
+  const pill = document.getElementById('inv_totals');
+  const tb   = document.querySelector('#inv_tbl tbody');
+  pill.textContent = 'Loading…'; tb.innerHTML = '';
+  (async ()=>{
+    try{
+      const { data: orders, error: oerr } = await window.supabase.from('Orders').select('item, buy_price, sell_price');
+      if (oerr) throw oerr;
+      const { data: meta } = await window.supabase.from('Items').select('item_name, market');
+      const mv = new Map((meta||[]).map(r=>[r.item_name, Number(r.market||0)]));
+      const onHand = {};
+      for(const r of (orders||[])){
+        const sold = (r.sell_price != null && Number(r.sell_price) > 0);
+        if (!sold){
+          const k = r.item || '';
+          if (!onHand[k]) onHand[k] = { qty:0, cost:0 };
+          onHand[k].qty += 1;
+          onHand[k].cost += Number(r.buy_price || 0);
+        }
       }
-
-      // ==== Database ====
-      function normDBShape(raw){
-  const x = (raw && typeof raw === 'object') ? raw : {};
-  const pick = (...keys)=> keys.map(k=> x[k]).find(v => Array.isArray(v));
-
-  let items        = pick('items','db_items','itemRows','productItems') || [];
-  let retailers    = pick('retailers','stores','vendors','retailerRows') || [];
-  let marketplaces = pick('marketplaces','platforms','salePlatforms','markets','marketRows') || [];
-
-  // Canonicalize item fields: keep only name + market (market value)
-  items = items.map(r => {
-    if (typeof r === 'string') return { row:null, name:r, market:'' };
-    const market = r.market ?? r.market_value ?? r.marketValue ?? r.price ?? r.mkt ?? '';
-    return { row: r.row ?? null, name: r.name ?? String(r.item ?? ''), market };
-  });
-
-  retailers = retailers.map(r => typeof r === 'string' ? ({ row:null, name:r }) : r);
-
-  // Canonicalize fee to decimal (0–1)
-  function toFeeDecimal(v){
-    if (v == null) return 0;
-    let s = String(v).trim();
-    if (s.endsWith('%')) s = s.slice(0,-1);
-    let n = Number(s);
-    if (!isFinite(n)) return 0;
-    if (n > 1) n = n/100; // accept 10.9 => 0.109
-    return n;
-  }
-  marketplaces = marketplaces.map(r => {
-    if (typeof r === 'string') return { row:null, name:r, fee:0 };
-    const raw = r.fee ?? r.feePct ?? r.fee_percent ?? r.feePercent ?? r.feeRate ?? r.pct ?? 0;
-    return { ...r, fee: toFeeDecimal(raw) };
-  });
-
-  return { items, retailers, marketplaces };
+      let totalQty=0,totalCost=0,totalEst=0;
+      const rows = Object.entries(onHand).map(([item,v])=>{
+        const est = (mv.get(item)||0) * v.qty;
+        totalQty += v.qty; totalCost += v.cost; totalEst += est;
+        return { item, onHandQty:v.qty, onHandCost: v.cost, estPrice: (mv.get(item)||0), estValue: est };
+      }).sort((a,b)=> b.onHandQty - a.onHandQty || b.estValue - a.estValue);
+      if (tb){
+        tb.innerHTML = rows.map(x => `
+          <tr>
+            <td>${escapeHtml(x.item)}</td>
+            <td>${x.onHandQty}</td>
+            <td>${moneyCompact(Math.abs(x.onHandCost))}</td>
+            <td>${moneyCompact(x.estPrice)}</td>
+            <td>${moneyCompact(x.estValue)}</td>
+          </tr>
+        `).join('');
+      }
+      if (pill) pill.innerHTML = \`On hand: <b>\${totalQty}</b> • Cost: <b>\${moneyCompact(Math.abs(totalCost))}</b> • Est. Value: <b>\${moneyCompact(totalEst)}</b> • Unrealized: <b>\${moneyCompact(totalEst + totalCost)}</b>\`;
+    }catch(err){
+      console.error('refreshInventory (Supabase) failed:', err);
+      if (pill) pill.textContent = 'Error loading inventory';
+    }
+  })();
 }
 
-
-      async function loadDatabase(){
-  try { renderDBCollapsed(); } catch(_){}
-
-  // Load DB first (fast path for Items/Retailers/Platforms)
-  try{
-    const raw = await gas('getDatabaseFull');
-    DB_STATE = normDBShape(raw?.data || raw);
-    renderDBCollapsed();
-  }catch(err){
-    showErr(err || 'Database load error');
-  }
-
-  // Then (separately) fetch the sheet count; do NOT block the above
-  try{
-    const el0 = document.getElementById('db_sheet_count');
-    if (el0) el0.textContent = 'Loading…';
-
-    const sheet = await gas('getOrderBookEditable');
-    // The API may return a plain array or { rows: [...] }
-    const sheetRows = Array.isArray(sheet?.rows) ? sheet.rows : (Array.isArray(sheet) ? sheet : []);
-    const count = sheetRows.length;
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: ' + count;
-
-  }catch(err){
-    console.warn('getOrderBookEditable failed:', err);
-    const el = document.getElementById('db_sheet_count');
-    if (el) el.textContent = 'Rows: —';
-  }
-}
 
 
 
 
       async function ensureDBLoaded(){
   if (DB_STATE && Array.isArray(DB_STATE.items)) return DB_STATE;
-  try{
-    const raw = await gas('getDatabaseFull');
-    DB_STATE = normDBShape(raw?.data || raw);
-    return DB_STATE;
-  }catch(e){
-    console.error('getDatabaseFull failed:', e);
-    DB_STATE = { items:[], retailers:[], marketplaces:[] };
-    return DB_STATE;
-  }
+  
+    try{
+      const sb = window.supabase;
+      const { data: itemsRows } = await sb.from('Items').select('id, item_name, market');
+      const { data: retailersRows } = await sb.from('Retailers').select('id, retailers');
+      const { data: marketsRows } = await sb.from('Marketplaces').select('id, marketplaces, fee');
+      const raw = {
+        items: (itemsRows||[]).map(r => ({ row: r.id, name: r.item_name, market: r.market })),
+        retailers: (retailersRows||[]).map(r => ({ row: r.id, name: r.retailers })),
+        marketplaces: (marketsRows||[]).map(r => ({ row: r.id, name: r.marketplaces, fee: r.fee }))
+      };
+      DB_STATE = normDBShape(raw);
+      return DB_STATE;
+    }catch(e){
+      console.error('load DB (Supabase) failed:', e);
+      DB_STATE = { items:[], retailers:[], marketplaces:[] };
+      return DB_STATE;
+    }
+    
 }
 
       function renderDBCollapsed(){
@@ -1873,12 +1807,22 @@ function renderDBBody(section){
     const tb = document.querySelector('#db_sheet_tbl tbody');
     tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
 
-    google.script.run
-  .withSuccessHandler(data=>{
-    // Accept either { rows: [...] } or plain [...]
-    const rows = Array.isArray(data?.rows) ? data.rows.slice()
-               : (Array.isArray(data) ? data.slice() : []);
-
+    
+    (async ()=>{
+      try{
+        const { data: dataRows, error } = await window.supabase.from('Orders').select('id, order_date, item, buy_price, bought_from, sell_price, sale_date, sale_location, shipping').order('order_date', { ascending: false }).limit(500);
+        if (error) throw error;
+        const rows = (dataRows || []).map(r => ({
+          row: r.id,
+          order_date: r.order_date,
+          item: r.item,
+          buy_price: r.buy_price,
+          bought_from: r.bought_from,
+          sell_price: r.sell_price,
+          sale_date: r.sale_date,
+          sale_location: r.sale_location,
+          shipping: r.shipping
+        }));
         // newest by order_date, then by row desc
         rows.sort((a, b) => {
           const da = a.order_date || '';
@@ -2026,10 +1970,15 @@ if (!dbRoot.__wiredClicks) {
       const name   = get(tr.children[0]);
       const market = get(tr.children[1]);
       if (!name) { toast('Item is required'); return; }
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Item added ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .addDatabaseItem({ name, market });
+      
+     (async ()=>{
+       try{
+         const { data, error } = await window.supabase.from('Items').insert([{ item_name: name, market }]).select('id');
+         if (error) throw error;
+         toast('Item added ✔'); loadDatabase(); reopenDBTabAfterLoad('items');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
 
@@ -2037,10 +1986,15 @@ if (!dbRoot.__wiredClicks) {
     if (inTbl('#db_retail_tbl')) {
       const name = get(tr.children[0]);
       if (!name) { toast('Retailer name required'); return; }
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .addDatabaseRetailer(name);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Retailers').insert([{ retailers: name }]);
+         if (error) throw error;
+         toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
 
@@ -2049,10 +2003,15 @@ if (!dbRoot.__wiredClicks) {
       const name = get(tr.children[0]);
       const fee  = get(tr.children[1]);
       if (!name) { toast('Platform name required'); return; }
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .addDatabaseMarketplace({ name, fee });
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Marketplaces').insert([{ marketplaces: name, fee }]);
+         if (error) throw error;
+         toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
 
@@ -2069,10 +2028,25 @@ if (!dbRoot.__wiredClicks) {
         shipping:      get(tr.children[7])
       };
       if (!payload.item) { toast('Item is required'); return; }
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .addOrderBookRow(payload);
+      
+     (async ()=>{
+       try{
+         const rec = {
+           order_date: payload.order_date || null,
+           item: payload.item || null,
+           buy_price: payload.buy_price ?? null,
+           bought_from: payload.bought_from || null,
+           sell_price: payload.sell_price ?? null,
+           sale_date: payload.sale_date || null,
+           sale_location: payload.sale_location || null,
+           shipping: payload.shipping ?? null
+         };
+         const { error } = await window.supabase.from('Orders').insert([rec]);
+         if (error) throw error;
+         toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
   } // END pending SAVE
@@ -2088,20 +2062,30 @@ if (!dbRoot.__wiredClicks) {
       const name   = get(tr.children[0]);
       const market = get(tr.children[1]);
       if (!name) { toast('Item name required'); return; }
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Item updated ✔'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .updateDatabaseItems([{ row: rowId, name, market }]);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Items').update({ item_name: name, market }).eq('id', rowId);
+         if (error) throw error;
+         toast('Item updated ✔'); loadDatabase(); reopenDBTabAfterLoad('items');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
 
     if (inTbl('#db_retail_tbl')) {
       const name = get(tr.children[0]);
       if (!name) { toast('Retailer name required'); return; }
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Retailer updated ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .updateDatabaseRetailers([{ row: rowId, name }]);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Retailers').update({ retailers: name }).eq('id', rowId);
+         if (error) throw error;
+         toast('Retailer updated ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
 
@@ -2109,10 +2093,15 @@ if (!dbRoot.__wiredClicks) {
       const name = get(tr.children[0]);
       const fee  = get(tr.children[1]);
       if (!name) { toast('Platform name required'); return; }
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Platform updated ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .updateDatabaseMarketplaces([{ row: rowId, name, fee }]);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Marketplaces').update({ marketplaces: name, fee }).eq('id', rowId);
+         if (error) throw error;
+         toast('Platform updated ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
 
@@ -2128,10 +2117,25 @@ if (!dbRoot.__wiredClicks) {
         sale_location: get(tr.children[6]),
         shipping:      get(tr.children[7])
       };
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .updateOrderBookRows([row]);
+      
+     (async ()=>{
+       try{
+         const rec = {
+           order_date: row.order_date || null,
+           item: row.item || null,
+           buy_price: row.buy_price ?? null,
+           bought_from: row.bought_from || null,
+           sell_price: row.sell_price ?? null,
+           sale_date: row.sale_date || null,
+           sale_location: row.sale_location || null,
+           shipping: row.shipping ?? null
+         };
+         const { error } = await window.supabase.from('Orders').update(rec).eq('id', row.row);
+         if (error) throw error;
+         toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
   } // END UPDATE
@@ -2145,31 +2149,51 @@ if (!dbRoot.__wiredClicks) {
     if (!confirm('Delete this row?')) return;
 
     if (kind === 'items') {
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Item deleted'); loadDatabase(); reopenDBTabAfterLoad('items'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .removeDatabaseItem(row);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Items').delete().eq('id', row);
+         if (error) throw error;
+         toast('Item deleted'); loadDatabase(); reopenDBTabAfterLoad('items');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
     if (kind === 'retailers') {
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Retailer deleted'); loadDatabase(); reopenDBTabAfterLoad('retailers'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .removeDatabaseRetailer(row);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Retailers').delete().eq('id', row);
+         if (error) throw error;
+         toast('Retailer deleted'); loadDatabase(); reopenDBTabAfterLoad('retailers');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
     if (kind === 'marketplaces') {
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .removeDatabaseMarketplace(row);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Marketplaces').delete().eq('id', row);
+         if (error) throw error;
+         toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
       return;
     }
     if (kind === 'sheet') {
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .deleteOrderBookRows([row]);
+      
+     (async ()=>{
+       try{
+         const { error } = await window.supabase.from('Orders').delete().eq('id', row);
+         if (error) throw error;
+         toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet');
+       }catch(err){ alert(err?.message||err); }
+     })()
+     ;
       return;
     }
   } // END DELETE
@@ -2252,10 +2276,25 @@ if (tr.closest('#db_sheet_tbl')) {
     shipping:      cellVal(tr.children[7])
   };
   if (!row.row) return;
-  google.script.run
-    .withSuccessHandler(()=>{ toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet'); })
-    .withFailureHandler(err=>alert(err?.message||err))
-    .updateOrderBookRows([row]);
+  
+     (async ()=>{
+       try{
+         const rec = {
+           order_date: row.order_date || null,
+           item: row.item || null,
+           buy_price: row.buy_price ?? null,
+           bought_from: row.bought_from || null,
+           sell_price: row.sell_price ?? null,
+           sale_date: row.sale_date || null,
+           sale_location: row.sale_location || null,
+           shipping: row.shipping ?? null
+         };
+         const { error } = await window.supabase.from('Orders').update(rec).eq('id', row.row);
+         if (error) throw error;
+         toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
+       }catch(err){ alert(err?.message||err); }
+     })();
+     
   return;
 }
 
