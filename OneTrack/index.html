@@ -2366,7 +2366,7 @@ if (tr.closest('#db_sheet_tbl')) {
 };
 
           (async()=>{ try{ await (window.apiAddProfile?apiAddProfile(payload):addProfile(payload)); document.getElementById('pro_username').value=''; document.getElementById('pro_email').value=''; document.getElementById('pro_discord').value=''; document.getElementById('pro_role').value=''; document.getElementById('pro_notes').value=''; renderProfiles(); toast('Profile added'); }catch(err){ toast((err && err.message)||'Add failed'); } })();
-});
+
 
 document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{
   const rows = collectProfileEdits();
