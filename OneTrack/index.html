@@ -1823,70 +1823,74 @@ function renderDBBody(section){
 
     
     (async ()=>{
-      try{
-        const { data: dataRows, error } = await window.supabase.from('Orders').select('id, order_date, item, buy_price, bought_from, sell_price, sale_date, sale_location, shipping').order('order_date', { ascending: false }).limit(500);
-        if (error) throw error;
-        const rows = (dataRows || []).map(r => ({
-          row: r.id,
-          order_date: r.order_date,
-          item: r.item,
-          buy_price: r.buy_price,
-          bought_from: r.bought_from,
-          sell_price: r.sell_price,
-          sale_date: r.sale_date,
-          sale_location: r.sale_location,
-          shipping: r.shipping
-        }));
-        // newest by order_date, then by row desc
-        rows.sort((a, b) => {
-          const da = a.order_date || '';
-          const db = b.order_date || '';
-          if (da && db) {
-            const cmp = db.localeCompare(da);
-            if (cmp !== 0) return cmp;
-          } else if (da || db) {
-            return db ? 1 : -1;
-          }
-          return (b.row || 0) - (a.row || 0);
-        });
+  try {
+    const { data: dataRows, error } = await window.supabase
+      .from('Orders')
+      .select('id, order_date, item, buy_price, bought_from, sell_price, sale_date, sale_location, shipping')
+      .order('order_date', { ascending: false })
+      .limit(500);
 
-        const elCnt = document.getElementById('db_sheet_count');
-        if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
+    if (error) throw error;
 
-        const mktOptions = (Array.isArray((META && META.marketplaces)) ? META.marketplaces : [])
-          .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+    const rows = (dataRows || []).map(r => ({
+      row: r.id,
+      order_date: r.order_date,
+      item: r.item,
+      buy_price: r.buy_price,
+      bought_from: r.bought_from,
+      sell_price: r.sell_price,
+      sale_date: r.sale_date,
+      sale_location: r.sale_location,
+      shipping: r.shipping
+    }));
 
-        tb.innerHTML = rows.map(r => `
-  <tr data-row="${r.row}">
-    <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
-    <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
-    <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
-    <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
-    <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
-    <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-    <td><select>${mktOptions}</select></td>
-    <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
-    <td class="td-actions">
-      <button class="db-row-update" data-row="${r.row}" type="button">Save</button>
-      <button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button>
-    </td>
-  </tr>
-`).join('');
+    // sort, update counts, render rows...
+    rows.sort((a, b) => {
+      const da = a.order_date || '';
+      const db = b.order_date || '';
+      if (da && db) {
+        const cmp = db.localeCompare(da);
+        if (cmp !== 0) return cmp;
+      } else if (da || db) {
+        return db ? 1 : -1;
+      }
+      return (b.row || 0) - (a.row || 0);
+    });
 
+    const elCnt = document.getElementById('db_sheet_count');
+    if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
 
+    const mktOptions = (Array.isArray((META && META.marketplaces)) ? META.marketplaces : [])
+      .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
-        // set saved sale_location after the <select> exists
-        Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
-          const sel = tr.children[6].querySelector('select');
-          if (sel) sel.value = rows[i]?.sale_location || '';
-        });
-      });
-      .withFailureHandler(err=>{
-        tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
-      })
-      .getOrderBookEditable();
-  } // ← close: else if (section === 'sheet')
-}   // ← close: function renderDBBody(section)
+    tb.innerHTML = rows.map(r => `
+      <tr data-row="${r.row}">
+        <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
+        <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
+        <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
+        <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
+        <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
+        <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
+        <td><select>${mktOptions}</select></td>
+        <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+        <td class="td-actions">
+          <button class="db-row-update" data-row="${r.row}" type="button">Save</button>
+          <button class="db-del" data-kind="sheet" data-row="${r.row}">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+
+    // restore sale_location values
+    Array.from(tb.querySelectorAll('tr')).forEach((tr, i) => {
+      const sel = tr.children[6].querySelector('select');
+      if (sel) sel.value = rows[i]?.sale_location || '';
+    });
+
+  } catch (err) {
+    tb.innerHTML = `<tr><td colspan="9">Error: ${escapeHtml(err && err.message ? err.message : String(err))}</td></tr>`;
+    console.error('Supabase fetch failed:', err);
+  }
+})();
 
       function wireDBButtons(){
   document.querySelectorAll('#database .db-section').forEach(sec=>{
