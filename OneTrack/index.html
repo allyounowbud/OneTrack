@@ -541,9 +541,7 @@
         </div>
         <p class="muted" style="margin-top:0">Sign in with Discord to gain access.</p>
         <div class="btn-row">
-          <a id="discordBtn" class="discord-btn"
-   href="https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec?route=discord_login"
-   target="_top" rel="noopener">Sign in with Discord</a>
+          <a id="discordBtn" class="discord-btn" href="#" rel="noopener">Sign in with Discord</a>
         </div>
         <div class="gate-foot"><span id="gateStatus" class="muted"></span></div>
       </div>
@@ -950,14 +948,12 @@
 
     <div id="toast" class="toast" style="display:none"></div>
 
-    <script>
-      // ===== Base URL / Netlify Function =====
+    
+<script>
+      
+// ===== Base URL =====
 const BASE_URL = location.origin;
-// Netlify function base
-const GAS_API_URL = "/.netlify/functions/sheet";
-// Apps Script "exec" base — used to redeem the session hash
-const GAS_EXEC_DIRECT = "https://script.google.com/macros/s/AKfycbyOQO9GluAXG7fmtBxMUTQ01pz7k9zIHGrYvq4SQZ2_sqn5hPLyEU_y-j3U7m1UcE_8/exec";
-
+// No more GAS/Netlify proxy — using Supabase directly
 
 
       // ---- Global app state (must exist before any function can run) ----
@@ -1126,107 +1122,56 @@ function showApp(){
   // ensure Flex card user/branding bits are ready if user visits Flex first
   try { initFlexUserBits(); } catch(_){}
 }
-
-
       function showErr(err, fallback){
         const msg = (err && (err.error || err.message)) || (typeof err==='string' ? err : '') || (fallback || 'Something went wrong');
         alert(msg);
       }
 
-      // ===== Auth flow (Discord) =====
-// The button already points to your Apps Script auth URL in the HTML.
-// We only ensure it opens in the top frame.
-(function wireDiscord(){
-  const el = document.getElementById('discordBtn');
-  if (!el) return;
-  el.setAttribute('target','_top');
-})();
+    import { supabase } from './lib/supabaseClient.js';
 
+  // If your Discord link has an href to Apps Script, change the element to:
+  // <a id="discordBtn" href="#" class="discord-btn">Sign in with Discord</a>
 
-
-      function setGateStatus(text){ const s = document.getElementById('gateStatus'); if (s) s.textContent = text || ''; }
-      async function redeemJson(url){
-        try{
-          const r = await fetch(url, { method:'GET', credentials:'same-origin', cache:'no-store', headers:{'Accept':'application/json'} });
-          const txt = await r.text();
-          try { return JSON.parse(txt); } catch { return { ok:false, error:'Bad JSON: ' + txt.slice(0,160) }; }
-        }catch(err){ return { ok:false, error:String(err && (err.message || err)) }; }
-      }
-      (function redeemIfNeeded(){
-  const m = (location.hash || '').match(/#sess=([^&]+)/);
-  if (!m) return;
-
-  // Show the app immediately while we redeem the code.
-  try { showApp(); } catch(_) {}
-
-  const code = decodeURIComponent(m[1]);
-  setGateStatus('Finalizing sign-in…');
-
-  (async ()=>{
-    // 1) Try Netlify function
-    let data = await redeemJson(`${GAS_API_URL}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
-
-    // 2) If Netlify doesn't support it (Unknown action), fall back to Apps Script
-    if (!data || !data.profile) {
-      const msg = (data && data.error || '').toLowerCase();
-      if (msg.includes('unknown action')) {
-        data = await redeemJson(`${GAS_EXEC_DIRECT}?route=api&action=redeem_session_code&code=${encodeURIComponent(code)}`);
-      }
-    }
-
-    console.log('redeem_session_code response:', data);
-
-    if (data && data.profile) {
-      try { localStorage.setItem('orders_user', JSON.stringify(data.profile)); } catch(_){}
-      history.replaceState(null, '', location.pathname + location.search); // clear #sess
-      showApp();
-      return;
-    }
-
-    setGateStatus('Sign-in failed' + (data && data.error ? `: ${data.error}` : ''));
-    try { history.replaceState(null, '', location.pathname + location.search); } catch(_) {}
-    showGate();
-  })();
-})();
-
-      
-      const __HAS_SESS_HASH = /#sess=/.test(location.hash || '');
-  ;(function safeBoot(){
-  try {
-    // Always start hidden to avoid flicker/overlap
-    const gate = document.getElementById('authGate');
-    const app  = document.getElementById('appRoot');
-    if (gate) gate.style.display = 'none';
-    if (app)  app.style.display  = 'none';
-
-    // If we arrive with a session code in the hash, show the app immediately
-    // while redemption runs (redeemIfNeeded stores the profile + clears the hash).
-    if (__HAS_SESS_HASH) { showApp(); return; }
-
-    // Otherwise, decide by saved session
-    (getSession() ? showApp : showGate)();
-  } catch (e) {
-    console.error('Boot error:', e);
-    showGate();
-  }
-
-  // One more pass next tick in case something else flipped visibility
-  setTimeout(() => {
-    try { (getSession() ? showApp : showGate)(); } catch(_) { showGate(); }
-  }, 0);
-})();
-
-window.addEventListener('storage', (e) => {
-  if (e.key === 'orders_user') {
-    try { (getSession() ? showApp : showGate)(); } catch(_) {}
-  }
-});
-
-      // Logout
-      logoutBtn?.addEventListener('click', ()=>{
-        try { localStorage.removeItem('orders_user'); } catch(_){}
-        showGate();
+  // 1) Click → start Discord OAuth through Supabase
+  const discordBtn = document.getElementById('discordBtn');
+  if (discordBtn) {
+    discordBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: { redirectTo: window.location.origin } // e.g. https://onetracking.netlify.app
       });
+    });
+  }
+
+  // 2) Show gate/app based on Supabase session (no localStorage needed)
+  async function refreshGate() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      // You can update a “signed-in as …” label here if you have one
+      try { showApp(); } catch(_) {}
+    } else {
+      try { showGate(); } catch(_) {}
+    }
+  }
+
+  // 3) React to login/logout
+  supabase.auth.onAuthStateChange(() => {
+    refreshGate();
+  });
+
+  // Initial render on page load
+  await refreshGate();
+
+  // 4) Logout
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      // refresh UI after logout
+      await refreshGate();
+    });
+  }
 
       // ===== Tabs =====
       function openTab(id){
