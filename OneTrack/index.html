@@ -1564,7 +1564,20 @@ function refreshInventory(){
           </tr>
         `).join('');
       }
-      if (pill) pill.innerHTML = \`On hand: <b>\${totalQty}</b> • Cost: <b>\${moneyCompact(Math.abs(totalCost))}</b> • Est. Value: <b>\${moneyCompact(totalEst)}</b> • Unrealized: <b>\${moneyCompact(totalEst + totalCost)}</b>\`;
+      const _n = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+const qty = _n(totalQty);
+const cost = Math.abs(_n(totalCost));
+const est  = _n(totalEst);
+const unreal = est + _n(totalCost);
+
+if (pill) {
+  pill.innerHTML =
+    'On hand: <b>' + qty + '</b>' +
+    ' • Cost: <b>' + moneyCompact(cost) + '</b>' +
+    ' • Est. Value: <b>' + moneyCompact(est) + '</b>' +
+    ' • Unrealized: <b>' + moneyCompact(unreal) + '</b>';
+}
+
     }catch(err){
       console.error('refreshInventory (Supabase) failed:', err);
       if (pill) pill.textContent = 'Error loading inventory';
@@ -2553,6 +2566,8 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
     return { items: out };
   };
 
+  
+
   window.supabaseGetLongestHoldDays = async function(itemName){
     const nm = String(itemName||'').trim();
     if (!nm) return 0;
@@ -2614,6 +2629,21 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
       if (end && t > dFloor(end).getTime()) return false;
       return true;
     }
+
+    function moneyCompact(n) {
+  const x = Number.isFinite(Number(n)) ? Number(n) : 0;
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      notation: 'compact',
+      maximumFractionDigits: 2
+    }).format(x);
+  } catch (_) {
+    // very old browsers: fallback
+    return '$' + x.toFixed(2);
+  }
+}
 
     const filt = String(itemFilter||'').trim().toLowerCase();
     const outRows = (rows||[]).filter(r => !filt || String(r.item||'').trim().toLowerCase()===filt);
