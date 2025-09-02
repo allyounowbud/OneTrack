@@ -2441,282 +2441,268 @@ document.getElementById('profiles_import_input')?.addEventListener('change', (e)
 
 // Export flow
 document.getElementById('profiles_export_btn')?.addEventListener('click', async ()=>{
-  try{
-    const data = await (window.apiGetProfiles? apiGetProfiles() : getProfiles());
-    downloadJSON('profiles.json', data||[]);
+  try {
+    const data = await (window.apiGetProfiles ? apiGetProfiles() : getProfiles());
+    downloadJSON('profiles.json', data || []);
     toast('Export ready');
-  }catch(err){ toast((err && err.message) || 'Export failed'); }
+  } catch (err) {
+    toast((err && err.message) || 'Export failed');
+  }
 });
+
 // When switching to Profiles tab, load data
-document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
+document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+  tab.addEventListener('click', () => {
     if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
   });
 });
-
-  </script>
-  <script type="module">
-  // Inline: no local file imports (avoids path/MIME issues)
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-  // 🔧 REPLACE these two with your values (Supabase → Settings → API)
-  const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co'; // <-- no trailing slash
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';  // keep your key
-
-  // Create the client and expose globally for legacy code that checks window.supabase
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  window.supabase = supabase;
-
-
-  // --- Minimal API: Profiles (keeps your old function names) ---
-  async function getProfiles() {
-    const { data, error } = await supabase
-      .from('Profiles')
-      .select('id, "profileName", username, email, discord, role, notes, created, updated, created_at, updated_at')
-      .order('profileName', { ascending: true });
-    if (error) throw error;
-    return (data || []).map(row => ({
-      id: row.id,
-      row: row.id, // alias for old code that expected .row
-      username: row.username ?? row.profileName ?? '',
-      email: row.email ?? '',
-      discord: row.discord ?? '',
-      role: row.role ?? '',
-      notes: row.notes ?? '',
-      created: row.created ?? row.created_at ?? null,
-      updated: row.updated ?? row.updated_at ?? null
-    }));
-  }
-
-  async function addProfile(payload) {
-    const rec = {
-      username: (payload && payload.username) ?? '',
-      email:    (payload && payload.email) ?? '',
-      discord:  (payload && payload.discord) ?? '',
-      role:     (payload && payload.role) ?? '',
-      notes:    (payload && payload.notes) ?? ''
-    };
-    const { data, error } = await supabase.from('Profiles').insert([rec]).select('id');
-    if (error) throw error;
-    return { ok: true, id: data?.[0]?.id };
-  }
-
-  async function updateProfiles(rows) {
-    const updates = (rows || []).map(r => ({
-      id: r.row,
-      username: r.username ?? null,
-      email:    r.email ?? null,
-      discord:  r.discord ?? null,
-      role:     r.role ?? null,
-      notes:    r.notes ?? null
-    }));
-    const { error } = await supabase.from('Profiles').upsert(updates, { onConflict: 'id' });
-    if (error) throw error;
-    return { ok: true };
-  }
-
-  async function removeProfile(row) {
-    const id = Number(row);
-    const { error } = await supabase.from('Profiles').delete().eq('id', id);
-    if (error) throw error;
-    return { ok: true };
-  }
-
-  // Expose globals with the same names your UI already calls
-  window.apiGetProfiles    = getProfiles;
-  window.apiAddProfile     = addProfile;
-  window.apiUpdateProfiles = updateProfiles;
-  window.apiRemoveProfile  = removeProfile;
-
-  // --- Discord auth (Supabase OAuth) ---
-  const discordBtn = document.getElementById('discordBtn');
-  if (discordBtn) {
-    discordBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      supabase.auth.signInWithOAuth({
-        provider: 'discord',
-        options: { redirectTo: window.location.origin } // e.g., https://onetracking.netlify.app
-      });
-    });
-  }
-
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      location.reload();
-    });
-  }
-
-  // Gate/app toggle based on Supabase session (no localStorage)
-  async function refreshGate() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) { try { showApp(); } catch {} } else { try { showGate(); } catch {} }
-  }
-  supabase.auth.onAuthStateChange(() => refreshGate());
-  
-  // ---- Helpers from Supabase ----
-  window.computeInventoryFromSupabase = async function(){
-    const { data: orders, error } = await supabase
-      .from('Orders')
-      .select('id, item, buy_price, sell_price');
-    if (error) throw error;
-    const map = new Map();
-    for (const r of (orders||[])){
-      const item = String(r.item||'').trim();
-      if (!item) continue;
-      const buy = Number(r.buy_price||0);
-      const sold = Number(r.sell_price||0) > 0;
-      const m = map.get(item) || { item, boughtQty:0, soldQty:0, costAll:0, costSold:0 };
-      m.boughtQty += 1;
-      m.costAll += buy;
-      if (sold){ m.soldQty += 1; m.costSold += buy; }
-      map.set(item, m);
-    }
-    const { data: items, error: e2 } = await supabase.from('Items').select('item_name, market');
-    if (e2) throw e2;
-    const mv = Object.fromEntries((items||[]).map(x => [x.item_name, Number(x.market||0)]));
-    const out = [];
-    for (const [k,v] of map.entries()){
-      const onHand = Math.max(0, (v.boughtQty||0) - (v.soldQty||0));
-      if (onHand <= 0) continue;
-      const onHandCost = (v.costAll||0) - (v.costSold||0);
-      const estPrice = mv[k] || 0;
-      out.push({
-        item: k,
-        onHandQty: onHand,
-        onHandCost: onHandCost,
-        estPrice: estPrice,
-        estValue: estPrice * onHand
-      });
-    }
-    return { items: out };
-  };
-
-  
-
-  window.supabaseGetLongestHoldDays = async function(itemName){
-    const nm = String(itemName||'').trim();
-    if (!nm) return 0;
-    const { data: rows, error } = await supabase
-      .from('Orders')
-      .select('order_date, item, sell_price')
-      .is('order_date', null)  // can't, so we'll filter client-side
-    ;
-    // If 'is' doesn't work due to null semantics, just select all:
-    if (error || !rows) {
-      const { data: all } = await supabase.from('Orders').select('order_date, item, sell_price');
-      const arr = all||[];
-      let oldest = null;
-      for (const r of arr){
-        if (Number(r.sell_price||0) > 0) continue; // only on-hand
-        if (!r.order_date) continue;
-        if (!oldest || new Date(r.order_date) < new Date(oldest)) oldest = r.order_date;
-      }
-      if (!oldest) return 0;
-      const d0 = new Date(new Date().toDateString());
-      const d1 = new Date(new Date(oldest).toDateString());
-      return Math.max(0, Math.round((d0 - d1)/(24*3600*1000)));
-    } else {
-      const arr = rows||[];
-      let oldest = null;
-      for (const r of arr){
-        if (Number(r.sell_price||0) > 0) continue;
-        if (!r.order_date) continue;
-        if (!oldest || new Date(r.order_date) < new Date(oldest)) oldest = r.order_date;
-      }
-      if (!oldest) return 0;
-      const d0 = new Date(new Date().toDateString());
-      const d1 = new Date(new Date(oldest).toDateString());
-      return Math.max(0, Math.round((d0 - d1)/(24*3600*1000)));
-    }
-  };
-
-  window.supabaseGetStatsV2 = async function(rangeKey, itemFilter, fromISO, toISO){
-    // Very lightweight stats (can be expanded later)
-    const { data: rows, error } = await supabase
-      .from('Orders')
-      .select('order_date, item, buy_price, sell_price, sale_date, sale_location, shipping, fees_pct, bought_from');
-    if (error) throw error;
-
-    // Window
-    const today = new Date();
-    let start=null, end=null;
-    function dFloor(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-    function minusDays(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
-    if (rangeKey === 'mtd'){ start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; }
-    else if (rangeKey === 'last30'){ start=minusDays(30); end=today; }
-    else if (rangeKey === 'last7'){ start=minusDays(7); end=today; }
-    else if (rangeKey === 'custom'){ if (fromISO) start=new Date(fromISO); if (toISO) end=new Date(toISO); }
-
-    function inWindow(d){
-      if (!d) return false;
-      const t = dFloor(new Date(d)).getTime();
-      if (start && t < dFloor(start).getTime()) return false;
-      if (end && t > dFloor(end).getTime()) return false;
-      return true;
-    }
-
-    function moneyCompact(n) {
-  const x = Number.isFinite(Number(n)) ? Number(n) : 0;
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      notation: 'compact',
-      maximumFractionDigits: 2
-    }).format(x);
-  } catch (_) {
-    // very old browsers: fallback
-    return '$' + x.toFixed(2);
-  }
-}
-
-    const filt = String(itemFilter||'').trim().toLowerCase();
-    const outRows = (rows||[]).filter(r => !filt || String(r.item||'').trim().toLowerCase()===filt);
-
-    let summary = { totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 };
-    let dSellSum=0, dSellCount=0;
-
-    for (const r of outRows){
-      const orderDate = r.order_date ? new Date(r.order_date) : null;
-      const sell = Number(r.sell_price||0);
-      const saleDate = r.sale_date ? new Date(r.sale_date) : null;
-
-      const purchaseInRange = (start || end) ? inWindow(orderDate) : true;
-      const sold = sell > 0 && saleDate;
-      const saleInRange = sold ? ((start || end) ? inWindow(saleDate) : true) : false;
-
-      if (purchaseInRange){ summary.totalQty+=1; }
-      if (saleInRange){
-        const feePct = Number(r.fees_pct||0);
-        const feeAmt = sell * (isFinite(feePct) ? feePct : 0);
-        summary.soldQty += 1;
-        summary.revenue += sell;
-        summary.fees += feeAmt;
-        summary.shipping += Number(r.shipping||0);
-        summary.costSold += Number(r.buy_price||0);
-
-        if (orderDate && saleDate){
-          const diff = Math.max(0, Math.round((dFloor(saleDate)-dFloor(orderDate))/(24*3600*1000)));
-          dSellSum += diff; dSellCount += 1;
-        }
-      }
-    }
-
-    summary.netProfit = summary.revenue + summary.costSold - summary.fees - summary.shipping;
-    summary.asp = summary.soldQty ? (summary.revenue / summary.soldQty) : 0;
-    const cogsAbs = Math.abs(summary.costSold || 0);
-    summary.roiPct = cogsAbs ? ((summary.netProfit / cogsAbs) * 100) : 0;
-    summary.marginPct = summary.revenue ? ((summary.netProfit / summary.revenue) * 100) : 0;
-    summary.avgDaysToSell = dSellCount ? (dSellSum / dSellCount) : 0;
-
-    return { summary, breakdownByItem: [], charts: {}, monthly: [] };
-  };
-await refreshGate();
 </script>
 
+<script type="module">
+// Inline: no local file imports (avoids path/MIME issues)
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// 🔧 REPLACE these two with your values (Supabase → Settings → API)
+const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co'; // <-- no trailing slash
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';
 
-  </body>
+// Create the client and expose globally for legacy code that checks window.supabase
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+window.supabase = supabase;
+
+// --- Minimal API: Profiles (keeps your old function names) ---
+async function getProfiles() {
+  const { data, error } = await supabase
+    .from('Profiles')
+    .select('id, "profileName", username, email, discord, role, notes, created, updated, created_at, updated_at')
+    .order('profileName', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(row => ({
+    id: row.id,
+    row: row.id, // alias for old code that expected .row
+    username: row.username ?? row.profileName ?? '',
+    email: row.email ?? '',
+    discord: row.discord ?? '',
+    role: row.role ?? '',
+    notes: row.notes ?? '',
+    created: row.created ?? row.created_at ?? null,
+    updated: row.updated ?? row.updated_at ?? null
+  }));
+}
+
+async function addProfile(payload) {
+  const rec = {
+    username: (payload && payload.username) ?? '',
+    email:    (payload && payload.email) ?? '',
+    discord:  (payload && payload.discord) ?? '',
+    role:     (payload && payload.role) ?? '',
+    notes:    (payload && payload.notes) ?? ''
+  };
+  const { data, error } = await supabase.from('Profiles').insert([rec]).select('id');
+  if (error) throw error;
+  return { ok: true, id: data?.[0]?.id };
+}
+
+async function updateProfiles(rows) {
+  const updates = (rows || []).map(r => ({
+    id: r.row,
+    username: r.username ?? null,
+    email:    r.email ?? null,
+    discord:  r.discord ?? null,
+    role:     r.role ?? null,
+    notes:    r.notes ?? null
+  }));
+  const { error } = await supabase.from('Profiles').upsert(updates, { onConflict: 'id' });
+  if (error) throw error;
+  return { ok: true };
+}
+
+async function removeProfile(row) {
+  const id = Number(row);
+  const { error } = await supabase.from('Profiles').delete().eq('id', id);
+  if (error) throw error;
+  return { ok: true };
+}
+
+// Expose globals with the same names your UI already calls
+window.apiGetProfiles    = getProfiles;
+window.apiAddProfile     = addProfile;
+window.apiUpdateProfiles = updateProfiles;
+window.apiRemoveProfile  = removeProfile;
+
+// --- Discord auth (Supabase OAuth) ---
+const discordBtn = document.getElementById('discordBtn');
+if (discordBtn) {
+  discordBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    supabase.auth.signInWithOAuth({
+      provider: 'discord',
+      options: { redirectTo: window.location.origin } // e.g., https://onetracking.netlify.app
+    });
+  });
+}
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    location.reload();
+  });
+}
+
+// Gate/app toggle based on Supabase session (no localStorage)
+async function refreshGate() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) { try { showApp(); } catch {} } else { try { showGate(); } catch {} }
+}
+supabase.auth.onAuthStateChange(() => refreshGate());
+
+// ---- Helpers from Supabase ----
+window.computeInventoryFromSupabase = async function(){
+  const { data: orders, error } = await supabase
+    .from('Orders')
+    .select('id, item, buy_price, sell_price');
+  if (error) throw error;
+  const map = new Map();
+  for (const r of (orders||[])){
+    const item = String(r.item||'').trim();
+    if (!item) continue;
+    const buy = Number(r.buy_price||0);
+    const sold = Number(r.sell_price||0) > 0;
+    const m = map.get(item) || { item, boughtQty:0, soldQty:0, costAll:0, costSold:0 };
+    m.boughtQty += 1;
+    m.costAll += buy;
+    if (sold){ m.soldQty += 1; m.costSold += buy; }
+    map.set(item, m);
+  }
+  const { data: items, error: e2 } = await supabase.from('Items').select('item_name, market');
+  if (e2) throw e2;
+  const mv = Object.fromEntries((items||[]).map(x => [x.item_name, Number(x.market||0)]));
+  const out = [];
+  for (const [k,v] of map.entries()){
+    const onHand = Math.max(0, (v.boughtQty||0) - (v.soldQty||0));
+    if (onHand <= 0) continue;
+    const onHandCost = (v.costAll||0) - (v.costSold||0);
+    const estPrice = mv[k] || 0;
+    out.push({
+      item: k,
+      onHandQty: onHand,
+      onHandCost: onHandCost,
+      estPrice: estPrice,
+      estValue: estPrice * onHand
+    });
+  }
+  return { items: out };
+};
+
+window.supabaseGetLongestHoldDays = async function(itemName){
+  const nm = String(itemName||'').trim();
+  if (!nm) return 0;
+  const { data: rows, error } = await supabase
+    .from('Orders')
+    .select('order_date, item, sell_price')
+    .is('order_date', null);  // this filter may not behave as expected with nulls
+
+  // Fallback: if null filter didn't work, fetch all and filter client-side
+  const arr = (error || !rows) ? (await supabase.from('Orders').select('order_date, item, sell_price')).data || [] : rows;
+  let oldest = null;
+  for (const r of arr){
+    if (Number(r.sell_price||0) > 0) continue; // only on-hand
+    if (!r.order_date) continue;
+    if (!oldest || new Date(r.order_date) < new Date(oldest)) oldest = r.order_date;
+  }
+  if (!oldest) return 0;
+  const d0 = new Date(new Date().toDateString());
+  const d1 = new Date(new Date(oldest).toDateString());
+  return Math.max(0, Math.round((d0 - d1)/(24*3600*1000)));
+};
+
+window.supabaseGetStatsV2 = async function(rangeKey, itemFilter, fromISO, toISO){
+  // Very lightweight stats (can be expanded later)
+  const { data: rows, error } = await supabase
+    .from('Orders')
+    .select('order_date, item, buy_price, sell_price, sale_date, sale_location, shipping, fees_pct, bought_from');
+  if (error) throw error;
+
+  // Window
+  const today = new Date();
+  let start=null, end=null;
+  function dFloor(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function minusDays(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
+  if (rangeKey === 'mtd'){ start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; }
+  else if (rangeKey === 'last30'){ start=minusDays(30); end=today; }
+  else if (rangeKey === 'last7'){ start=minusDays(7); end=today; }
+  else if (rangeKey === 'custom'){ if (fromISO) start=new Date(fromISO); if (toISO) end=new Date(toISO); }
+
+  function inWindow(d){
+    if (!d) return false;
+    const t = dFloor(new Date(d)).getTime();
+    if (start && t < dFloor(start).getTime()) return false;
+    if (end && t > dFloor(end).getTime()) return false;
+    return true;
+  }
+
+  function moneyCompact(n) {
+    const x = Number.isFinite(Number(n)) ? Number(n) : 0;
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        notation: 'compact',
+        maximumFractionDigits: 2
+      }).format(x);
+    } catch (_) {
+      // very old browsers: fallback
+      return '$' + x.toFixed(2);
+    }
+  }
+
+  const filt = String(itemFilter||'').trim().toLowerCase();
+  const outRows = (rows||[]).filter(r => !filt || String(r.item||'').trim().toLowerCase()===filt);
+
+  const summary = { totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 };
+  let dSellSum=0, dSellCount=0;
+
+  for (const r of outRows){
+    const orderDate = r.order_date ? new Date(r.order_date) : null;
+    const sell = Number(r.sell_price||0);
+    const saleDate = r.sale_date ? new Date(r.sale_date) : null;
+
+    const purchaseInRange = (start || end) ? inWindow(orderDate) : true;
+    const sold = sell > 0 && saleDate;
+    const saleInRange = sold ? ((start || end) ? inWindow(saleDate) : true) : false;
+
+    if (purchaseInRange){ summary.totalQty+=1; }
+    if (saleInRange){
+      const feePct = Number(r.fees_pct||0);
+      const feeAmt = sell * (isFinite(feePct) ? feePct : 0);
+      summary.soldQty += 1;
+      summary.revenue += sell;
+      summary.fees += feeAmt;
+      summary.shipping += Number(r.shipping||0);
+      summary.costSold += Number(r.buy_price||0);
+
+      if (orderDate && saleDate){
+        const diff = Math.max(0, Math.round((dFloor(saleDate)-dFloor(orderDate))/(24*3600*1000)));
+        dSellSum += diff; dSellCount += 1;
+      }
+    }
+  }
+
+  summary.netProfit = summary.revenue + summary.costSold - summary.fees - summary.shipping;
+  summary.asp = summary.soldQty ? (summary.revenue / summary.soldQty) : 0;
+  const cogsAbs = Math.abs(summary.costSold || 0);
+  summary.roiPct = cogsAbs ? ((summary.netProfit / cogsAbs) * 100) : 0;
+  summary.marginPct = summary.revenue ? ((summary.netProfit / summary.revenue) * 100) : 0;
+  summary.avgDaysToSell = dSellCount ? (dSellSum / dSellCount) : 0;
+
+  return { summary, breakdownByItem: [], charts: {}, monthly: [] };
+};
+
+// Call refreshGate safely (wrap TLA for broad compatibility)
+(async () => { await refreshGate(); })();
+</script>
+
+</body>
 </html>
+
