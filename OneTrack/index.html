@@ -2926,19 +2926,54 @@ if (tr.closest('#db_sheet_tbl')) {
     });
   });
   return out;
-}      
-async function apiAddProfile(payload){
-  const qs = new URLSearchParams({ route:'api', action:'addProfile', payload: JSON.stringify(payload) });
-  return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
 }
-async function apiUpdateProfiles(rows){
-  const qs = new URLSearchParams({ route:'api', action:'updateProfiles', rows: JSON.stringify(rows) });
-  return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
-}
-async function apiRemoveProfile(row){
-  const qs = new URLSearchParams({ route:'api', action:'removeProfile', row: String(row) });
-  return fetch(`${GAS_API_URL}?${qs}`).then(r=>r.json());
-}
+
+  
+<script type="module">
+  import { supabase } from './lib/supabaseClient.js';
+  import { getProfiles, addProfile, updateProfiles, removeProfile } from './lib/supabaseApi.js';
+
+  // Wire Discord button
+  const btn = document.getElementById('discordBtn');
+  if (btn) {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: { redirectTo: window.location.origin }
+      });
+    });
+  }
+
+  // Keep your old global names so the rest of your UI keeps working
+  window.apiGetProfiles = async function apiGetProfiles() {
+    return await getProfiles();
+  };
+  window.apiAddProfile = async function apiAddProfile(payload) {
+    return await addProfile(payload);
+  };
+  window.apiUpdateProfiles = async function apiUpdateProfiles(rows) {
+    return await updateProfiles(rows);
+  };
+  window.apiRemoveProfile = async function apiRemoveProfile(row) {
+    return await removeProfile(row); // row is the primary key id now
+  };
+
+  // Optional: show who’s logged in / sign out button you already have
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      location.reload();
+    });
+  }
+
+  // Re-render app on login/logout (if you have gate logic)
+  supabase.auth.onAuthStateChange(() => {
+    // Your existing showGate/showApp logic can live here if needed
+    // e.g., after login: window.apiGetProfiles().then(renderProfiles)
+  });
+
 
 // === Profiles UI ===
 let PRO_CACHE = [];
