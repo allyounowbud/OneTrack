@@ -2456,9 +2456,17 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
       if (tab.getAttribute('data-tab') === 'profiles') renderProfiles();
   });
 });
+</script>
 
+<script type="module">
 // Inline: no local file imports (avoids path/MIME issues)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// ... keep ALL your Supabase code here ...
+// const SUPABASE_URL = '...'
+// const supabase = createClient(...)
+// window.apiGetProfiles = ...
+// (async () => { await refreshGate(); })();
 
 
 // 🔧 REPLACE these two with your values (Supabase → Settings → API)
