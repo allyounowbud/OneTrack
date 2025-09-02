@@ -994,8 +994,8 @@ window.gas = function(){ return Promise.reject('Apps Script backend disabled'); 
       const savedTheme = localStorage.getItem('orders_theme') || 'dark';
       setTheme(savedTheme);
 
-      themeBtn?.addEventListener('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
-      gateThemeBtn?.addEventListener('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
+      (themeBtn && themeBtn.addEventListener)('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
+      (gateThemeBtn && gateThemeBtn.addEventListener)('click', ()=> setTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'));
 
       function setTheme(mode){
         document.body.dataset.theme = mode;
@@ -1124,12 +1124,12 @@ function moneyCompact(n){
 
       function cellVal(td){
         const el = td && td.querySelector ? td.querySelector('input,select') : null;
-        return (el ? el.value : (td?.textContent || '')).trim();
+        return (el ? el.value : ((td && td.textContent) || '')).trim();
       }
 
       function getFeePctFor(market){
   try{
-    const pct = META?.feeTable?.[market]?.pct;
+    const pct = (META && META.feeTable)?.[market]?.pct;
     return (typeof pct === 'number' && isFinite(pct) && pct>=0) ? pct : 0;
   }catch(_){ return 0; }
 }
@@ -1246,7 +1246,7 @@ if (msMarket){
           const hint     = document.getElementById('st_hint');
 
           function updateCustomUI(){
-            const isCustom = (rangeSel?.value === 'custom');
+            const isCustom = ((rangeSel && rangeSel.value) === 'custom');
             if (fromInp && toInp) { fromInp.disabled = toInp.disabled = !isCustom; }
             if (hint) hint.textContent = isCustom ? 'Pick a From/To date and click Apply' : '';
           }
@@ -1635,19 +1635,20 @@ function refreshInventory(){
     const scEl = document.getElementById('db_sheet_count');
     if (scEl) scEl.textContent = 'Loading…';
 
-    google.script.run
-      .withSuccessHandler(sheet => {
-        const n = Array.isArray(sheet?.rows) ? sheet.rows.length : 0;
-        const target = document.getElementById('db_sheet_count');
-        if (target) target.textContent = 'Rows: ' + n;
-      })
-      .withFailureHandler(() => {
-        const target = document.getElementById('db_sheet_count');
-        if (target) target.textContent = 'Rows: —';
-      })
-      .getOrderBookEditable();
-
-    wireDBButtons();
+    
+(async () => {
+  try {
+    const { count, error } = await window.supabase
+      .from('Orders')
+      .select('id', { count: 'exact', head: true });
+    if (error) throw error;
+    const target = document.getElementById('db_sheet_count');
+    if (target) target.textContent = 'Rows: ' + (count || 0);
+  } catch (_err) {
+    const target = document.getElementById('db_sheet_count');
+    if (target) target.textContent = 'Rows: —';
+  }
+})();wireDBButtons();
   }catch(err){
     alert('Database render error: ' + (err && err.message ? err.message : err));
     console.error(err);
@@ -1670,7 +1671,7 @@ function renderDBBody(section){
 
     // explicit uppercase header rows
     it.forEach(x => {
-      const nm = (x?.name || '').trim();
+      const nm = ((x && x.name) || '').trim();
       if (!nm) return;
       const isCat = (nm === nm.toUpperCase()) && /[A-Z]{2}/.test(nm.replace(/[^A-Z]/g,''));
       if (isCat) { headerCats.add(nm); ensureCat(nm); }
@@ -1679,7 +1680,7 @@ function renderDBBody(section){
     // assign to categories
     let currentCat = null;
     it.forEach(x => {
-      const nm = (x?.name || '').trim();
+      const nm = ((x && x.name) || '').trim();
       if (!nm) return;
 
       const isCat = (nm === nm.toUpperCase()) && /[A-Z]{2}/.test(nm.replace(/[^A-Z]/g,''));
@@ -1839,7 +1840,7 @@ function renderDBBody(section){
         const elCnt = document.getElementById('db_sheet_count');
         if (elCnt) elCnt.textContent = 'Rows: ' + rows.length;
 
-        const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+        const mktOptions = (Array.isArray((META && META.marketplaces)) ? META.marketplaces : [])
           .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
         tb.innerHTML = rows.map(r => `
@@ -1976,7 +1977,7 @@ if (!dbRoot.__wiredClicks) {
          const { data, error } = await window.supabase.from('Items').insert([{ item_name: name, market }]).select('id');
          if (error) throw error;
          toast('Item added ✔'); loadDatabase(); reopenDBTabAfterLoad('items');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -1992,7 +1993,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Retailers').insert([{ retailers: name }]);
          if (error) throw error;
          toast('Retailer added ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2009,7 +2010,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Marketplaces').insert([{ marketplaces: name, fee }]);
          if (error) throw error;
          toast('Platform added ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2044,7 +2045,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Orders').insert([rec]);
          if (error) throw error;
          toast('Order added ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2055,7 +2056,7 @@ if (!dbRoot.__wiredClicks) {
   const updBtn = ev.target.closest('button.db-row-update');
   if (updBtn) {
     const tr   = updBtn.closest('tr');
-    const rowId = Number(tr?.dataset?.row || 0);
+    const rowId = Number((tr && tr.dataset)?.row || 0);
     if (!rowId) return;
 
     if (inTbl('#db_items_tbl')) {
@@ -2068,7 +2069,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Items').update({ item_name: name, market }).eq('id', rowId);
          if (error) throw error;
          toast('Item updated ✔'); loadDatabase(); reopenDBTabAfterLoad('items');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2083,7 +2084,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Retailers').update({ retailers: name }).eq('id', rowId);
          if (error) throw error;
          toast('Retailer updated ✔'); loadDatabase(); reopenDBTabAfterLoad('retailers');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2099,7 +2100,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Marketplaces').update({ marketplaces: name, fee }).eq('id', rowId);
          if (error) throw error;
          toast('Platform updated ✔'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2133,7 +2134,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Orders').update(rec).eq('id', row.row);
          if (error) throw error;
          toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2155,7 +2156,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Items').delete().eq('id', row);
          if (error) throw error;
          toast('Item deleted'); loadDatabase(); reopenDBTabAfterLoad('items');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2167,7 +2168,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Retailers').delete().eq('id', row);
          if (error) throw error;
          toast('Retailer deleted'); loadDatabase(); reopenDBTabAfterLoad('retailers');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2179,7 +2180,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Marketplaces').delete().eq('id', row);
          if (error) throw error;
          toast('Platform deleted'); loadDatabase(); reopenDBTabAfterLoad('marketplaces');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
       return;
@@ -2191,7 +2192,7 @@ if (!dbRoot.__wiredClicks) {
          const { error } = await window.supabase.from('Orders').delete().eq('id', row);
          if (error) throw error;
          toast('Row deleted'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })()
      ;
       return;
@@ -2292,7 +2293,7 @@ if (tr.closest('#db_sheet_tbl')) {
          const { error } = await window.supabase.from('Orders').update(rec).eq('id', row.row);
          if (error) throw error;
          toast('Order updated ✔'); loadDatabase(); reopenDBTabAfterLoad('sheet');
-       }catch(err){ alert(err?.message||err); }
+       }catch(err){ alert((err && err.message)||err); }
      })();
      
   return;
@@ -2306,7 +2307,7 @@ if (tr.closest('#db_sheet_tbl')) {
   const tr = document.createElement('tr');
   tr.className='__pending';
 
-  const mktOptions = (Array.isArray(META?.marketplaces) ? META.marketplaces : [])
+  const mktOptions = (Array.isArray((META && META.marketplaces)) ? META.marketplaces : [])
     .map(x => `<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
 
   tr.innerHTML = `
@@ -2347,563 +2348,12 @@ if (tr.closest('#db_sheet_tbl')) {
   market: cellVal(tr.children[1])
 };
 
-          google.script.run.withFailureHandler(err=>alert(err?.message||err)).addDatabaseItem(payload);
-          return null;
-        }
-        if (tr.dataset.row){
-          return {
-  row:     Number(tr.dataset.row),
-  name:    cellVal(tr.children[0]),
-  market:  cellVal(tr.children[1])
-};
-
-        }
-        return null;
-      })
-      .filter(Boolean);
-
-    if (rows.length){
-      google.script.run
-        .withSuccessHandler(()=>{ toast('Items updated ✔'); const wasOpen='items'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
-        .withFailureHandler(err=>alert(err?.message||err))
-        .updateDatabaseItems(rows);
-    }else{
-      toast('Saved ✔'); const wasOpen='items'; loadDatabase(); reopenDBTabAfterLoad(wasOpen);
-    }
-  }
-
-  if (section === 'retailers') {
-    const pend = Array.from(document.querySelectorAll('#db_retail_tbl tbody tr.__pending'));
-    pend.forEach(tr=>{
-      const name = cellVal(tr.children[0]);
-      if (name){
-        google.script.run.withFailureHandler(err=>alert(err?.message||err)).addDatabaseRetailer(name);
-      }
-    });
-    const rows = Array.from(document.querySelectorAll('#db_retail_tbl tbody tr'))
-      .filter(tr => !tr.classList.contains('__pending'))
-      .map(tr => ({ row: Number(tr.dataset.row), name: cellVal(tr.children[0]) }));
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Retailers updated ✔'); const wasOpen='retailers'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .updateDatabaseRetailers(rows);
-  }
-
-  if (section === 'marketplaces') {
-    const pend = Array.from(document.querySelectorAll('#db_mkt_tbl tbody tr.__pending'));
-    pend.forEach(tr=>{
-      const name = cellVal(tr.children[0]);
-      const fee  = cellVal(tr.children[1]);
-      if (name){
-        google.script.run.withFailureHandler(err=>alert(err?.message||err)).addDatabaseMarketplace({name, fee});
-      }
-    });
-    const rows = Array.from(document.querySelectorAll('#db_mkt_tbl tbody tr'))
-      .filter(tr => !tr.classList.contains('__pending'))
-      .map(tr => ({ row: Number(tr.dataset.row), name: cellVal(tr.children[0]), fee: cellVal(tr.children[1]) }));
-    google.script.run
-      .withSuccessHandler(()=>{ toast('Platforms updated ✔'); const wasOpen='marketplaces'; loadDatabase(); reopenDBTabAfterLoad(wasOpen); })
-      .withFailureHandler(err=>alert(err?.message||err))
-      .updateDatabaseMarketplaces(rows);
-  }
-
-
-        if (section === 'sheet') {
-          // new rows
-          const pend = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr.__pending'));
-          pend.forEach(tr=>{
-            const payload = {
-              order_date:   cellVal(tr.children[0]),
-              item:         cellVal(tr.children[1]),
-              buy_price:    cellVal(tr.children[2]),
-              bought_from:  cellVal(tr.children[3]),
-              sell_price:   cellVal(tr.children[4]),
-              sale_date:    cellVal(tr.children[5]),
-              sale_location:cellVal(tr.children[6]),
-              shipping:     cellVal(tr.children[7])
-            };
-            if (payload.item){
-              google.script.run.withFailureHandler(err=>alert(err?.message||err)).addOrderBookRow(payload);
-            }
-          });
-
-          // existing rows
-          const rows = Array.from(document.querySelectorAll('#db_sheet_tbl tbody tr'))
-            .filter(tr => !tr.classList.contains('__pending'))
-            .map(tr => ({
-              row:          Number(tr.dataset.row),
-              order_date:   cellVal(tr.children[0]),
-              item:         cellVal(tr.children[1]),
-              buy_price:    cellVal(tr.children[2]),
-              bought_from:  cellVal(tr.children[3]),
-              sell_price:   cellVal(tr.children[4]),
-              sale_date:    cellVal(tr.children[5]),
-              sale_location:cellVal(tr.children[6]),
-              shipping:     cellVal(tr.children[7])
-            }));
-
-          google.script.run
-            .withSuccessHandler(()=>{
-              toast('Sheet updated ✔');
-              const wasOpen='sheet';
-              loadDatabase(); 
-              reopenDBTabAfterLoad(wasOpen);
-            })
-            .withFailureHandler(err=>alert(err?.message||err))
-            .updateOrderBookRows(rows);
-        }
-      }
-
-      function reopenDBTabAfterLoad(which){
-        const tab = document.querySelector('.tab[data-tab="database"]');
-        if (tab){
-          tab.click();
-          setTimeout(()=>{
-            const sec = document.querySelector(`.db-section[data-section="${which}"]`);
-            if (sec){
-              const btn = sec.querySelector('[data-action="edit"]');
-              btn && btn.click();
-            }
-          }, 350);
-        }
-      }
-
-      // ===== FLEX =====
-      function initFlexDefaults(){
-        const fxRange = document.getElementById('fx_range');
-        const fxFrom  = document.getElementById('fx_from');
-        const fxTo    = document.getElementById('fx_to');
-        const fxItem  = document.getElementById('fx_item');
-
-        function updateFlexCustom(){
-          const isCustom = fxRange.value === 'custom';
-          fxFrom.disabled = fxTo.disabled = !isCustom;
-        }
-        fxRange.onchange = updateFlexCustom;
-        updateFlexCustom();
-
-        if (!fxItem.value && META && META.items && META.items.length){
-          fxItem.innerHTML = META.items.map(i=>`<option>${escapeHtml(i)}</option>`).join('');
-          fxItem.value = META.items[0];
-        }
-        initFlexUserBits();
-      }
-
-      function initFlexUserBits(){
-        const fxUser   = document.getElementById('fx_username');
-        const fxAv     = document.getElementById('fx_avatar');
-        const appTitle = document.getElementById('appTitle');
-        const sess = getSession();
-
-        if (sess){
-          const uname = sess.displayName || sess.username || 'User';
-          fxUser.textContent = sess.displayName || (sess.username || 'user');
-          if (sess.avatarUrl){
-            toDataUrl(sess.avatarUrl).then(dataUri => { fxAv.src = dataUri || sess.avatarUrl; })
-                                     .catch(() => { fxAv.src = sess.avatarUrl; });
-          } else {
-            fxAv.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
-          }
-          if (appTitle) appTitle.textContent = uname + "s OneTrack";
-        } else {
-          fxUser.textContent = '@username';
-          fxAv.src = 'https://cdn.discordapp.com/embed/avatars/0.png';
-          if (appTitle) appTitle.textContent = "OneTrack";
-        }
-      }
-
-      document.getElementById('fx_gen').addEventListener('click', runFlex);
-      document.getElementById('fx_save').addEventListener('click', saveFlexImage);
-      document.getElementById('fx_clear').addEventListener('click', clearFlexCard);
-
-      function runFlex(){
-        const range = document.getElementById('fx_range').value;
-        const item  = document.getElementById('fx_item').value || '';
-        const from  = document.getElementById('fx_from').value || '';
-        const to    = document.getElementById('fx_to').value   || '';
-        const msg   = document.getElementById('fx_msg');
-
-        if (!item){ toast('Pick an item'); return; }
-        if (msg) msg.textContent = 'Building…';
-
-        google.script.run
-          .withSuccessHandler(res=>{
-            const norm = window.normalizeStatsPayload ? window.normalizeStatsPayload(res) : res;
-            FLEX.cache = norm;
-            drawFlexCard(item, norm);
-            if (msg){ msg.textContent = 'Ready ✔'; setTimeout(()=>{ msg.textContent=''; }, 1200); }
-          })
-          .withFailureHandler(err => {
-            if (msg) msg.textContent = '';
-            alert(err && err.message ? err.message : err);
-          })
-          .getStatsV2(range, item, from, to);
-      }
-
-      async function applyHeaderImage(url){
-        const holder = document.getElementById('fx_bgimg');
-        if (!url){ holder.style.backgroundImage=''; return; }
-        const dataUri = await toDataUrl(url);
-        holder.style.backgroundImage = `url("${dataUri || url}")`;
-      }
-
-      function computeFlexStatsTitle(){
-        const r = document.getElementById('fx_range')?.value || 'all';
-        if (r === 'all')     return 'All-Time Stats';
-        if (r === 'last30')  return 'Last 30 Days Stats';
-        if (r === 'last7')   return 'Last 7 Days Stats';
-        if (r === 'mtd')     return 'Month-to-Date Stats';
-        if (r === 'custom') {
-          const from = document.getElementById('fx_from')?.value || '';
-          const to   = document.getElementById('fx_to')?.value   || '';
-          if (from && to) return `${from.slice(5).replace('-','/')} - ${to.slice(5).replace('-','/')} Stats`;
-          return 'Custom Range Stats';
-        }
-        return 'Stats';
-      }
-
-      function drawFlexCard(item, stats){
-        const msg = document.getElementById('fx_msg');
-        if (msg){ msg.textContent='Ready ✔'; setTimeout(()=>{ msg.textContent=''; }, 1200); }
-
-        // left title (range-aware)
-        const tEl = document.getElementById('fx_left_title');
-        if (tEl) tEl.textContent = computeFlexStatsTitle();
-
-        // ribbon
-        document.getElementById('fx_ribbon').textContent = item.split(':')[0]?.toUpperCase() || 'ITEM';
-
-        // header image
-        const url = (document.getElementById('fx_img').value || '').trim();
-        applyHeaderImage(url);
-
-        // data
-        const row = (stats.breakdownByItem||[])[0] || { boughtQty:0, soldQty:0, onHandQty:0, totalCost:0, totalRevenue:0, profit:0 };
-        const s   = stats.summary || {};
-        const avgCost = row.boughtQty ? Math.abs(row.totalCost)/row.boughtQty : 0;
-        const avgSale = row.soldQty ? (row.totalRevenue/row.soldQty) : 0;
-
-        // helpers
-        function topKeyFrom(map){
-          let bestK='', bestV=-1;
-          for (const k of Object.keys(map||{})){
-            const v = (map[k] && map[k][item]) ? map[k][item] : 0;
-            if (v>bestV){ bestV=v; bestK=k; }
-          }
-          return bestK || '—';
-        }
-        const topRetail = topKeyFrom(stats.charts && stats.charts.purchasesByStoreByItem);
-        const topPlat   = topKeyFrom(stats.charts && stats.charts.salesByPlatformByItem);
-
-        // LEFT stats
-        const statsEl = document.getElementById('fx_stats');
-        statsEl.innerHTML = `
-          <div class="fx-row"><div class="k">Bought</div><div class="v">${row.boughtQty||0}</div></div>
-          <div class="fx-row"><div class="k">Sold</div><div class="v">${row.soldQty||0}</div></div>
-          <div class="fx-row"><div class="k">Avg Cost</div><div class="v">${money(avgCost)}</div></div>
-          <div class="fx-row"><div class="k">Avg Sale</div><div class="v">${money(avgSale)}</div></div>
-          <div class="fx-divider"></div>
-          <div class="fx-row"><div class="k">Realized Profit</div>
-            <div class="v" style="color:${(row.profit||0)>=0?'var(--good)':'var(--bad)'}">${money(row.profit||0)}</div>
-          </div>
-          <div class="fx-divider"></div>
-          <div class="fx-row"><div class="k">Top Retailer</div><div class="v">${escapeHtml(topRetail)}</div></div>
-          <div class="fx-row"><div class="k">Top Marketplace</div><div class="v">${escapeHtml(topPlat)}</div></div>
-        `;
-
-        // headline
-        document.getElementById('fx_bigprofit').textContent = money(row.profit||0);
-        document.getElementById('fx_subline').innerHTML =
-          `<span>ROI ${pct(s.roiPct)}</span> · <span>Margin ${pct(s.marginPct)}</span> · <span>Avg Days ${s.avgDaysToSell||0}</span>`;
-
-        // CHART
-        const ctx = document.getElementById('fx_chart');
-        const monthly = (stats.monthly||[]).slice().sort((a,b)=>a.ym.localeCompare(b.ym));
-        const labels = monthly.map(x=>x.ym);
-        const cumulative = []; let sum = 0;
-        for (const m of monthly){ sum += (m.profit||0); cumulative.push(Math.round(sum*100)/100); }
-
-        if (FLEX.chart) FLEX.chart.destroy();
-        FLEX.chart = new Chart(ctx,{
-          type:'line',
-          data:{ labels, datasets:[{ label:'Cumulative Net Profit', data:cumulative, tension:.3, fill:false, borderColor:'#22c55e' }]},
-          options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ ticks:{ callback:v=>'$'+Number(v).toLocaleString() } } } }
-        });
-
-        // right-side metrics
-        updateOnHandAndUnrealized(item);
-        updateLongestHold(item);
-
-        window.__drawFlexChart = ()=>drawFlexCard(item, stats);
-      }
-
-      function updateUnrealizedValue(itemName, onHand){
-        const el = document.getElementById('fx_unrealized');
-        const setVal = (n)=>{ if (el) el.textContent = money(Number(n)||0); };
-
-        if (!onHand || !Number(onHand) || Number(onHand) <= 0){ setVal(0); return; }
-
-        const toNum = (v)=>{ const n = Number(String(v||'').replace(/[^0-9.\-]/g,'')); return isFinite(n) ? n : 0; };
-        const normalize = (s)=> String(s||'').trim().toLowerCase();
-
-        const tryCompute = (db)=>{
-          try{
-            const items = (db && Array.isArray(db.items)) ? db.items : null;
-            if (!items) return false;
-
-            let rec = items.find(x => normalize(x && x.name) === normalize(itemName));
-            if (!rec){ rec = items.find(x => normalize(itemName).includes(normalize(x && x.name))); }
-
-            const marketRaw = rec ? (rec.market ?? rec.market_value ?? rec.price ?? 0) : 0;
-            const market = toNum(marketRaw);
-            setVal(toNum(onHand) * market);
-            return true;
-          }catch(_){ return false; }
-        };
-
-        if (tryCompute(window.DB_STATE)) return;
-
-        google.script.run
-          .withSuccessHandler(res => { window.DB_STATE = res || {}; tryCompute(window.DB_STATE) || setVal(0); })
-          .withFailureHandler(() => setVal(0))
-          .getDatabaseFull();
-      }
-
-      function updateOnHandAndUnrealized(itemName){
-        const onHandEl = document.getElementById('fx_onhand');
-        const norm = s => String(s||'').trim().toLowerCase();
-
-        google.script.run
-          .withSuccessHandler(inv => {
-            let qty = 0;
-            try{
-              const rows = Array.isArray(inv?.items) ? inv.items : [];
-              let rec = rows.find(r => norm(r.item) === norm(itemName));
-              if (!rec) rec = rows.find(r => norm(itemName).includes(norm(r.item)));
-              qty = Number(rec?.onHandQty || 0);
-            }catch(_){ qty = 0; }
-
-            if (onHandEl) onHandEl.textContent = String(qty);
-            updateUnrealizedValue(itemName, qty);
-          })
-          .withFailureHandler(() => {
-            if (onHandEl) onHandEl.textContent = '0';
-            updateUnrealizedValue(itemName, 0);
-          })
-          .getInventory();
-      }
-
-      function updateLongestHold(itemName){
-        const el = document.getElementById('fx_longest');
-        const setVal = (txt, muted=false)=>{
-          if (!el) return;
-          el.textContent = txt;
-          el.classList.toggle('muted', !!muted);
-        };
-        const norm = s => String(s||'').trim().toLowerCase();
-        const expect = norm(itemName);
-
-        google.script.run
-          .withSuccessHandler(days=>{
-            const current = norm(document.getElementById('fx_item').value || '');
-            if (current !== expect) return;
-            const n = Number(days);
-            if (isFinite(n) && n >= 0) setVal(n + ' days', n === 0);
-            else setVal('0 days', true);
-          })
-          .withFailureHandler(()=>{
-            const current = norm(document.getElementById('fx_item').value || '');
-            if (current === expect) setVal('0 days', true);
-          })
-          .getLongestHoldDays(itemName);
-      }
-
-      function clearFlexCard(){
-        FLEX.cache = null;
-        if (FLEX.chart) { try { FLEX.chart.destroy(); } catch(_) {} FLEX.chart = null; }
-
-        document.getElementById('fx_stats').innerHTML = '';
-        document.getElementById('fx_bigprofit').textContent = '$0.00';
-        document.getElementById('fx_subline').textContent = '';
-        document.getElementById('fx_ribbon').textContent = 'ITEM';
-
-        const bg = document.getElementById('fx_bgimg');
-        if (bg) bg.style.backgroundImage = '';
-
-        const onHandEl = document.getElementById('fx_onhand');
-        const unrlEl   = document.getElementById('fx_unrealized');
-        const longest  = document.getElementById('fx_longest');
-        if (onHandEl) onHandEl.textContent = '0';
-        if (unrlEl)   unrlEl.textContent   = money(0);
-        if (longest) { longest.textContent = '0 days'; longest.classList.add('muted'); }
-
-        const msg = document.getElementById('fx_msg');
-        if (msg) msg.textContent = '';
-
-        const img = document.getElementById('fx_img');
-        if (img) img.value = '';
-      }
-
-      async function saveFlexImage(){
-        const node = document.getElementById('flexCard');
-        const btn1 = document.getElementById('fx_gen');
-        const btn2 = document.getElementById('fx_save');
-
-        btn1.disabled = btn2.disabled = true;
-        try {
-          node.classList.add("saving");
-          const canvas = await html2canvas(node, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: false });
-          const link = document.createElement('a');
-          link.download = 'flex.png';
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-        } catch(e) {
-          alert(e && e.message ? e.message : e);
-        } finally {
-          node.classList.remove("saving");
-          btn1.disabled = btn2.disabled = false;
-        }
-      }
-
-     function insertPendingRowForCategory(cat){
-  const tb = document.querySelector('#db_items_tbl tbody');
-  if (!tb) return;
-  const isOther = (cat === 'Other');
-
-  // expand if collapsed
-  const catHeader = tb.querySelector(`tr.cat-row[data-cat="${CSS.escape(cat)}"]`);
-  if (catHeader && catHeader.classList.contains('collapsed')) {
-    catHeader.classList.remove('collapsed');
-    catHeader.classList.add('expanded');
-    const rowsSameCat = tb.querySelectorAll(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
-    rowsSameCat.forEach(r => r.style.display = '');
-    try {
-      const storeKey = 'db_cat_collapsed';
-      const obj = JSON.parse(localStorage.getItem(storeKey) || '{}');
-      obj[cat] = 0;
-      localStorage.setItem(storeKey, JSON.stringify(obj));
-    } catch(_) {}
-  }
-
-  function formatCategoryName(str){ return String(str || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); }
-
-  const tr = document.createElement('tr');
-  tr.className = '__pending';
-  tr.setAttribute('data-cat', cat);
-
-  // Do not auto-insert the category prefix
-  tr.innerHTML = `
-    <td><input type="text" value=""></td>
-    <td><input type="number" step="0.01" value="0"></td>
-    <td class="td-actions">
-      <button class="db-row-save" type="button">Save</button>
-      <button class="db-row-cancel" type="button">Cancel</button>
-    </td>
-  `;
-
-  const firstDataRow = tb.querySelector(`tr[data-cat="${CSS.escape(cat)}"]:not(.cat-row)`);
-  if (firstDataRow) {
-    tb.insertBefore(tr, firstDataRow);
-  } else if (catHeader) {
-    tb.insertBefore(tr, catHeader.nextSibling);
-  } else {
-    tb.insertBefore(tr, tb.firstChild);
-  }
-
-  const first = tr.querySelector('input');
-  if (first) {
-    setTimeout(() => { first.focus(); tr.scrollIntoView({ block: 'nearest' }); }, 0);
-  }
-}
-
-      // === Profiles API helpers ===
-  function collectProfileEdits(){
-  const out = [];
-  document.querySelectorAll('#pro_tbl tbody tr').forEach(tr=>{
-    const row = Number(tr.children[0].textContent.trim());
-    const get = (k)=> {
-      const cell = tr.querySelector(`[data-k="${k}"]`);
-      return (cell ? cell.textContent : '').trim();
-    };
-    out.push({
-      row,
-      username: get('username'),
-      email:    get('email'),
-      discord:  get('discord'),
-      role:     get('role'),
-      notes:    get('notes'),
-      created:  tr.children[6]?.textContent.trim() || ''
-    });
-  });
-  return out;
-}
-
-
-// === Profiles UI ===
-let PRO_CACHE = [];
-
-async function renderProfiles(){
-  const msg = document.getElementById('pro_msg');
-  if (msg) msg.textContent = 'Loading…';
-
-  google.script.run
-    .withSuccessHandler((data)=>{
-      const PRO_CACHE = Array.isArray(data) ? data : [];
-      const tb = document.querySelector('#pro_tbl tbody');
-      if (!tb) { if (msg) msg.textContent = ''; return; }
-      tb.innerHTML = '';
-      for (const r of PRO_CACHE) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r.row}</td>
-          <td contenteditable="true" data-k="username">${escapeHtml(r.username||'')}</td>
-          <td contenteditable="true" data-k="email">${escapeHtml(r.email||'')}</td>
-          <td contenteditable="true" data-k="discord">${escapeHtml(r.discord||'')}</td>
-          <td contenteditable="true" data-k="role">${escapeHtml(r.role||'')}</td>
-          <td contenteditable="true" data-k="notes">${escapeHtml(r.notes||'')}</td>
-          <td>${r.created||''}</td>
-          <td>${r.updated||''}</td>
-          <td><button class="btn danger sm" data-act="del" data-row="${r.row}">Delete</button></td>`;
-        tb.appendChild(tr);
-      }
-      if (msg) msg.textContent = '';
-    })
-    .withFailureHandler(err => { if (msg) msg.textContent = ''; toast((err && err.error) || 'Load failed'); })
-    .getProfiles();
-}
-
-document.getElementById('pro_add_btn')?.addEventListener('click', ()=>{
-  const payload = {
-    username: document.getElementById('pro_username').value || '',
-    email:    document.getElementById('pro_email').value    || '',
-    discord:  document.getElementById('pro_discord').value  || '',
-    role:     document.getElementById('pro_role').value     || '',
-    notes:    document.getElementById('pro_notes').value    || ''
-  };
-  if (!payload.username && !payload.email && !payload.discord){
-    toast('Provide at least Username, Email or Discord ID'); return;
-  }
-
-  google.script.run
-    .withSuccessHandler(()=>{
-      document.getElementById('pro_username').value = '';
-      document.getElementById('pro_email').value    = '';
-      document.getElementById('pro_discord').value  = '';
-      document.getElementById('pro_role').value     = '';
-      document.getElementById('pro_notes').value    = '';
-      renderProfiles();
-      toast('Profile added');
-    })
-    .withFailureHandler(err => toast((err && err.error) || 'Add failed'))
-    .addProfile(payload);
+          (async()=>{ try{ await (window.apiAddProfile?apiAddProfile(payload):addProfile(payload)); document.getElementById('pro_username').value=''; document.getElementById('pro_email').value=''; document.getElementById('pro_discord').value=''; document.getElementById('pro_role').value=''; document.getElementById('pro_notes').value=''; renderProfiles(); toast('Profile added'); }catch(err){ toast((err && err.message)||'Add failed'); } })();
 });
 
 document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{
   const rows = collectProfileEdits();
-  google.script.run
-    .withSuccessHandler(()=>{ renderProfiles(); toast('Saved'); })
-    .withFailureHandler(err => toast((err && err.error) || 'Save failed'))
-    .updateProfiles(rows);
+  (async()=>{ try{ await (window.apiUpdateProfiles?apiUpdateProfiles(rows):updateProfiles(rows)); renderProfiles(); toast('Saved'); }catch(err){ toast((err && err.message)||'Save failed'); } })();
 });
 
 document.querySelector('#pro_tbl tbody')?.addEventListener('click', (e)=>{
@@ -2912,10 +2362,7 @@ document.querySelector('#pro_tbl tbody')?.addEventListener('click', (e)=>{
   const row = Number(btn.getAttribute('data-row'));
   if (!row || !confirm('Delete this profile row?')) return;
 
-  google.script.run
-    .withSuccessHandler(()=>{ renderProfiles(); toast('Deleted'); })
-    .withFailureHandler(err => toast((err && err.error) || 'Delete failed'))
-    .removeProfile(row);
+  (async()=>{ try{ await (window.apiRemoveProfile?apiRemoveProfile(row):removeProfile(row)); renderProfiles(); toast('Deleted'); }catch(err){ toast((err && err.message)||'Delete failed'); } })();
 });
 
       // Small helper to trigger a download of JSON
@@ -2943,9 +2390,7 @@ document.getElementById('profiles_file')?.addEventListener('change', (e)=>{
       if (!Array.isArray(json)) { toast('JSON must be an array'); return; }
 
       // Optional: light validation / trimming (we send raw; backend sanitizes)
-      google.script.run
-        .withSuccessHandler(()=>{ renderProfiles(); toast('Import complete'); e.target.value=''; })
-        .withFailureHandler(err => { toast((err && err.error) || 'Import failed'); e.target.value=''; })
+      (async()=>{ try{ for(const row of json){ await (window.apiAddProfile? apiAddProfile(row) : addProfile(row)); } renderProfiles(); toast('Import complete'); e.target.value=''; }catch(err){ toast((err && err.message)||'Import failed'); e.target.value=''; } })(); e.target.value=''; })
         .importProfilesAstral(json);
     } catch (err) {
       toast('Invalid JSON'); e.target.value='';
@@ -2955,17 +2400,13 @@ document.getElementById('profiles_file')?.addEventListener('change', (e)=>{
 });
 
 // Export flow
-document.getElementById('profiles_export_btn')?.addEventListener('click', ()=>{
-  google.script.run
-    .withSuccessHandler((data)=>{
-      downloadJSON('profiles-astral.json', data || []);
-      toast('Export ready');
-    })
-    .withFailureHandler(err => toast((err && err.error) || 'Export failed'))
-    .exportProfilesAstral();
+document.getElementById('profiles_export_btn')?.addEventListener('click', async ()=>{
+  try{
+    const data = await (window.apiGetProfiles? apiGetProfiles() : getProfiles());
+    downloadJSON('profiles.json', data||[]);
+    toast('Export ready');
+  }catch(err){ toast((err && err.message) || 'Export failed'); }
 });
-
-
 // When switching to Profiles tab, load data
 document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
   tab.addEventListener('click', ()=>{
@@ -3009,11 +2450,11 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
 
   async function addProfile(payload) {
     const rec = {
-      username: payload?.username ?? '',
-      email:    payload?.email ?? '',
-      discord:  payload?.discord ?? '',
-      role:     payload?.role ?? '',
-      notes:    payload?.notes ?? ''
+      username: (payload && payload.username) ?? '',
+      email:    (payload && payload.email) ?? '',
+      discord:  (payload && payload.discord) ?? '',
+      role:     (payload && payload.role) ?? '',
+      notes:    (payload && payload.notes) ?? ''
     };
     const { data, error } = await supabase.from('Profiles').insert([rec]).select('id');
     if (error) throw error;
@@ -3073,7 +2514,149 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab=>{
     if (user) { try { showApp(); } catch {} } else { try { showGate(); } catch {} }
   }
   supabase.auth.onAuthStateChange(() => refreshGate());
-  await refreshGate();
+  
+  // ---- Helpers from Supabase ----
+  window.computeInventoryFromSupabase = async function(){
+    const { data: orders, error } = await supabase
+      .from('Orders')
+      .select('id, item, buy_price, sell_price');
+    if (error) throw error;
+    const map = new Map();
+    for (const r of (orders||[])){
+      const item = String(r.item||'').trim();
+      if (!item) continue;
+      const buy = Number(r.buy_price||0);
+      const sold = Number(r.sell_price||0) > 0;
+      const m = map.get(item) || { item, boughtQty:0, soldQty:0, costAll:0, costSold:0 };
+      m.boughtQty += 1;
+      m.costAll += buy;
+      if (sold){ m.soldQty += 1; m.costSold += buy; }
+      map.set(item, m);
+    }
+    const { data: items, error: e2 } = await supabase.from('Items').select('item_name, market');
+    if (e2) throw e2;
+    const mv = Object.fromEntries((items||[]).map(x => [x.item_name, Number(x.market||0)]));
+    const out = [];
+    for (const [k,v] of map.entries()){
+      const onHand = Math.max(0, (v.boughtQty||0) - (v.soldQty||0));
+      if (onHand <= 0) continue;
+      const onHandCost = (v.costAll||0) - (v.costSold||0);
+      const estPrice = mv[k] || 0;
+      out.push({
+        item: k,
+        onHandQty: onHand,
+        onHandCost: onHandCost,
+        estPrice: estPrice,
+        estValue: estPrice * onHand
+      });
+    }
+    return { items: out };
+  };
+
+  window.supabaseGetLongestHoldDays = async function(itemName){
+    const nm = String(itemName||'').trim();
+    if (!nm) return 0;
+    const { data: rows, error } = await supabase
+      .from('Orders')
+      .select('order_date, item, sell_price')
+      .is('order_date', null)  // can't, so we'll filter client-side
+    ;
+    // If 'is' doesn't work due to null semantics, just select all:
+    if (error || !rows) {
+      const { data: all } = await supabase.from('Orders').select('order_date, item, sell_price');
+      const arr = all||[];
+      let oldest = null;
+      for (const r of arr){
+        if (Number(r.sell_price||0) > 0) continue; // only on-hand
+        if (!r.order_date) continue;
+        if (!oldest || new Date(r.order_date) < new Date(oldest)) oldest = r.order_date;
+      }
+      if (!oldest) return 0;
+      const d0 = new Date(new Date().toDateString());
+      const d1 = new Date(new Date(oldest).toDateString());
+      return Math.max(0, Math.round((d0 - d1)/(24*3600*1000)));
+    } else {
+      const arr = rows||[];
+      let oldest = null;
+      for (const r of arr){
+        if (Number(r.sell_price||0) > 0) continue;
+        if (!r.order_date) continue;
+        if (!oldest || new Date(r.order_date) < new Date(oldest)) oldest = r.order_date;
+      }
+      if (!oldest) return 0;
+      const d0 = new Date(new Date().toDateString());
+      const d1 = new Date(new Date(oldest).toDateString());
+      return Math.max(0, Math.round((d0 - d1)/(24*3600*1000)));
+    }
+  };
+
+  window.supabaseGetStatsV2 = async function(rangeKey, itemFilter, fromISO, toISO){
+    // Very lightweight stats (can be expanded later)
+    const { data: rows, error } = await supabase
+      .from('Orders')
+      .select('order_date, item, buy_price, sell_price, sale_date, sale_location, shipping, fees_pct, bought_from');
+    if (error) throw error;
+
+    // Window
+    const today = new Date();
+    let start=null, end=null;
+    function dFloor(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+    function minusDays(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
+    if (rangeKey === 'mtd'){ start = new Date(today.getFullYear(), today.getMonth(), 1); end = today; }
+    else if (rangeKey === 'last30'){ start=minusDays(30); end=today; }
+    else if (rangeKey === 'last7'){ start=minusDays(7); end=today; }
+    else if (rangeKey === 'custom'){ if (fromISO) start=new Date(fromISO); if (toISO) end=new Date(toISO); }
+
+    function inWindow(d){
+      if (!d) return false;
+      const t = dFloor(new Date(d)).getTime();
+      if (start && t < dFloor(start).getTime()) return false;
+      if (end && t > dFloor(end).getTime()) return false;
+      return true;
+    }
+
+    const filt = String(itemFilter||'').trim().toLowerCase();
+    const outRows = (rows||[]).filter(r => !filt || String(r.item||'').trim().toLowerCase()===filt);
+
+    let summary = { totalQty:0, soldQty:0, revenue:0, fees:0, shipping:0, costSold:0, netProfit:0, roiPct:0, marginPct:0, asp:0, avgDaysToSell:0 };
+    let dSellSum=0, dSellCount=0;
+
+    for (const r of outRows){
+      const orderDate = r.order_date ? new Date(r.order_date) : null;
+      const sell = Number(r.sell_price||0);
+      const saleDate = r.sale_date ? new Date(r.sale_date) : null;
+
+      const purchaseInRange = (start || end) ? inWindow(orderDate) : true;
+      const sold = sell > 0 && saleDate;
+      const saleInRange = sold ? ((start || end) ? inWindow(saleDate) : true) : false;
+
+      if (purchaseInRange){ summary.totalQty+=1; }
+      if (saleInRange){
+        const feePct = Number(r.fees_pct||0);
+        const feeAmt = sell * (isFinite(feePct) ? feePct : 0);
+        summary.soldQty += 1;
+        summary.revenue += sell;
+        summary.fees += feeAmt;
+        summary.shipping += Number(r.shipping||0);
+        summary.costSold += Number(r.buy_price||0);
+
+        if (orderDate && saleDate){
+          const diff = Math.max(0, Math.round((dFloor(saleDate)-dFloor(orderDate))/(24*3600*1000)));
+          dSellSum += diff; dSellCount += 1;
+        }
+      }
+    }
+
+    summary.netProfit = summary.revenue + summary.costSold - summary.fees - summary.shipping;
+    summary.asp = summary.soldQty ? (summary.revenue / summary.soldQty) : 0;
+    const cogsAbs = Math.abs(summary.costSold || 0);
+    summary.roiPct = cogsAbs ? ((summary.netProfit / cogsAbs) * 100) : 0;
+    summary.marginPct = summary.revenue ? ((summary.netProfit / summary.revenue) * 100) : 0;
+    summary.avgDaysToSell = dSellCount ? (dSellSum / dSellCount) : 0;
+
+    return { summary, breakdownByItem: [], charts: {}, monthly: [] };
+  };
+await refreshGate();
 </script>
 
 
