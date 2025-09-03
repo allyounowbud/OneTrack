@@ -3,207 +3,310 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>OneTrack</title>
+  <title>Resale Dashboard (Supabase)</title>
   <style>
-    :root{
-      --bg:#0d0d0d; --card:#111; --muted:#777; --text:#e0e0e0; --accent:#66bb6a; --danger:#e57373; --warn:#ffb74d;
-      --border:#222; --shadow: 0 8px 24px rgba(0,0,0,.35);
+    :root {
+      --bg:#0b0b0b; --card:#111; --muted:#9aa0a6; --text:#f5f5f5; --accent:#6dd17a;
+      --danger:#ff7b7b; --warn:#ffc670; --border:#232323; --shadow:0 8px 28px rgba(0,0,0,.35);
+      --input:#0f0f0f; --input-border:#262626; --tag:#151515; --link:#a7f3d0;
+      --chart-grid:#2a2a2a;
     }
-    *{ box-sizing: border-box; }
-    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; background:var(--bg); color:var(--text); }
-    a{ color: var(--accent); text-decoration: none; }
-    .nav{ display:flex; gap:8px; padding:12px 16px; position:sticky; top:0; background:#0a0a0a; border-bottom:1px solid var(--border); z-index:10; align-items:center; }
-    .nav .title{ font-weight:700; margin-right:auto; letter-spacing:.3px; }
-    .nav .tab{ padding:8px 12px; border:1px solid var(--border); border-radius:10px; cursor:pointer; background:#141414; }
-    .nav .tab.active{ border-color:#2a2a2a; background:#171717; outline:1px solid #202020; }
-    .wrap{ max-width:1200px; margin:24px auto; padding:0 16px 80px; }
-    .card{ background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); margin:16px 0; }
-    .card .hd{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
-    .card .hd h3{ margin:0; font-size:16px; font-weight:700; letter-spacing:.3px; }
-    .card .hd .btns{ display:flex; gap:8px; }
-    .btn{ padding:8px 12px; background:#1a1a1a; border:1px solid var(--border); border-radius:8px; color:var(--text); cursor:pointer; }
-    .btn:hover{ background:#202020; }
-    .btn.accent{ border-color:#234; background:#17231a; color:#cfead3; }
-    .btn.warn{ border-color:#443; background:#231b17; color:#ffd7b3; }
-    .btn.ghost{ background:transparent; }
-    .btn.danger{ border-color:#442; background:#261616; color:#ffc7c7; }
-    .muted{ color:var(--muted); }
-    .body{ padding:14px; display:none; }
-    .body.show{ display:block; }
-    table{ width:100%; border-collapse:collapse; }
-    thead th{ text-align:left; font-size:12px; font-weight:600; color:#bdbdbd; padding:8px; border-bottom:1px solid var(--border); }
-    tbody td{ padding:8px; border-bottom:1px solid var(--border); vertical-align:middle; }
-    tbody tr.__pending{ background:#121212; }
-    td.td-actions{ width:180px; }
-    input, select, textarea{
-      width:100%; padding:8px 10px; background:#0f0f0f; border:1px solid #222; border-radius:8px; color:#e0e0e0;
+    [data-theme="light"] {
+      --bg:#f7f7f8; --card:#ffffff; --muted:#475569; --text:#0b1020; --accent:#0ea5e9;
+      --danger:#d32f2f; --warn:#ed6c02; --border:#e5e7eb; --shadow:0 6px 24px rgba(0,0,0,.08);
+      --input:#fff; --input-border:#e5e7eb; --tag:#f3f4f6; --link:#0369a1;
+      --chart-grid:#e5e7eb;
     }
-    input[type="date"]{ color-scheme: dark; }
-    .saved{ outline: 1px solid #1b5e20; transition: outline 300ms ease-in; }
-    .pill{ padding:10px 12px; font-size:13px; color:#c7c7c7; }
-    .row{ display:flex; gap:14px; flex-wrap:wrap; }
-    .col{ flex:1 1 460px; min-width:320px; }
-    .hide{ display:none !important; }
-    #toast{ position:fixed; bottom:18px; left:50%; transform: translateX(-50%); background:#111; border:1px solid #222; color:#eee; padding:10px 14px; border-radius:10px; box-shadow: var(--shadow); display:none; z-index:1000; }
-    #gate{ display:none; max-width:520px; margin:80px auto; text-align:center; }
-    #gate .card{ padding:18px; }
-    .tag{ display:inline-block; padding:2px 8px; border:1px solid #2a2a2a; border-radius:999px; font-size:12px; color:#bbb; }
-    .flex{ display:flex; gap:10px; align-items:center; }
-    .right{ margin-left:auto; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--text); }
+    a { color: var(--link); text-decoration: none; }
+
+    .nav { display:none; gap:8px; padding:10px 12px; position:sticky; top:0;
+      background:color-mix(in oklab, var(--bg) 96%, #000 4%);
+      border-bottom:1px solid var(--border); z-index:20; align-items:center; }
+    .nav.show { display:flex; }
+    .nav .title { font-weight:800; letter-spacing:.2px; margin-right:10px; }
+    .nav .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .nav .tab { padding:7px 10px; border:1px solid var(--border); border-radius:10px; cursor:pointer; background:var(--tag); font-size:13px; }
+    .nav .tab.active { outline:2px solid color-mix(in oklab, var(--accent) 35%, transparent); }
+    .nav .right { margin-left:auto; display:flex; gap:10px; align-items:center; }
+    .theme-btn { border:1px solid var(--border); background:var(--tag); border-radius:8px; padding:6px 10px; cursor:pointer; }
+    .avatar { width:28px; height:28px; border-radius:999px; border:1px solid var(--border); object-fit:cover; display:none; }
+    .userbox { display:flex; gap:8px; align-items:center; }
+    .uname { font-size:13px; color:var(--muted); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:none; }
+
+    .wrap { max-width:1200px; margin:22px auto 80px; padding:0 16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); margin:16px 0; }
+    .card .hd { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid var(--border); }
+    .card .hd h3 { margin:0; font-size:16px; font-weight:800; letter-spacing:.3px; }
+    .card .hd .btns { display:flex; gap:8px; }
+    .btn { padding:8px 12px; background:var(--tag); border:1px solid var(--border); border-radius:8px; color:var(--text); cursor:pointer; font-weight:600; }
+    .btn:hover { filter: brightness(1.05); }
+    .btn.accent { background: color-mix(in oklab, var(--accent) 18%, var(--tag)); border-color: color-mix(in oklab, var(--accent) 45%, var(--border)); }
+    .btn.ghost { background: transparent; }
+    .btn.danger { background: color-mix(in oklab, var(--danger) 18%, var(--tag)); border-color: color-mix(in oklab, var(--danger) 45%, var(--border)); }
+    .muted { color: var(--muted); }
+    .body { padding:14px; display:none; }
+    .body.show { display:block; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:12px; }
+    .tile { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; }
+    .tile h4 { margin:0 0 6px; font-size:13px; color:var(--muted); }
+    .tile .big { font-size:20px; font-weight:800; }
+
+    table { width:100%; border-collapse:collapse; }
+    thead th { text-align:left; font-size:12px; font-weight:700; color:color-mix(in oklab, var(--muted) 75%, var(--text)); padding:8px; border-bottom:1px solid var(--border); }
+    tbody td { padding:8px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    tbody tr.__pending { background: color-mix(in oklab, var(--accent) 8%, var(--card)); }
+    td.td-actions { white-space:nowrap; }
+    input, select, textarea { width:100%; padding:9px 10px; background:var(--input); border:1px solid var(--input-border); border-radius:10px; color:var(--text); }
+    input[type="date"] { color-scheme: dark; }
+    [data-theme="light"] input[type="date"] { color-scheme: light; }
+
+    .hide { display:none !important; }
+    #toast{ position:fixed; bottom:18px; left:50%; transform: translateX(-50%); background:var(--card); border:1px solid var(--border); color:var(--text); padding:10px 14px; border-radius:10px; box-shadow: var(--shadow); display:none; z-index:1000; }
+
+    #gate { max-width:520px; margin:90px auto; }
+    #gate .brand { font-weight:900; font-size:22px; letter-spacing:.3px; margin-bottom:8px; text-align:center; }
+    #gate .card { padding:18px; }
+    #gate .cta { text-align:center; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
-  <div class="nav">
+  <!-- NAV (hidden until login) -->
+  <div class="nav" id="nav">
     <div class="title">Resale Dashboard</div>
-    <button class="tab active" data-tab="database">Database</button>
-    <button class="tab" data-tab="profiles">Profiles</button>
-    <span class="right flex">
-      <button id="discordBtn" class="btn accent">Sign in with Discord</button>
-      <button id="logoutBtn" class="btn ghost">Logout</button>
-    </span>
-  </div>
-
-  <div id="gate" class="wrap">
-    <div class="card">
-      <div class="hd"><h3>Sign in</h3></div>
-      <div class="body show">
-        <p class="muted">Please sign in to continue.</p>
-        <button id="discordBtn_clone" class="btn accent">Sign in with Discord</button>
+    <div class="tabs">
+      <button class="tab" data-tab="quickadd">Quick Add</button>
+      <button class="tab" data-tab="marksold">Mark as Sold</button>
+      <button class="tab" data-tab="stats">Stats</button>
+      <button class="tab" data-tab="inventory">Inventory</button>
+      <button class="tab" data-tab="flex">Flex</button>
+      <button class="tab" data-tab="settings">Settings</button>
+      <button class="tab" data-tab="profiles">Profiles</button>
+    </div>
+    <div class="right">
+      <button id="themeBtn" class="theme-btn" title="Toggle theme">🌓</button>
+      <div id="userBox" class="userbox">
+        <img id="avatar" class="avatar" alt="avatar"/>
+        <span id="uname" class="uname"></span>
+        <button id="logoutBtn" class="btn ghost">Logout</button>
       </div>
     </div>
   </div>
 
-  <div id="app" class="wrap">
+  <!-- GATE (only visible before login) -->
+  <div id="gate" class="wrap">
+    <div class="brand">Resale Dashboard</div>
+    <div class="card">
+      <div class="hd"><h3>Sign in</h3></div>
+      <div class="body show">
+        <p class="muted" style="text-align:center;">Sign in with Discord to continue.</p>
+        <div class="cta"><button id="discordBtn" class="btn accent">Sign in with Discord</button></div>
+      </div>
+    </div>
+  </div>
 
-    <!-- Database -->
-    <section id="tab_database" class="tabpane">
+  <!-- APP -->
+  <div id="app" class="wrap" style="display:none;">
+    <!-- QUICK ADD -->
+    <section id="tab_quickadd" class="tabpane">
       <div class="card">
-        <div class="hd">
-          <h3>Items <span id="db_items_count" class="tag"></span></h3>
-          <div class="btns">
-            <button class="btn" data-action="edit">Edit</button>
-            <button class="btn" data-action="add">Add</button>
-            <button class="btn" data-action="save" style="display:none;">Save</button>
-            <button class="btn ghost" data-action="cancel">Close</button>
+        <div class="hd"><h3>Quick Add (Purchase)</h3></div>
+        <div class="body show">
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div><label>Order Date<input id="qa_order_date" type="date"></label></div>
+            <div><label>Item<select id="qa_item"></select></label></div>
+            <div><label>Retailer<select id="qa_bought_from"></select></label></div>
+            <div><label>Quantity<input id="qa_qty" type="number" step="1" min="1" value="1"></label></div>
+            <div><label>Buy Price (total)<input id="qa_buy_price" type="number" step="0.01" value="0"></label></div>
           </div>
-        </div>
-        <div class="body" id="db_items_body">
-          <table id="db_items_tbl">
-            <thead><tr><th>Item</th><th>Market</th><th class="td-actions">Actions</th></tr></thead>
-            <tbody><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
-          </table>
+          <div class="pill muted">Quantity will split buy price (and sale price/shipping, if provided) evenly per unit.</div>
         </div>
       </div>
 
       <div class="card">
+        <div class="hd"><h3>Sale Details (optional)</h3></div>
+        <div class="body show">
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div><label>Sale Date<input id="qa_sale_date" type="date"></label></div>
+            <div><label>Marketplace<select id="qa_marketplace"></select></label></div>
+            <div><label>Sale Price (total)<input id="qa_sale_price" type="number" step="0.01" value="0"></label></div>
+            <div><label>Shipping (total)<input id="qa_shipping" type="number" step="0.01" value="0"></label></div>
+          </div>
+          <div class="pill muted">If provided with quantity &gt; 1, sale price and shipping will be split per-unit.</div>
+          <button id="qa_add_btn" class="btn accent">Add Order(s)</button>
+          <div id="qa_msg" class="pill muted"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MARK AS SOLD -->
+    <section id="tab_marksold" class="tabpane hide">
+      <div class="card">
+        <div class="hd"><h3>Mark an Open Purchase as Sold</h3></div>
+        <div class="body show">
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div>
+              <label>Open Purchase
+                <select id="ms_open">
+                  <option value="">Loading…</option>
+                </select>
+              </label>
+            </div>
+            <div><label>Sell Price<input id="ms_price" type="number" step="0.01" value="0"></label></div>
+            <div><label>Sale Date<input id="ms_date" type="date"></label></div>
+            <div><label>Marketplace<select id="ms_mkt"></select></label></div>
+            <div><label>Fee % (blank = auto)<input id="ms_fee" type="number" step="0.0001" placeholder=""></label></div>
+            <div><label>Shipping<input id="ms_ship" type="number" step="0.01" value="0"></label></div>
+          </div>
+          <div class="pill muted">Fee % defaults from Marketplace if left blank.</div>
+          <button id="ms_save" class="btn accent">Mark Sold</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section id="tab_stats" class="tabpane hide">
+      <div class="card">
         <div class="hd">
-          <h3>Retailers <span id="db_retail_count" class="tag"></span></h3>
+          <h3>Stats</h3>
           <div class="btns">
-            <button class="btn" data-action="edit">Edit</button>
-            <button class="btn" data-action="add">Add</button>
-            <button class="btn" data-action="save" style="display:none;">Save</button>
-            <button class="btn ghost" data-action="cancel">Close</button>
+            <select id="st_range">
+              <option value="all">All Time</option>
+              <option value="last30" selected>Last 30</option>
+              <option value="last7">Last 7</option>
+              <option value="custom">Custom</option>
+            </select>
+            <input id="st_from" type="date" class="hide">
+            <input id="st_to" type="date" class="hide">
+            <select id="st_item_filter"><option value="">All Items</option></select>
+            <button id="st_refresh" class="btn">Refresh</button>
           </div>
         </div>
-        <div class="body" id="db_retail_body">
-          <table id="db_retail_tbl">
-            <thead><tr><th>Retailer</th><th class="td-actions">Actions</th></tr></thead>
-            <tbody><tr><td colspan="2" class="muted">Loading…</td></tr></tbody>
-          </table>
+        <div class="body show">
+          <div class="grid" style="grid-template-columns: 1fr; gap:16px;">
+            <canvas id="chart_purchases_sales" height="120"></canvas>
+            <canvas id="chart_by_retailer" height="120"></canvas>
+            <canvas id="chart_by_marketplace" height="120"></canvas>
+            <canvas id="chart_cost_revenue" height="120"></canvas>
+          </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="hd">
-          <h3>Marketplaces <span id="db_mkt_count" class="tag"></span></h3>
-          <div class="btns">
-            <button class="btn" data-action="edit">Edit</button>
-            <button class="btn" data-action="add">Add</button>
-            <button class="btn" data-action="save" style="display:none;">Save</button>
-            <button class="btn ghost" data-action="cancel">Close</button>
-          </div>
-        </div>
-        <div class="body" id="db_mkt_body">
-          <table id="db_mkt_tbl">
-            <thead><tr><th>Marketplace</th><th>Fee (decimal, e.g. 0.13)</th><th class="td-actions">Actions</th></tr></thead>
-            <tbody><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="hd">
-          <h3>Order Book <span id="db_sheet_count" class="tag"></span></h3>
-          <div class="btns">
-            <button class="btn" data-action="edit">Edit</button>
-            <button class="btn" data-action="add">Add</button>
-            <button class="btn" data-action="save" style="display:none;">Save</button>
-            <button class="btn ghost" data-action="cancel">Close</button>
-          </div>
-        </div>
-        <div class="body" id="db_sheet_body">
-          <div class="pill muted">Newest first. Use inline Save per row.</div>
-          <table id="db_sheet_tbl">
-            <thead>
-              <tr>
-                <th>Order Date</th><th>Item</th><th>Buy Price</th><th>Bought From</th>
-                <th>Sell Price</th><th>Sale Date</th><th>Sale Location</th><th>Shipping</th><th class="td-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody><tr><td colspan="9" class="muted">Loading…</td></tr></tbody>
+        <div class="hd"><h3>Breakdown by Item</h3></div>
+        <div class="body show">
+          <table id="st_breakdown_tbl">
+            <thead><tr>
+              <th>Item</th><th># Bought</th><th># Sold</th><th>On Hand</th><th>Total Cost</th><th>Total Revenue</th><th>P&L</th>
+            </tr></thead>
+            <tbody><tr><td colspan="7" class="muted">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- Profiles -->
+    <!-- INVENTORY -->
+    <section id="tab_inventory" class="tabpane hide">
+      <div class="card">
+        <div class="hd"><h3>On-Hand Inventory</h3></div>
+        <div class="body show">
+          <table id="inv_tbl">
+            <thead><tr><th>Item</th><th>On Hand</th><th>Avg Cost</th><th>Total Cost</th><th>Market Price</th><th>Est. Value</th></tr></thead>
+            <tbody><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FLEX -->
+    <section id="tab_flex" class="tabpane hide">
+      <div class="card">
+        <div class="hd"><h3>Shareable Flex Graphic</h3></div>
+        <div class="body show">
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+            <div><label>From<input id="fx_from" type="date"></label></div>
+            <div><label>To<input id="fx_to" type="date"></label></div>
+            <div><label>Item<select id="fx_item"><option value="">All Items</option></select></label></div>
+            <div><label>Header Image URL<input id="fx_img" placeholder="https://..."></label></div>
+          </div>
+          <div style="margin:12px 0; display:flex; gap:8px;">
+            <button id="fx_gen" class="btn accent">Generate</button>
+            <button id="fx_clear" class="btn">Clear</button>
+            <button id="fx_save" class="btn">Save Image</button>
+          </div>
+          <canvas id="fx_canvas" width="1000" height="600" style="width:100%; max-width:1000px; border:1px solid var(--border); border-radius:10px; background:var(--card);"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab_settings" class="tabpane hide">
+      <div class="card">
+        <div class="hd"><h3>Items</h3><div class="btns"><button class="btn" data-add="items">Add</button></div></div>
+        <div class="body show">
+          <table id="set_items"><thead><tr><th>Item</th><th>Market</th><th>Actions</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Retailers</h3><div class="btns"><button class="btn" data-add="retailers">Add</button></div></div>
+        <div class="body show">
+          <table id="set_retailers"><thead><tr><th>Retailer</th><th>Actions</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Marketplaces</h3><div class="btns"><button class="btn" data-add="marketplaces">Add</button></div></div>
+        <div class="body show">
+          <table id="set_marketplaces"><thead><tr><th>Marketplace</th><th>Fee % (decimal)</th><th>Actions</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Order Book</h3><div class="btns"><button class="btn" data-add="orders">Add</button></div></div>
+        <div class="body show">
+          <table id="set_orders">
+            <thead><tr>
+              <th>Order Date</th><th>Item</th><th>Buy</th><th>Retailer</th>
+              <th>Sell</th><th>Sale Date</th><th>Marketplace</th><th>Shipping</th><th>Fee %</th><th>Actions</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFILES -->
     <section id="tab_profiles" class="tabpane hide">
       <div class="card">
         <div class="hd">
           <h3>Profiles</h3>
           <div class="btns">
-            <label class="btn">
-              Import <input id="profiles_import_input" type="file" accept="application/json" style="display:none;">
-            </label>
+            <label class="btn">Import <input id="profiles_import_input" type="file" accept="application/json" style="display:none;"></label>
             <button id="profiles_export_btn" class="btn">Export</button>
           </div>
         </div>
         <div class="body show">
-          <div class="row">
-            <div class="col">
+          <div class="grid" style="grid-template-columns: 1fr 1fr;">
+            <div>
               <div class="card">
                 <div class="hd"><h3>Add Profile</h3></div>
                 <div class="body show">
-                  <div class="row">
-                    <div class="col"><label>Username<input id="pro_username" placeholder="jdoe"/></label></div>
-                    <div class="col"><label>Email<input id="pro_email" placeholder="jdoe@email.com"/></label></div>
-                  </div>
-                  <div class="row">
-                    <div class="col"><label>Discord<input id="pro_discord" placeholder="discord#1234"/></label></div>
-                    <div class="col"><label>Role<input id="pro_role" placeholder="admin"/></label></div>
-                  </div>
-                  <div class="row">
-                    <div class="col"><label>Notes<textarea id="pro_notes" rows="2" placeholder="notes…"></textarea></label></div>
-                  </div>
-                  <div class="row">
-                    <div class="col"><button id="pro_add_btn" class="btn accent">Add Profile</button></div>
+                  <div class="grid">
+                    <div><label>Username<input id="pro_username" placeholder="jdoe"/></label></div>
+                    <div><label>Email<input id="pro_email" placeholder="jdoe@email.com"/></label></div>
+                    <div><label>Discord<input id="pro_discord" placeholder="discord#1234"/></label></div>
+                    <div><label>Role<input id="pro_role" placeholder="admin"/></label></div>
+                    <div style="grid-column:1 / -1;"><label>Notes<textarea id="pro_notes" rows="2" placeholder="notes…"></textarea></label></div>
+                    <div><button id="pro_add_btn" class="btn accent">Add Profile</button></div>
                   </div>
                 </div>
               </div>
             </div>
-            <div class="col">
+            <div>
               <div class="card">
-                <div class="hd"><h3>Profiles Table</h3>
-                  <div class="btns">
-                    <button id="pro_save_btn" class="btn">Save Edits</button>
-                  </div>
-                </div>
+                <div class="hd"><h3>Profiles Table</h3> <div class="btns"><button id="pro_save_btn" class="btn">Save Edits</button></div></div>
                 <div class="body show">
                   <table id="pro_tbl">
-                    <thead><tr>
-                      <th>Username</th><th>Email</th><th>Discord</th><th>Role</th><th>Notes</th><th class="td-actions">Actions</th>
-                    </tr></thead>
+                    <thead><tr><th>Username</th><th>Email</th><th>Discord</th><th>Role</th><th>Notes</th><th>Actions</th></tr></thead>
                     <tbody><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
                   </table>
                 </div>
@@ -218,25 +321,24 @@
   <div id="toast"></div>
 
 <script>
-// ------------------ Shared UI utils ------------------
+(function(){
+  const key='theme';
+  function apply(t){ document.body.setAttribute('data-theme', t); }
+  function current(){ return localStorage.getItem(key) || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); }
+  function toggle(){ const t=current()==='dark'?'light':'dark'; localStorage.setItem(key,t); apply(t); }
+  apply(current());
+  window.__themeToggle = toggle;
+  document.getElementById('themeBtn')?.addEventListener('click', toggle);
+})();
+
 function $(sel, root=document){ return root.querySelector(sel); }
 function $all(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
-function escapeHtml(s=''){
-  return String(s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-function toast(msg){
-  const el = document.getElementById('toast');
-  el.textContent = String(msg||'');
-  el.style.display='block';
-  clearTimeout(window.__toastTO);
-  window.__toastTO = setTimeout(()=>{ el.style.display='none'; }, 2500);
-}
-function showApp(){ document.getElementById('app').style.display='block'; document.getElementById('gate').style.display='none'; }
-function showGate(){ document.getElementById('app').style.display='none'; document.getElementById('gate').style.display='block'; }
+function escapeHtml(s=''){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function toast(msg){ const el=document.getElementById('toast'); el.textContent=String(msg||''); el.style.display='block'; clearTimeout(window.__toastTO); window.__toastTO=setTimeout(()=>{ el.style.display='none'; }, 2400); }
+function showApp(){ document.getElementById('app').style.display='block'; document.getElementById('nav').classList.add('show'); document.getElementById('gate').style.display='none'; }
+function showGate(){ document.getElementById('app').style.display='none'; document.getElementById('nav').classList.remove('show'); document.getElementById('gate').style.display='block'; }
+function cellVal(td){ const el=td.querySelector('input,select,textarea'); if(!el) return ''; if(el.tagName==='SELECT') return el.value||''; if(el.type==='number') return (el.value!==''?Number(el.value):0); return el.value||''; }
 
-// Tabs
 $all('.tab').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     $all('.tab').forEach(b=>b.classList.remove('active'));
@@ -245,662 +347,554 @@ $all('.tab').forEach(btn=>{
     $all('.tabpane').forEach(p=>p.classList.add('hide'));
     document.getElementById('tab_'+tab).classList.remove('hide');
     if (tab==='profiles') renderProfiles();
-    if (tab==='database') loadDatabase();
+    if (tab==='settings') renderSettings();
+    if (tab==='stats') refreshStats();
+    if (tab==='inventory') loadInventory();
   });
 });
-
-// Wire "Edit/Add/Save/Close" for each database card
-function wireDBButtons(){
-  const sections = [
-    { body:'#db_items_body', tbl:'#db_items_tbl', section:'items' },
-    { body:'#db_retail_body', tbl:'#db_retail_tbl', section:'retailers' },
-    { body:'#db_mkt_body',    tbl:'#db_mkt_tbl',    section:'marketplaces' },
-    { body:'#db_sheet_body',  tbl:'#db_sheet_tbl',  section:'sheet' },
-  ];
-  sections.forEach(({body, tbl, section})=>{
-    const card = document.querySelector(body)?.closest('.card');
-    if (!card) return;
-    const edit = card.querySelector('[data-action="edit"]');
-    const add  = card.querySelector('[data-action="add"]');
-    const save = card.querySelector('[data-action="save"]');
-    const cancel = card.querySelector('[data-action="cancel"]');
-
-    // Only wire once
-    if (card.__wired) return; card.__wired = true;
-
-    edit?.addEventListener('click', ()=>{
-      card.querySelector('.body')?.classList.add('show');
-      edit.style.display='none';
-      // Hide top Save for inline-save sections
-      if (save) save.style.display = (['items','retailers','marketplaces','sheet'].includes(section) ? 'none' : '');
-    });
-    cancel?.addEventListener('click', ()=>{
-      card.querySelector('.body')?.classList.remove('show');
-      if (edit) edit.style.display='';
-    });
-    add?.addEventListener('click', ()=> insertPendingRow(section));
-  });
-}
-
-// cell value getter
-function cellVal(td){
-  const el = td.querySelector('input, select, textarea');
-  if (!el) return '';
-  if (el.tagName==='SELECT') return el.value || '';
-  if (el.type==='number') return (el.value!=='' ? Number(el.value) : 0);
-  return el.value || '';
-}
-
 </script>
 
 <script type="module">
-// ------------------ Supabase Client ------------------
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// 🔧 Replace with your values
 const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-window.supabase = supabase; // expose for legacy helpers
+window.supabase = supabase;
 
-// ------------------ DB Helpers ------------------
-const DB = {
-  async list(table, columns='*', { orderBy, ascending=true, limit }={}){
-    let q = supabase.from(table).select(columns);
-    if (orderBy) q = q.order(orderBy, { ascending });
-    if (limit) q = q.limit(limit);
-    const { data, error } = await q;
-    if (error) throw error;
-    return data || [];
-  },
-  async insert(table, payload){
-    const { data, error } = await supabase.from(table).insert(payload).select();
-    if (error) throw error;
-    return (data && data[0]) || null;
-  },
-  async update(table, id, payload, idCol='id'){
-    const { data, error } = await supabase.from(table).update(payload).eq(idCol, id).select();
-    if (error) throw error;
-    return (data && data[0]) || null;
-  },
-  async remove(table, id, idCol='id'){
-    const { error } = await supabase.from(table).delete().eq(idCol, id);
-    if (error) throw error;
-    return true;
-  }
-};
-
-// ------------------ Auth / Gate ------------------
 async function refreshGate(){
   const { data: { user } } = await supabase.auth.getUser();
-  if (user){ try{ showApp(); }catch(_){} } else { try{ showGate(); }catch(_){} }
+  const signBtn = document.getElementById('discordBtn');
+  const userBox = document.getElementById('userBox');
+  const avatar = document.getElementById('avatar');
+  const uname = document.getElementById('uname');
+
+  if (user){
+    const meta = user.user_metadata || {};
+    const pic = meta.avatar_url || meta.picture || '';
+    const name = meta.full_name || meta.name || meta.user_name || meta.preferred_username || (user.email || 'User');
+    if (pic){ avatar.src = pic; avatar.style.display='block'; } else { avatar.style.display='none'; }
+    uname.textContent = name; uname.style.display='inline-block';
+    if (userBox) userBox.style.display='flex';
+    if (signBtn) signBtn.style.display='none';
+
+    showApp();
+    setActiveTab('quickadd');
+    await populateLookups();
+  } else {
+    showGate();
+    if (signBtn) signBtn.style.display='inline-block';
+    if (userBox) userBox.style.display='none';
+  }
 }
 supabase.auth.onAuthStateChange(()=> refreshGate());
 
-const discordBtn = document.getElementById('discordBtn');
-const discordBtn2 = document.getElementById('discordBtn_clone');
-[discordBtn, discordBtn2].forEach(btn=>{
-  btn?.addEventListener('click', (e)=>{
-    e.preventDefault();
-    supabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: window.location.href } });
-  });
+document.getElementById('discordBtn')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  supabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: window.location.href } });
 });
 document.getElementById('logoutBtn')?.addEventListener('click', async ()=>{
   await supabase.auth.signOut();
-  location.reload();
+  await refreshGate();
 });
 
-// ------------------ Database Renderers ------------------
-async function renderDBBody(section){
+function setActiveTab(tab){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  const btn = document.querySelector(`.tab[data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.add('hide'));
+  const pane = document.getElementById('tab_'+tab);
+  if (pane) pane.classList.remove('hide');
+}
+
+async function populateLookups(){
+  const [{ data: items }, { data: retailers }, { data: mkts }] = await Promise.all([
+    supabase.from('Items').select('item_name').order('item_name', { ascending:true }),
+    supabase.from('Retailers').select('name').order('name', { ascending:true }),
+    supabase.from('Marketplaces').select('name, fee').order('name', { ascending:true })
+  ]);
+  const qaItem = document.getElementById('qa_item');
+  const qaRetail = document.getElementById('qa_bought_from');
+  const qaMkt = document.getElementById('qa_marketplace');
+  if (qaItem) qaItem.innerHTML = (items||[]).map(x=>`<option value="${escapeHtml(x.item_name)}">${escapeHtml(x.item_name)}</option>`).join('');
+  if (qaRetail) qaRetail.innerHTML = (retailers||[]).map(x=>`<option value="${escapeHtml(x.name)}">${escapeHtml(x.name)}</option>`).join('');
+  if (qaMkt) qaMkt.innerHTML = `<option value=""></option>` + (mkts||[]).map(x=>`<option value="${escapeHtml(x.name)}" data-fee="${Number(x.fee||0)}">${escapeHtml(x.name)}</option>`).join('');
+
+  const msMkt = document.getElementById('ms_mkt');
+  if (msMkt) msMkt.innerHTML = (mkts||[]).map(x=>`<option value="${escapeHtml(x.name)}" data-fee="${Number(x.fee||0)}">${escapeHtml(x.name)}</option>`).join('');
+
+  const stItem = document.getElementById('st_item_filter');
+  const fxItem = document.getElementById('fx_item');
+  if (stItem) stItem.innerHTML = `<option value="">All Items</option>` + (items||[]).map(x=>`<option value="${escapeHtml(x.item_name)}">${escapeHtml(x.item_name)}</option>`).join('');
+  if (fxItem) fxItem.innerHTML = `<option value="">All Items</option>` + (items||[]).map(x=>`<option value="${escapeHtml(x.item_name)}">${escapeHtml(x.item_name)}</option>`).join('');
+
+  refreshOpenPurchases();
+}
+async function refreshOpenPurchases(){
+  const sel = document.getElementById('ms_open');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Loading…</option>';
+  const { data, error } = await supabase.from('Orders')
+    .select('id, order_date, item, buy_price, bought_from, sell_price')
+    .order('order_date', { ascending:false }).limit(1000);
+  if (error){ sel.innerHTML='<option value="">Error</option>'; return; }
+  const open = (data||[]).filter(r => !(Number(r.sell_price||0) > 0));
+  sel.innerHTML = '<option value="">Select…</option>' + open.map(r=>{
+    const label = `${r.order_date || '—'} • ${r.item || 'item'} • $${Number(r.buy_price||0).toFixed(2)} • ${r.bought_from || ''}`;
+    return `<option value="${r.id}">${escapeHtml(label)}</option>`;
+  }).join('');
+}
+
+document.getElementById('qa_add_btn')?.addEventListener('click', async ()=>{
+  const order_date = (document.getElementById('qa_order_date').value || null);
+  const item = (document.getElementById('qa_item').value || null);
+  const bought_from = (document.getElementById('qa_bought_from').value || null);
+  const qty = Math.max(1, Number(document.getElementById('qa_qty').value || 1));
+  const buy_total = Number(document.getElementById('qa_buy_price').value || 0);
+
+  const sale_date = (document.getElementById('qa_sale_date').value || null);
+  const sale_location = (document.getElementById('qa_marketplace').value || null);
+  const sale_total = Number(document.getElementById('qa_sale_price').value || 0);
+  const ship_total = Number(document.getElementById('qa_shipping').value || 0);
+
+  if (!order_date || !item){ toast('Order date and Item are required'); return; }
+
+  const per_buy = qty>0 ? (buy_total / qty) : buy_total;
+  const hasSale = !!(sale_date || sale_location || sale_total>0 || ship_total>0);
+  const per_sale = hasSale ? (sale_total / qty) : 0;
+  const per_ship = hasSale ? (ship_total / qty) : 0;
+
+  const rows = [];
+  for (let i=0;i<qty;i++){
+    rows.push({
+      order_date, item,
+      buy_price: per_buy,
+      bought_from,
+      sell_price: hasSale ? per_sale : null,
+      sale_date: hasSale ? sale_date : null,
+      sale_location: hasSale ? sale_location : null,
+      shipping: hasSale ? per_ship : null
+    });
+  }
   try{
-    if (section==='items'){
-      const tb = document.querySelector('#db_items_tbl tbody');
-      tb.innerHTML = '<tr><td colspan="3" class="muted">Loading…</td></tr>';
-      const rows = (await DB.list('Items','id, item_name, market', { orderBy:'item_name', ascending:true }))
-        .map(r=>({ row:r.id, name:r.item_name||'', market:Number(r.market||0) }));
-      document.getElementById('db_items_count').textContent = 'Rows: '+rows.length;
-      tb.innerHTML = rows.map(x=>`
-        <tr data-row="${x.row}">
-          <td><input type="text" value="${escapeHtml(x.name)}"></td>
-          <td><input type="number" step="0.01" value="${x.market}"></td>
-          <td class="td-actions">
-            <button class="btn db-row-update" type="button">Save</button>
-            <button class="btn danger db-del" type="button">Delete</button>
-          </td>
-        </tr>
-      `).join('') || '<tr><td colspan="3" class="muted">No rows</td></tr>';
+    const { error } = await supabase.from('Orders').insert(rows);
+    if (error) throw error;
+    toast(`Added ${qty} order${qty>1?'s':''}`);
+    document.getElementById('qa_buy_price').value='0';
+    document.getElementById('qa_sale_price').value='0';
+    document.getElementById('qa_shipping').value='0';
+    document.getElementById('qa_qty').value='1';
+    document.getElementById('qa_msg').textContent='Saved ✔';
+    await refreshOpenPurchases();
+  }catch(err){ toast((err && err.message) || 'Add failed'); }
+});
 
-      tb.onclick = async (ev)=>{
-        const tr = ev.target.closest('tr[data-row], tr.__pending');
-        if (!tr) return;
-        if (ev.target.matches('.db-row-update')){
-          // pending -> insert, else update
-          if (tr.classList.contains('__pending')){
-            const name = cellVal(tr.children[0]).trim();
-            const market = Number(cellVal(tr.children[1])||0);
-            if (!name){ toast('Item name required'); return; }
-            const rec = await DB.insert('Items',[{ item_name:name, market }]);
-            toast('Item added'); renderDBBody('items');
-          } else {
-            const id = Number(tr.getAttribute('data-row'));
-            const name = cellVal(tr.children[0]).trim();
-            const market = Number(cellVal(tr.children[1])||0);
-            await DB.update('Items', id, { item_name:name, market });
-            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
-            toast('Item saved');
-          }
-        }
-        if (ev.target.matches('.db-del')){
-          const id = Number(tr.getAttribute('data-row'));
-          if (!id || !confirm('Delete this item?')) return;
-          await DB.remove('Items', id);
-          tr.remove(); toast('Deleted');
-          document.getElementById('db_items_count').textContent = 'Rows: '+document.querySelectorAll('#db_items_tbl tbody tr').length;
-        }
-        if (ev.target.matches('.db-row-cancel')){
-          tr.remove();
-        }
-      };
+document.getElementById('ms_save')?.addEventListener('click', async ()=>{
+  const id = Number(document.getElementById('ms_open').value || 0);
+  if (!id){ toast('Select a purchase'); return; }
+  const sell_price = Number(document.getElementById('ms_price').value || 0);
+  const sale_date = document.getElementById('ms_date').value || null;
+  const sale_location = document.getElementById('ms_mkt').value || null;
+  let fees_pct = document.getElementById('ms_fee').value;
+  const shipping = Number(document.getElementById('ms_ship').value || 0);
 
-      return;
-    }
-
-    if (section==='retailers'){
-      const tb = document.querySelector('#db_retail_tbl tbody');
-      tb.innerHTML = '<tr><td colspan="2" class="muted">Loading…</td></tr>';
-      const rows = (await DB.list('Retailers','id, name', { orderBy:'name', ascending:true }))
-        .map(r=>({ row:r.id, name:r.name||'' }));
-      document.getElementById('db_retail_count').textContent = 'Rows: '+rows.length;
-      tb.innerHTML = rows.map(x=>`
-        <tr data-row="${x.row}">
-          <td><input type="text" value="${escapeHtml(x.name)}"></td>
-          <td class="td-actions">
-            <button class="btn db-row-update" type="button">Save</button>
-            <button class="btn danger db-del" type="button">Delete</button>
-          </td>
-        </tr>
-      `).join('') || '<tr><td colspan="2" class="muted">No rows</td></tr>';
-
-      tb.onclick = async (ev)=>{
-        const tr = ev.target.closest('tr[data-row], tr.__pending');
-        if (!tr) return;
-        if (ev.target.matches('.db-row-update')){
-          if (tr.classList.contains('__pending')){
-            const name = cellVal(tr.children[0]).trim();
-            if (!name){ toast('Name required'); return; }
-            await DB.insert('Retailers',[{ name }]);
-            toast('Retailer added'); renderDBBody('retailers');
-          } else {
-            const id = Number(tr.getAttribute('data-row'));
-            const name = cellVal(tr.children[0]).trim();
-            await DB.update('Retailers', id, { name });
-            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
-            toast('Retailer saved');
-          }
-        }
-        if (ev.target.matches('.db-del')){
-          const id = Number(tr.getAttribute('data-row'));
-          if (!id || !confirm('Delete this retailer?')) return;
-          await DB.remove('Retailers', id);
-          tr.remove(); toast('Deleted');
-          document.getElementById('db_retail_count').textContent = 'Rows: '+document.querySelectorAll('#db_retail_tbl tbody tr').length;
-        }
-        if (ev.target.matches('.db-row-cancel')) tr.remove();
-      };
-      return;
-    }
-
-    if (section==='marketplaces'){
-      const tb = document.querySelector('#db_mkt_tbl tbody');
-      tb.innerHTML = '<tr><td colspan="3" class="muted">Loading…</td></tr>';
-      const rows = (await DB.list('Marketplaces','id, name, fee', { orderBy:'name', ascending:true }))
-        .map(r=>({ row:r.id, name:r.name||'', fee:Number(r.fee||0) }));
-      document.getElementById('db_mkt_count').textContent = 'Rows: '+rows.length;
-      tb.innerHTML = rows.map(x=>`
-        <tr data-row="${x.row}">
-          <td><input type="text" value="${escapeHtml(x.name)}"></td>
-          <td><input type="number" step="0.0001" value="${x.fee}"></td>
-          <td class="td-actions">
-            <button class="btn db-row-update" type="button">Save</button>
-            <button class="btn danger db-del" type="button">Delete</button>
-          </td>
-        </tr>
-      `).join('') || '<tr><td colspan="3" class="muted">No rows</td></tr>';
-
-      tb.onclick = async (ev)=>{
-        const tr = ev.target.closest('tr[data-row], tr.__pending');
-        if (!tr) return;
-        if (ev.target.matches('.db-row-update')){
-          if (tr.classList.contains('__pending')){
-            const name = cellVal(tr.children[0]).trim();
-            const fee  = Number(cellVal(tr.children[1])||0);
-            if (!name){ toast('Name required'); return; }
-            await DB.insert('Marketplaces',[{ name, fee }]);
-            toast('Marketplace added'); renderDBBody('marketplaces');
-          } else {
-            const id = Number(tr.getAttribute('data-row'));
-            const name = cellVal(tr.children[0]).trim();
-            const fee  = Number(cellVal(tr.children[1])||0);
-            await DB.update('Marketplaces', id, { name, fee });
-            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
-            toast('Marketplace saved');
-          }
-        }
-        if (ev.target.matches('.db-del')){
-          const id = Number(tr.getAttribute('data-row'));
-          if (!id || !confirm('Delete this marketplace?')) return;
-          await DB.remove('Marketplaces', id);
-          tr.remove(); toast('Deleted');
-          document.getElementById('db_mkt_count').textContent = 'Rows: '+document.querySelectorAll('#db_mkt_tbl tbody tr').length;
-        }
-        if (ev.target.matches('.db-row-cancel')) tr.remove();
-      };
-      return;
-    }
-
-    if (section==='sheet'){
-      const tb = document.querySelector('#db_sheet_tbl tbody');
-      tb.innerHTML = '<tr><td colspan="9" class="muted">Loading…</td></tr>';
-      const { data: dataRows, error } = await supabase
-        .from('Orders')
-        .select('id, order_date, item, buy_price, bought_from, sell_price, sale_date, sale_location, shipping')
-        .order('order_date', { ascending: false })
-        .limit(500);
-      if (error) throw error;
-
-      const rows = (dataRows || []).map(r => ({
-        row: r.id,
-        order_date: r.order_date, item: r.item, buy_price: r.buy_price, bought_from: r.bought_from,
-        sell_price: r.sell_price, sale_date: r.sale_date, sale_location: r.sale_location, shipping: r.shipping
-      }));
-
-      // Sort newest by order_date, then id desc
-      rows.sort((a,b)=>{
-        const da = a.order_date || ''; const db = b.order_date || '';
-        if (da && db){ const cmp = db.localeCompare(da); if (cmp!==0) return cmp; }
-        else if (da || db){ return db ? 1 : -1; }
-        return (b.row||0)-(a.row||0);
-      });
-
-      document.getElementById('db_sheet_count').textContent = 'Rows: '+rows.length;
-
-      // sale locations select options
-      const mktNames = (await DB.list('Marketplaces','name', { orderBy:'name', ascending:true })).map(x=>x.name).filter(Boolean);
-      const mktOptions = mktNames.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-
-      tb.innerHTML = rows.map(r=>`
-        <tr data-row="${r.row}">
-          <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
-          <td><input list="items" value="${escapeHtml(r.item||'')}"></td>
-          <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
-          <td><input list="retailers" value="${escapeHtml(r.bought_from||'')}"></td>
-          <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
-          <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
-          <td><select>${mktOptions}</select></td>
-          <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
-          <td class="td-actions">
-            <button class="btn db-row-update" type="button">Save</button>
-            <button class="btn danger db-del" type="button">Delete</button>
-          </td>
-        </tr>
-      `).join('') || '<tr><td colspan="9" class="muted">No rows</td></tr>';
-
-      // restore selected value post render
-      Array.from(tb.querySelectorAll('tr')).forEach((tr, i)=>{
-        const sel = tr.children[6]?.querySelector('select'); if (sel) sel.value = rows[i]?.sale_location || '';
-      });
-
-      tb.onclick = async (ev)=>{
-        const tr = ev.target.closest('tr[data-row], tr.__pending');
-        if (!tr) return;
-        if (ev.target.matches('.db-row-update')){
-          if (tr.classList.contains('__pending')){
-            // insert
-            const rec = {
-              order_date: cellVal(tr.children[0]) || null,
-              item: cellVal(tr.children[1]) || null,
-              buy_price: cellVal(tr.children[2]) ?? null,
-              bought_from: cellVal(tr.children[3]) || null,
-              sell_price: cellVal(tr.children[4]) ?? null,
-              sale_date: cellVal(tr.children[5]) || null,
-              sale_location: cellVal(tr.children[6]) || null,
-              shipping: cellVal(tr.children[7]) ?? null
-            };
-            await DB.insert('Orders',[rec]);
-            toast('Order added'); renderDBBody('sheet');
-          } else {
-            // update existing
-            const id = Number(tr.getAttribute('data-row'));
-            const rec = {
-              order_date: cellVal(tr.children[0]) || null,
-              item: cellVal(tr.children[1]) || null,
-              buy_price: cellVal(tr.children[2]) ?? null,
-              bought_from: cellVal(tr.children[3]) || null,
-              sell_price: cellVal(tr.children[4]) ?? null,
-              sale_date: cellVal(tr.children[5]) || null,
-              sale_location: cellVal(tr.children[6]) || null,
-              shipping: cellVal(tr.children[7]) ?? null
-            };
-            await DB.update('Orders', id, rec);
-            tr.classList.add('saved'); setTimeout(()=>tr.classList.remove('saved'),600);
-            toast('Order saved');
-          }
-        }
-        if (ev.target.matches('.db-del')){
-          const id = Number(tr.getAttribute('data-row'));
-          if (!id || !confirm('Delete this order row?')) return;
-          await DB.remove('Orders', id);
-          tr.remove(); toast('Deleted');
-          document.getElementById('db_sheet_count').textContent = 'Rows: '+document.querySelectorAll('#db_sheet_tbl tbody tr').length;
-        }
-        if (ev.target.matches('.db-row-cancel')) tr.remove();
-      };
-
-      return;
-    }
-  }catch(err){
-    console.error(err);
-    toast((err && err.message) || 'Load failed');
+  if (!fees_pct && sale_location){
+    const { data } = await supabase.from('Marketplaces').select('fee').eq('name', sale_location).maybeSingle();
+    fees_pct = data ? Number(data.fee || 0) : 0;
+  } else {
+    fees_pct = Number(fees_pct || 0);
   }
+
+  try{
+    const { error } = await supabase.from('Orders').update({
+      sell_price: sell_price > 0 ? sell_price : null,
+      sale_date,
+      sale_location,
+      fees_pct,
+      shipping
+    }).eq('id', id);
+    if (error) throw error;
+    toast('Saved ✔');
+    await refreshOpenPurchases();
+  }catch(err){ toast((err && err.message) || 'Save failed'); }
+});
+
+function moneyCompact(n){
+  const x = Number.isFinite(Number(n)) ? Number(n) : 0;
+  try{
+    return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', notation:'compact', maximumFractionDigits:2 }).format(x);
+  }catch{ return '$'+x.toFixed(2); }
+}
+function fmtDate(d){ const dd=new Date(d); return dd.toISOString().slice(0,10); }
+function dateKey(d){ const dd=new Date(d); return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); }
+function rangeWindow(key, from, to){
+  const today = new Date();
+  function minusDays(n){ const d=new Date(today); d.setDate(d.getDate()-n); return d; }
+  if (key==='last30') return { start: minusDays(30), end: today };
+  if (key==='last7')  return { start: minusDays(7), end: today };
+  if (key==='custom') return { start: from?new Date(from):null, end: to?new Date(to):null };
+  return { start:null, end:null };
+}
+function inWindow(d, start, end){
+  if (!d) return false;
+  const t = new Date(new Date(d).toDateString()).getTime();
+  if (start && t < new Date(new Date(start).toDateString()).getTime()) return false;
+  if (end && t > new Date(new Date(end).toDateString()).getTime()) return false;
+  return true;
+}
+let charts = {};
+function destroyCharts(){ Object.values(charts).forEach(ch=>{ try{ ch.destroy(); }catch{} }); charts={}; }
+
+async function refreshStats(){
+  const rk = document.getElementById('st_range').value;
+  const from = document.getElementById('st_from').value;
+  const to = document.getElementById('st_to').value;
+  const itemFilter = document.getElementById('st_item_filter').value;
+
+  const { start, end } = rangeWindow(rk, from, to);
+  const { data, error } = await supabase.from('Orders')
+    .select('order_date, item, buy_price, sell_price, sale_date, sale_location, shipping, bought_from');
+  if (error){ toast('Stats load failed'); return; }
+  const rows = (data||[]).filter(r => !itemFilter || String(r.item||'')===itemFilter);
+
+  const byDay = new Map();
+  const byRetailer = new Map();
+  const byMarketplace = new Map();
+  const breakdown = new Map();
+
+  const add = (m,k,delta)=> m.set(k, (m.get(k)||0)+delta);
+  for (const r of rows){
+    if (!start && !end || inWindow(r.order_date, start, end)){
+      const k = dateKey(r.order_date || r.sale_date || new Date());
+      const obj = byDay.get(k) || { purchases:0, sales:0, cost:0, revenue:0 };
+      obj.purchases += 1;
+      obj.cost += Number(r.buy_price||0);
+      byDay.set(k, obj);
+      if (r.bought_from) add(byRetailer, r.bought_from, 1);
+      const it = breakdown.get(r.item)||{bought:0,sold:0,onhand:0,cost:0,revenue:0};
+      it.bought += 1; it.cost += Number(r.buy_price||0); breakdown.set(r.item, it);
+    }
+    const sold = Number(r.sell_price||0) > 0 && r.sale_date;
+    if (sold && ( !start && !end || inWindow(r.sale_date, start, end)) ){
+      const k = dateKey(r.sale_date);
+      const obj = byDay.get(k) || { purchases:0, sales:0, cost:0, revenue:0 };
+      obj.sales += 1;
+      obj.revenue += Number(r.sell_price||0);
+      byDay.set(k, obj);
+      if (r.sale_location) add(byMarketplace, r.sale_location, 1);
+      const it = breakdown.get(r.item)||{bought:0,sold:0,onhand:0,cost:0,revenue:0};
+      it.sold += 1; it.revenue += Number(r.sell_price||0); breakdown.set(r.item, it);
+    }
+  }
+  for (const [k,it] of breakdown.entries()){ it.onhand = Math.max(0, (it.bought||0)-(it.sold||0)); }
+
+  destroyCharts();
+  const labels = Array.from(byDay.keys()).sort();
+  const purchasesData = labels.map(k => (byDay.get(k)||{}).purchases||0);
+  const salesData = labels.map(k => (byDay.get(k)||{}).sales||0);
+  const costData = labels.map(k => (byDay.get(k)||{}).cost||0);
+  const revenueData = labels.map(k => (byDay.get(k)||{}).revenue||0);
+
+  const gridColor = getComputedStyle(document.body).getPropertyValue('--chart-grid').trim() || '#333';
+  const axis = { ticks:{ color:getComputedStyle(document.body).getPropertyValue('--muted') }, grid:{ color:gridColor } };
+  const legend = { labels:{ color:getComputedStyle(document.body).getPropertyValue('--muted') } };
+
+  charts.ps = new Chart(document.getElementById('chart_purchases_sales'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { label:'Purchases', data:purchasesData },
+      { label:'Sales', data:salesData }
+    ]},
+    options:{ responsive:true, plugins:{ legend }, scales:{ x:axis, y:axis } }
+  });
+  const byRet = Array.from(byRetailer.entries()).sort((a,b)=>b[1]-a[1]);
+  charts.br = new Chart(document.getElementById('chart_by_retailer'), {
+    type:'bar', data:{ labels: byRet.map(x=>x[0]), datasets:[{ label:'Purchases by Retailer', data: byRet.map(x=>x[1]) }] },
+    options:{ responsive:true, plugins:{ legend }, scales:{ x:axis, y:axis } }
+  });
+  const byMkt = Array.from(byMarketplace.entries()).sort((a,b)=>b[1]-a[1]);
+  charts.bm = new Chart(document.getElementById('chart_by_marketplace'), {
+    type:'bar', data:{ labels: byMkt.map(x=>x[0]), datasets:[{ label:'Sales by Marketplace', data: byMkt.map(x=>x[1]) }] },
+    options:{ responsive:true, plugins:{ legend }, scales:{ x:axis, y:axis } }
+  });
+  charts.cr = new Chart(document.getElementById('chart_cost_revenue'), {
+    type:'bar', data:{ labels, datasets:[
+      { label:'Cost', data: costData },
+      { label:'Revenue', data: revenueData }
+    ]},
+    options:{ responsive:true, plugins:{ legend }, scales:{ x:axis, y:axis } }
+  });
+
+  const tb = document.querySelector('#st_breakdown_tbl tbody');
+  const rows2 = Array.from(breakdown.entries()).map(([item,v])=>({
+    item, bought:v.bought||0, sold:v.sold||0, onhand:v.onhand||0, cost:v.cost||0, revenue:v.revenue||0, pnl:(v.revenue||0)-(v.cost||0)
+  })).sort((a,b)=> b.pnl - a.pnl);
+  tb.innerHTML = rows2.map(r=>`
+    <tr>
+      <td>${escapeHtml(r.item||'')}</td>
+      <td>${r.bought}</td>
+      <td>${r.sold}</td>
+      <td>${r.onhand}</td>
+      <td>${moneyCompact(r.cost)}</td>
+      <td>${moneyCompact(r.revenue)}</td>
+      <td>${moneyCompact(r.pnl)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="7" class="muted">No data</td></tr>';
+}
+document.getElementById('st_refresh')?.addEventListener('click', refreshStats);
+document.getElementById('st_range')?.addEventListener('change', ()=>{
+  const v=document.getElementById('st_range').value;
+  const show = (v==='custom');
+  document.getElementById('st_from').classList.toggle('hide', !show);
+  document.getElementById('st_to').classList.toggle('hide', !show);
+});
+
+function money(n){ return '$'+Number(n||0).toFixed(2); }
+async function loadInventory(){
+  const tb = document.querySelector('#inv_tbl tbody'); tb.innerHTML='<tr><td colspan="6" class="muted">Loading…</td></tr>';
+  try{
+    const { data: orders } = await supabase.from('Orders').select('item, buy_price, sell_price');
+    const { data: items } = await supabase.from('Items').select('item_name, market');
+    const priceMap = Object.fromEntries((items||[]).map(x=>[x.item_name, Number(x.market||0)]));
+    const agg = new Map();
+    for (const r of (orders||[])){
+      const k = String(r.item||''); if (!k) continue;
+      const m = agg.get(k) || { item:k, bought:0, sold:0, costAll:0, costSold:0 };
+      m.bought += 1;
+      m.costAll += Number(r.buy_price||0);
+      if (Number(r.sell_price||0) > 0) { m.sold += 1; m.costSold += Number(r.buy_price||0); }
+      agg.set(k, m);
+    }
+    const rows=[];
+    for (const [k,v] of agg.entries()){
+      const onHand = Math.max(0, (v.bought||0)-(v.sold||0));
+      if (onHand <= 0) continue;
+      const onHandCost = (v.costAll||0)-(v.costSold||0);
+      const avg = onHand ? onHandCost/onHand : 0;
+      const mkt = priceMap[k] || 0;
+      const est = mkt * onHand;
+      rows.push({ item:k, onHand, avg, cost:onHandCost, mkt, est });
+    }
+    rows.sort((a,b)=> b.est - a.est);
+    tb.innerHTML = rows.map(r=>`
+      <tr><td>${escapeHtml(r.item)}</td><td>${r.onHand}</td><td>${money(r.avg)}</td><td>${money(r.cost)}</td><td>${money(r.mkt)}</td><td>${money(r.est)}</td></tr>
+    `).join('') || '<tr><td colspan="6" class="muted">No inventory</td></tr>';
+  }catch(err){ tb.innerHTML='<tr><td colspan="6">Load failed</td></tr>'; }
 }
 
-// Insert a pending row at top for inline add
-async function insertPendingRow(section){
-  if (section==='items'){
-    const tb = document.querySelector('#db_items_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `
-      <td><input type="text" value=""></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td class="td-actions">
-        <button class="btn db-row-update" type="button">Save</button>
-        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
-      </td>`;
-    tb.prepend(tr);
-    tr.querySelector('input')?.focus();
-    return;
+async function computeFlex(from, to, item){
+  const { data, error } = await supabase.from('Orders').select('order_date, item, buy_price, sell_price, sale_date, shipping');
+  if (error) throw error;
+  const inWin = (d)=>{
+    const t = d ? new Date(new Date(d).toDateString()).getTime() : null;
+    const s = from ? new Date(new Date(from).toDateString()).getTime() : null;
+    const e = to ? new Date(new Date(to).toDateString()).getTime() : null;
+    if (s && (!t || t < s)) return false;
+    if (e && (!t || t > e)) return false;
+    return true;
+  };
+  let bought=0, sold=0, cost=0, revenue=0, ship=0;
+  for (const r of (data||[])){
+    if (item && String(r.item||'')!==item) continue;
+    if (inWin(r.order_date)){ bought+=1; cost += Number(r.buy_price||0); }
+    if (Number(r.sell_price||0)>0 && inWin(r.sale_date)){ sold+=1; revenue += Number(r.sell_price||0); ship += Number(r.shipping||0); }
   }
-  if (section==='retailers'){
-    const tb = document.querySelector('#db_retail_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `
-      <td><input type="text" value=""></td>
-      <td class="td-actions">
-        <button class="btn db-row-update" type="button">Save</button>
-        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
-      </td>`;
-    tb.prepend(tr);
-    tr.querySelector('input')?.focus();
-    return;
+  const avgCost = bought ? cost/bought : 0;
+  const profit = revenue - cost - ship;
+  return { bought, sold, avgCost, revenue, profit };
+}
+async function drawFlex(){
+  const from = document.getElementById('fx_from').value || null;
+  const to = document.getElementById('fx_to').value || null;
+  const item = document.getElementById('fx_item').value || '';
+  const imgUrl = document.getElementById('fx_img').value.trim();
+  const c = document.getElementById('fx_canvas'); const ctx = c.getContext('2d');
+  const cs = getComputedStyle(document.body);
+  const bg = cs.getPropertyValue('--card') || '#111';
+  const text = cs.getPropertyValue('--text') || '#eee';
+  const border = cs.getPropertyValue('--border') || '#333';
+  ctx.fillStyle = bg; ctx.fillRect(0,0,c.width,c.height);
+
+  if (imgUrl){
+    try {
+      const img = await new Promise((res, rej)=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=rej; i.src=imgUrl; });
+      const ratio = Math.min(c.width/img.width, 200/img.height);
+      const w = img.width*ratio, h = img.height*ratio;
+      ctx.drawImage(img, (c.width-w)/2, 20, w, h);
+    } catch {}
   }
-  if (section==='marketplaces'){
-    const tb = document.querySelector('#db_mkt_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    tr.innerHTML = `
-      <td><input type="text" value=""></td>
-      <td><input type="number" step="0.0001" value="0"></td>
-      <td class="td-actions">
-        <button class="btn db-row-update" type="button">Save</button>
-        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
-      </td>`;
-    tb.prepend(tr);
-    tr.querySelector('input')?.focus();
-    return;
-  }
-  if (section==='sheet'){
-    const tb = document.querySelector('#db_sheet_tbl tbody');
-    const tr = document.createElement('tr');
-    tr.className='__pending';
-    // get marketplaces to build options
-    const mktNames = (await DB.list('Marketplaces','name', { orderBy:'name', ascending:true })).map(x=>x.name).filter(Boolean);
-    const mktOptions = mktNames.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-    tr.innerHTML = `
-      <td><input type="date" value=""></td>
-      <td><input list="items" value=""></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td><input list="retailers" value=""></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td><input type="date" value=""></td>
-      <td><select>${mktOptions}</select></td>
-      <td><input type="number" step="0.01" value="0"></td>
-      <td class="td-actions">
-        <button class="btn db-row-update" type="button">Save</button>
-        <button class="btn ghost db-row-cancel" type="button">Cancel</button>
-      </td>`;
-    tb.prepend(tr);
-    tr.querySelector('input,select')?.focus();
-    return;
+
+  const s = await computeFlex(from, to, item);
+  ctx.fillStyle = text;
+  ctx.font = 'bold 32px Inter, system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Resale Stats', c.width/2, 260);
+  ctx.font = '16px Inter, system-ui, sans-serif';
+  ctx.fillText(`${from||'Start'} → ${to||'Today'} ${item?('• '+item):''}`, c.width/2, 285);
+
+  const cards = [
+    { label:'# Bought', val:String(s.bought) },
+    { label:'# Sold', val:String(s.sold) },
+    { label:'Avg Cost', val:'$'+(s.avgCost||0).toFixed(2) },
+    { label:'Revenue', val:'$'+(s.revenue||0).toFixed(2) },
+    { label:'Profit/Loss', val:'$'+(s.profit||0).toFixed(2) }
+  ];
+  const startX = 80, startY=330, w=160, h=90, gap=30;
+  ctx.textAlign = 'left';
+  for (let i=0;i<cards.length;i++){
+    const x = startX + i*(w+gap), y=startY;
+    ctx.fillStyle = border; ctx.fillRect(x-1,y-1,w+2,h+2);
+    ctx.fillStyle = bg; ctx.fillRect(x,y,w,h);
+    ctx.fillStyle = text; ctx.font='12px Inter, system-ui, sans-serif'; ctx.fillText(cards[i].label, x+10, y+24);
+    ctx.font='bold 22px Inter, system-ui, sans-serif'; ctx.fillText(cards[i].val, x+10, y+56);
   }
 }
+document.getElementById('fx_gen')?.addEventListener('click', ()=>{ drawFlex().then(()=>toast('Generated')); });
+document.getElementById('fx_clear')?.addEventListener('click', ()=>{
+  const c=document.getElementById('fx_canvas'); const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+});
+document.getElementById('fx_save')?.addEventListener('click', ()=>{
+  const c=document.getElementById('fx_canvas');
+  const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='flex.png'; a.click();
+});
 
-// Load all db bodies initially when landing on database tab
-async function loadDatabase(){
-  await renderDBBody('items');
-  await renderDBBody('retailers');
-  await renderDBBody('marketplaces');
-  await renderDBBody('sheet');
+function rowBtn(label, cls, attrs=''){ return `<button class="btn ${cls}" ${attrs}>${label}</button>`; }
+async function renderSettings(){
+  const itb = document.querySelector('#set_items tbody');
+  const { data: items } = await supabase.from('Items').select('id,item_name,market').order('item_name',{ascending:true});
+  itb.innerHTML = (items||[]).map(r=>`
+    <tr data-id="${r.id}">
+      <td><input value="${escapeHtml(r.item_name||'')}"></td>
+      <td><input type="number" step="0.01" value="${Number(r.market||0)}"></td>
+      <td>${rowBtn('Save','set-save')} ${rowBtn('Delete','danger set-del')}</td>
+    </tr>`).join('') + `<tr class="__pending"><td><input></td><td><input type="number" step="0.01" value="0"></td><td>${rowBtn('Add','set-add')}</td></tr>`;
+
+  const rtb = document.querySelector('#set_retailers tbody');
+  const { data: retailers } = await supabase.from('Retailers').select('id,name').order('name',{ascending:true});
+  rtb.innerHTML = (retailers||[]).map(r=>`
+    <tr data-id="${r.id}"><td><input value="${escapeHtml(r.name||'')}"></td><td>${rowBtn('Save','set-save')} ${rowBtn('Delete','danger set-del')}</td></tr>
+  `).join('') + `<tr class="__pending"><td><input></td><td>${rowBtn('Add','set-add')}</td></tr>`;
+
+  const mtb = document.querySelector('#set_marketplaces tbody');
+  const { data: mkts } = await supabase.from('Marketplaces').select('id,name,fee').order('name',{ascending:true});
+  mtb.innerHTML = (mkts||[]).map(r=>`
+    <tr data-id="${r.id}">
+      <td><input value="${escapeHtml(r.name||'')}"></td>
+      <td><input type="number" step="0.0001" value="${Number(r.fee||0)}"></td>
+      <td>${rowBtn('Save','set-save')} ${rowBtn('Delete','danger set-del')}</td>
+    </tr>`).join('') + `<tr class="__pending"><td><input></td><td><input type="number" step="0.0001" value="0"></td><td>${rowBtn('Add','set-add')}</td></tr>`;
+
+  const otb = document.querySelector('#set_orders tbody');
+  const { data: orders } = await supabase.from('Orders').select('id,order_date,item,buy_price,bought_from,sell_price,sale_date,sale_location,shipping,fees_pct').order('order_date',{ascending:false}).limit(500);
+  otb.innerHTML = (orders||[]).map(r=>`
+    <tr data-id="${r.id}">
+      <td><input type="date" value="${escapeHtml(r.order_date||'')}"></td>
+      <td><input value="${escapeHtml(r.item||'')}"></td>
+      <td><input type="number" step="0.01" value="${Number(r.buy_price||0)}"></td>
+      <td><input value="${escapeHtml(r.bought_from||'')}"></td>
+      <td><input type="number" step="0.01" value="${Number(r.sell_price||0)}"></td>
+      <td><input type="date" value="${escapeHtml(r.sale_date||'')}"></td>
+      <td><input value="${escapeHtml(r.sale_location||'')}"></td>
+      <td><input type="number" step="0.01" value="${Number(r.shipping||0)}"></td>
+      <td><input type="number" step="0.0001" value="${Number(r.fees_pct||0)}"></td>
+      <td>${rowBtn('Save','set-save')} ${rowBtn('Delete','danger set-del')}</td>
+    </tr>`).join('') + `<tr class="__pending">
+      <td><input type="date"></td><td><input></td><td><input type="number" step="0.01" value="0"></td>
+      <td><input></td><td><input type="number" step="0.01" value="0"></td><td><input type="date"></td>
+      <td><input></td><td><input type="number" step="0.01" value="0"></td><td><input type="number" step="0.0001" value="0"></td>
+      <td>${rowBtn('Add','set-add')}</td></tr>`;
+
+  document.querySelector('#tab_settings')?.addEventListener('click', async (e)=>{
+    const tr = e.target.closest('tr'); if (!tr) return;
+    const id = Number(tr.getAttribute('data-id'));
+    const tableEl = tr.closest('table'); const tid = tableEl.id;
+    if (e.target.classList.contains('set-save')){
+      try{
+        if (tid==='set_items'){
+          const rec = { item_name: tr.children[0].querySelector('input').value, market: Number(tr.children[1].querySelector('input').value||0) };
+          await supabase.from('Items').update(rec).eq('id', id); toast('Saved');
+        } else if (tid==='set_retailers'){
+          const rec = { name: tr.children[0].querySelector('input').value };
+          await supabase.from('Retailers').update(rec).eq('id', id); toast('Saved');
+        } else if (tid==='set_marketplaces'){
+          const rec = { name: tr.children[0].querySelector('input').value, fee: Number(tr.children[1].querySelector('input').value||0) };
+          await supabase.from('Marketplaces').update(rec).eq('id', id); toast('Saved');
+        } else if (tid==='set_orders'){
+          const rec = {
+            order_date: tr.children[0].querySelector('input').value || null,
+            item: tr.children[1].querySelector('input').value || null,
+            buy_price: Number(tr.children[2].querySelector('input').value || 0),
+            bought_from: tr.children[3].querySelector('input').value || null,
+            sell_price: Number(tr.children[4].querySelector('input').value || 0) || null,
+            sale_date: tr.children[5].querySelector('input').value || null,
+            sale_location: tr.children[6].querySelector('input').value || null,
+            shipping: Number(tr.children[7].querySelector('input').value || 0) || null,
+            fees_pct: Number(tr.children[8].querySelector('input').value || 0) || null
+          };
+          await supabase.from('Orders').update(rec).eq('id', id); toast('Saved');
+        }
+      }catch(err){ toast('Save failed'); }
+    }
+    if (e.target.classList.contains('set-del')){
+      if (!confirm('Delete row?')) return;
+      try{
+        if (tid==='set_items'){ await supabase.from('Items').delete().eq('id', id); }
+        else if (tid==='set_retailers'){ await supabase.from('Retailers').delete().eq('id', id); }
+        else if (tid==='set_marketplaces'){ await supabase.from('Marketplaces').delete().eq('id', id); }
+        else if (tid==='set_orders'){ await supabase.from('Orders').delete().eq('id', id); }
+        tr.remove(); toast('Deleted');
+      }catch(err){ toast('Delete failed'); }
+    }
+    if (e.target.classList.contains('set-add')){
+      try{
+        if (tid==='set_items'){
+          const rec = { item_name: tr.children[0].querySelector('input').value || '', market: Number(tr.children[1].querySelector('input').value || 0) };
+          await supabase.from('Items').insert([rec]); toast('Added'); renderSettings();
+        } else if (tid==='set_retailers'){
+          const rec = { name: tr.children[0].querySelector('input').value || '' };
+          await supabase.from('Retailers').insert([rec]); toast('Added'); renderSettings();
+        } else if (tid==='set_marketplaces'){
+          const rec = { name: tr.children[0].querySelector('input').value || '', fee: Number(tr.children[1].querySelector('input').value || 0) };
+          await supabase.from('Marketplaces').insert([rec]); toast('Added'); renderSettings();
+        } else if (tid==='set_orders'){
+          const rec = {
+            order_date: tr.children[0].querySelector('input').value || null,
+            item: tr.children[1].querySelector('input').value || null,
+            buy_price: Number(tr.children[2].querySelector('input').value || 0),
+            bought_from: tr.children[3].querySelector('input').value || null,
+            sell_price: Number(tr.children[4].querySelector('input').value || 0) || null,
+            sale_date: tr.children[5].querySelector('input').value || null,
+            sale_location: tr.children[6].querySelector('input').value || null,
+            shipping: Number(tr.children[7].querySelector('input').value || 0) || null,
+            fees_pct: Number(tr.children[8].querySelector('input').value || 0) || null
+          };
+          await supabase.from('Orders').insert([rec]); toast('Added'); renderSettings();
+        }
+      }catch(err){ toast('Add failed'); }
+    }
+  }, { once:true });
 }
-window.loadDatabase = loadDatabase;
 
-// ------------------ Profiles ------------------
 async function getProfiles(){
-  const { data, error } = await supabase
-    .from('Profiles')
-    .select('id, "profileName", username, email, discord, role, notes, created, updated, created_at, updated_at')
-    .order('profileName', { ascending:true });
+  const { data, error } = await supabase.from('Profiles').select('id, "profileName", username, email, discord, role, notes, created, updated, created_at, updated_at').order('profileName',{ascending:true});
   if (error) throw error;
   return (data||[]).map(row=>({
     id: row.id, row: row.id,
-    username: row.username ?? row.profileName ?? '',
-    email: row.email ?? '',
-    discord: row.discord ?? '',
-    role: row.role ?? '',
-    notes: row.notes ?? '',
-    created: row.created ?? row.created_at ?? null,
-    updated: row.updated ?? row.updated_at ?? null
+    username: row.username ?? row.profileName ?? '', email: row.email ?? '', discord: row.discord ?? '', role: row.role ?? '', notes: row.notes ?? '',
+    created: row.created ?? row.created_at ?? null, updated: row.updated ?? row.updated_at ?? null
   }));
 }
-async function addProfile(payload){
-  const rec = {
-    username: payload?.username ?? '',
-    email:    payload?.email    ?? '',
-    discord:  payload?.discord  ?? '',
-    role:     payload?.role     ?? '',
-    notes:    payload?.notes    ?? ''
-  };
-  const { data, error } = await supabase.from('Profiles').insert([rec]).select('id');
-  if (error) throw error;
-  return { ok:true, id: data?.[0]?.id };
-}
-async function updateProfiles(rows){
-  const updates = (rows||[]).map(r=>({
-    id: r.row,
-    username: r.username ?? null,
-    email:    r.email ?? null,
-    discord:  r.discord ?? null,
-    role:     r.role ?? null,
-    notes:    r.notes ?? null
-  }));
-  const { error } = await supabase.from('Profiles').upsert(updates, { onConflict:'id' });
-  if (error) throw error;
-  return { ok:true };
-}
-async function removeProfile(row){
-  const id = Number(row);
-  const { error } = await supabase.from('Profiles').delete().eq('id', id);
-  if (error) throw error;
-  return { ok:true };
-}
-window.apiGetProfiles = getProfiles;
-window.apiAddProfile = addProfile;
-window.apiUpdateProfiles = updateProfiles;
-window.apiRemoveProfile = removeProfile;
+async function addProfile(payload){ const { data, error } = await supabase.from('Profiles').insert([{ username:payload?.username||'', email:payload?.email||'', discord:payload?.discord||'', role:payload?.role||'', notes:payload?.notes||'' }]).select('id'); if (error) throw error; return { ok:true, id:data?.[0]?.id }; }
+async function updateProfiles(rows){ const updates=(rows||[]).map(r=>({ id:r.row, username:r.username??null, email:r.email??null, discord:r.discord??null, role:r.role??null, notes:r.notes??null })); const { error } = await supabase.from('Profiles').upsert(updates, { onConflict:'id' }); if (error) throw error; return { ok:true }; }
+async function removeProfile(row){ const id=Number(row); const { error } = await supabase.from('Profiles').delete().eq('id', id); if (error) throw error; return { ok:true }; }
+function collectProfileEdits(){ const out=[]; document.querySelectorAll('#pro_tbl tbody tr[data-row]').forEach(tr=>{ const row=Number(tr.dataset.row); out.push({ row, username:tr.children[0].querySelector('input').value.trim(), email:tr.children[1].querySelector('input').value.trim(), discord:tr.children[2].querySelector('input').value.trim(), role:tr.children[3].querySelector('input').value.trim(), notes:tr.children[4].querySelector('input').value.trim() }); }); return out; }
+async function renderProfiles(){ const tb=document.querySelector('#pro_tbl tbody'); tb.innerHTML='<tr><td colspan="6" class="muted">Loading…</td></tr>'; try{ const rows=await getProfiles(); tb.innerHTML = rows.map(r=>`<tr data-row="${r.row}"><td><input value="${escapeHtml(r.username||'')}"></td><td><input value="${escapeHtml(r.email||'')}"></td><td><input value="${escapeHtml(r.discord||'')}"></td><td><input value="${escapeHtml(r.role||'')}"></td><td><input value="${escapeHtml(r.notes||'')}"></td><td><button class="btn" data-act="del" data-row="${r.row}">Delete</button></td></tr>`).join('') || '<tr><td colspan="6" class="muted">No profiles</td></tr>'; }catch{ tb.innerHTML='<tr><td colspan="6">Load failed</td></tr>'; } }
+document.getElementById('pro_add_btn')?.addEventListener('click', ()=>{ const payload={ username:$('#pro_username').value.trim(), email:$('#pro_email').value.trim(), discord:$('#pro_discord').value.trim(), role:$('#pro_role').value.trim(), notes:$('#pro_notes').value.trim() }; (async()=>{ try{ await addProfile(payload); ['pro_username','pro_email','pro_discord','pro_role','pro_notes'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; }); renderProfiles(); toast('Added'); }catch{ toast('Add failed'); } })(); });
+document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{ const rows=collectProfileEdits(); (async()=>{ try{ await updateProfiles(rows); renderProfiles(); toast('Saved'); }catch{ toast('Save failed'); } })(); });
+document.querySelector('#pro_tbl tbody')?.addEventListener('click', (e)=>{ const btn=e.target.closest('button[data-act="del"]'); if(!btn) return; const row=Number(btn.getAttribute('data-row')); if(!row||!confirm('Delete this profile row?')) return; (async()=>{ try{ await removeProfile(row); renderProfiles(); toast('Deleted'); }catch{ toast('Delete failed'); } })(); });
 
-function collectProfileEdits(){
-  const out = [];
-  document.querySelectorAll('#pro_tbl tbody tr[data-row]').forEach(tr=>{
-    const row = Number(tr.getAttribute('data-row'));
-    out.push({
-      row,
-      username: cellVal(tr.children[0]).trim(),
-      email: cellVal(tr.children[1]).trim(),
-      discord: cellVal(tr.children[2]).trim(),
-      role: cellVal(tr.children[3]).trim(),
-      notes: cellVal(tr.children[4]).trim()
-    });
-  });
-  return out;
-}
-
-async function renderProfiles(){
-  const tb = document.querySelector('#pro_tbl tbody');
-  tb.innerHTML = '<tr><td colspan="6" class="muted">Loading…</td></tr>';
-  try{
-    const rows = await getProfiles();
-    tb.innerHTML = rows.map(r=>`
-      <tr data-row="${r.row}">
-        <td><input type="text" value="${escapeHtml(r.username||'')}"></td>
-        <td><input type="text" value="${escapeHtml(r.email||'')}"></td>
-        <td><input type="text" value="${escapeHtml(r.discord||'')}"></td>
-        <td><input type="text" value="${escapeHtml(r.role||'')}"></td>
-        <td><input type="text" value="${escapeHtml(r.notes||'')}"></td>
-        <td class="td-actions">
-          <button class="btn" data-act="del" data-row="${r.row}" type="button">Delete</button>
-        </td>
-      </tr>
-    `).join('') || '<tr><td colspan="6" class="muted">No profiles</td></tr>';
-  }catch(err){
-    console.error(err);
-    tb.innerHTML = '<tr><td colspan="6">Error loading profiles</td></tr>';
-  }
-}
-window.renderProfiles = renderProfiles;
-
-// add profile
-document.getElementById('pro_add_btn')?.addEventListener('click', ()=>{
-  const payload = {
-    username: document.getElementById('pro_username').value.trim(),
-    email:    document.getElementById('pro_email').value.trim(),
-    discord:  document.getElementById('pro_discord').value.trim(),
-    role:     document.getElementById('pro_role').value.trim(),
-    notes:    document.getElementById('pro_notes').value.trim()
-  };
-  (async()=>{
-    try{
-      await (window.apiAddProfile? apiAddProfile(payload) : addProfile(payload));
-      ['pro_username','pro_email','pro_discord','pro_role','pro_notes'].forEach(id=>{ const el=document.getElementById(id); if (el) el.value=''; });
-      renderProfiles(); toast('Profile added');
-    }catch(err){
-      toast((err && err.message) || 'Add failed');
-    }
-  })();
-});
-
-// save edited profiles
-document.getElementById('pro_save_btn')?.addEventListener('click', ()=>{
-  const rows = collectProfileEdits();
-  (async()=>{
-    try{
-      await (window.apiUpdateProfiles? apiUpdateProfiles(rows) : updateProfiles(rows));
-      renderProfiles(); toast('Saved');
-    }catch(err){
-      toast((err && err.message) || 'Save failed');
-    }
-  })();
-});
-
-// delete profile (row button)
-document.querySelector('#pro_tbl tbody')?.addEventListener('click', (e)=>{
-  const btn = e.target.closest('button[data-act="del"]');
-  if (!btn) return;
-  const row = Number(btn.getAttribute('data-row'));
-  if (!row || !confirm('Delete this profile row?')) return;
-  (async()=>{
-    try{
-      await (window.apiRemoveProfile? apiRemoveProfile(row) : removeProfile(row));
-      renderProfiles(); toast('Deleted');
-    }catch(err){
-      toast((err && err.message) || 'Delete failed');
-    }
-  })();
-});
-
-// Small helper to trigger a download of JSON
-function downloadJSON(filename, data){
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 2000);
-}
-
-// Import profiles
-document.getElementById('profiles_import_input')?.addEventListener('change', (e) => {
-  const file = e.target.files?.[0];
-  if (!file) { e.target.value=''; return; }
-  const reader = new FileReader();
-  reader.onload = async (ev)=>{
-    try{
-      const text = String(ev.target?.result || '').trim();
-      const json = JSON.parse(text);
-      if (!Array.isArray(json)) throw new Error('JSON must be an array of profiles');
-      try{
-        for (const row of json){
-          await (window.apiAddProfile ? apiAddProfile(row) : addProfile(row));
-        }
-        renderProfiles(); toast('Import complete'); e.target.value='';
-      }catch(err){
-        toast((err && err.message) || 'Import failed'); e.target.value='';
-      }
-    }catch(_){
-      toast('Invalid JSON'); e.target.value='';
-    }
-  };
-  reader.readAsText(file);
-});
-
-// Export profiles
-document.getElementById('profiles_export_btn')?.addEventListener('click', async ()=>{
-  try{
-    const data = await (window.apiGetProfiles ? apiGetProfiles() : getProfiles());
-    downloadJSON('profiles.json', data||[]);
-    toast('Export ready');
-  }catch(err){
-    toast((err && err.message) || 'Export failed');
-  }
-});
-
-// Initial wires
-wireDBButtons();
-
-// Load initial view
-(async ()=>{
-  await refreshGate();
-  loadDatabase();
-})();
-</script>
-
-<!-- Datalists for items & retailers (used in Order Book inputs) -->
-<datalist id="items"></datalist>
-<datalist id="retailers"></datalist>
-
-<script type="module">
-// Populate datalists for convenience
-import { createClient as _createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-const supabase2 = _createClient('https://dbxrlauvarqzvejvizew.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM');
-async function refreshDatalists(){
-  const { data: items } = await supabase2.from('Items').select('item_name').order('item_name', { ascending:true });
-  const { data: retailers } = await supabase2.from('Retailers').select('name').order('name', { ascending:true });
-  const itemsEl = document.getElementById('items'); const retailersEl = document.getElementById('retailers');
-  if (itemsEl) itemsEl.innerHTML = (items||[]).map(x=>`<option value="${escapeHtml(x.item_name||'')}">`).join('');
-  if (retailersEl) retailersEl.innerHTML = (retailers||[]).map(x=>`<option value="${escapeHtml(x.name||'')}">`).join('');
-}
-refreshDatalists();
+await refreshGate();
 </script>
 
 </body>
