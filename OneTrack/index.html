@@ -361,6 +361,22 @@ const SUPABASE_URL = 'https://dbxrlauvarqzvejvizew.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieHJsYXV2YXJxenZlanZpemV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3MzI5NjEsImV4cCI6MjA3MjMwODk2MX0.WxA5UxIxhV-fiac62xJ1B5blsJJ5S-1Vf1y3pQwxWiM';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window.supabase = supabase;
+// Surface auth errors from URL (?error=... or #error=...)
+(function(){
+  try{
+    const url = new URL(window.location.href);
+    const q = new URLSearchParams(url.search||'');
+    const h = new URLSearchParams((url.hash||'').replace(/^#/,''));
+    const get = (k)=> q.get(k) || h.get(k);
+    const err = get('error') || get('error_code');
+    if (err){
+      const desc = get('error_description') || err;
+      toast('Auth error: ' + decodeURIComponent(desc));
+      // Clean the URL so it doesn't re-trigger
+      history.replaceState({}, document.title, url.origin + url.pathname);
+    }
+  }catch(_){}
+})();
 
 async function refreshGate(){
   const { data: { user } } = await supabase.auth.getUser();
@@ -391,7 +407,7 @@ supabase.auth.onAuthStateChange(()=> refreshGate());
 
 document.getElementById('discordBtn')?.addEventListener('click', (e)=>{
   e.preventDefault();
-  supabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: window.location.href } });
+  supabase.auth.signInWithOAuth({ provider:'discord', options:{ redirectTo: window.location.origin } });
 });
 document.getElementById('logoutBtn')?.addEventListener('click', async ()=>{
   await supabase.auth.signOut();
